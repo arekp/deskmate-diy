@@ -35,11 +35,44 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: "8.9"
-      - run: gradle -p android assembleDebug --no-daemon
+      - name: Testy jednostkowe
+        run: gradle -p android testDebugUnitTest --no-daemon
+      - name: Budowanie APK
+        run: |
+          gradle -p android assembleDebug --no-daemon
+          cp android/app/build/outputs/apk/debug/app-debug.apk deskmate-diy.apk
       - uses: actions/upload-artifact@v4
         with:
-          name: deskmate-debug-apk
-          path: android/app/build/outputs/apk/debug/*.apk
+          name: deskmate-diy-apk
+          path: deskmate-diy.apk
+      - name: Raport testów
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-test-report
+          path: android/app/build/reports/tests/
+
+  release:
+    # Publiczny link do APK: .../releases/latest/download/deskmate-diy.apk
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    needs: [firmware, android, python]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: deskmate-diy-apk
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: build-${{ github.run_number }}
+          name: DeskMate DIY – build ${{ github.run_number }}
+          target_commitish: ${{ github.sha }}
+          make_latest: true
+          files: deskmate-diy.apk
+          body: |
+            Automatyczna kompilacja z commita ${{ github.sha }}.
+            Wersja testowa (debug). Instalacja: pobierz deskmate-diy.apk na telefonie i zezwól na instalację z nieznanych źródeł.
 
   python:
     runs-on: ubuntu-latest

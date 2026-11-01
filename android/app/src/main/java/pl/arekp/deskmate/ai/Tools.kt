@@ -7,7 +7,7 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import org.json.JSONArray
 import org.json.JSONObject
-import pl.arekp.deskmate.Config
+import pl.arekp.deskmate.Settings
 import pl.arekp.deskmate.ui.Emotion
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
@@ -55,7 +55,7 @@ class TimeTool : AssistantTool {
  * "Spójrz na mój ekran" – pobiera zrzut ekranu z komputera (desktop/screen_helper.py).
  * Działa tylko na wyraźną prośbę użytkownika; zrzut trafia do modelu i nie jest zapisywany.
  */
-class ScreenTool(private val baseUrl: String, private val token: String) : AssistantTool {
+class ScreenTool(private val settings: Settings) : AssistantTool {
     override val name = "look_at_screen"
     override val description =
         "Pobiera aktualny zrzut ekranu komputera użytkownika. Używaj TYLKO, gdy użytkownik " +
@@ -65,9 +65,16 @@ class ScreenTool(private val baseUrl: String, private val token: String) : Assis
     private val http = OkHttpClient.Builder().callTimeout(10, TimeUnit.SECONDS).build()
 
     override suspend fun run(input: JSONObject): ToolResult = withContext(Dispatchers.IO) {
+        val baseUrl = settings.screenHelperUrl
+        if (baseUrl.isBlank()) {
+            return@withContext ToolResult.text(
+                "Pomocnik ekranu nie jest skonfigurowany (ustawienia aplikacji + desktop/screen_helper.py).",
+                isError = true,
+            )
+        }
         val request = Request.Builder()
             .url(baseUrl.trimEnd('/') + "/screenshot")
-            .header("X-Token", token)
+            .header("X-Token", settings.screenHelperToken)
             .build()
         http.newCall(request).execute().use { resp ->
             if (!resp.isSuccessful) return@withContext ToolResult.text("Pomocnik ekranu zwrócił ${resp.code}", true)
@@ -83,10 +90,5 @@ class ScreenTool(private val baseUrl: String, private val token: String) : Assis
                 )
             ToolResult.blocks(JSONArray().put(image).put(JSONObject().put("type", "text").put("text", "Zrzut ekranu użytkownika.")))
         }
-    }
-
-    companion object {
-        fun fromConfig(): ScreenTool? =
-            Config.SCREEN_HELPER_URL.takeIf { it.isNotBlank() }?.let { ScreenTool(it, Config.SCREEN_HELPER_TOKEN) }
     }
 }

@@ -32,6 +32,17 @@ android {
         buildConfigField("String", "SCREEN_HELPER_TOKEN", "\"${secret("screenHelper.token")}\"")
     }
 
+    signingConfigs {
+        // Wspólny klucz testowy z repozytorium (NIE do publikacji w sklepie).
+        // Dzięki temu każdy build z GitHub Actions instaluje się jako aktualizacja poprzedniego.
+        getByName("debug") {
+            storeFile = file("debug.keystore")
+            storePassword = "android"
+            keyAlias = "androiddebugkey"
+            keyPassword = "android"
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = false
@@ -50,6 +61,10 @@ android {
 
     kotlinOptions {
         jvmTarget = "17"
+    }
+
+    testOptions {
+        unitTests.isReturnDefaultValues = true
     }
 }
 
@@ -75,4 +90,8 @@ dependencies {
 
     // HTTP do API modelu językowego i pomocnika ekranu
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
+
+    // Testy jednostkowe logiki (JVM, bez telefonu)
+    testImplementation("junit:junit:4.13.2")
+    testImplementation("org.json:json:20240303")
 }

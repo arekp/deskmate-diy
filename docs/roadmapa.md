@@ -7,7 +7,8 @@ Kolejność proponowana – od rzeczy, które najbardziej poprawiają codzienne 
 - [ ] Fold8 Ultra: wybór właściwej kamery przedniej po rozłożeniu (CameraX `CameraSelector` po `LENS_FACING` + rozmiarze ekranu).
 - [ ] Wykrywanie głosu (VAD) zamiast samego „patrzenia w kamerę” – mniej pustych nasłuchów, szybsza reakcja.
 - [ ] Przerywanie robota w trakcie mówienia (barge-in).
-- [ ] Ekran ustawień w aplikacji (czułość śledzenia, odwrócenie osi, głos, model, klucz API zamiast `local.properties`).
+- [x] Ekran ustawień: klucz API, model, pomocnik ekranu (przytrzymaj palec na oczach).
+- [ ] Ustawienia zaawansowane: czułość śledzenia, odwrócenie osi, głos.
 - [ ] Auto-start po postawieniu telefonu na robocie (połączenie BLE / ładowanie).
 
 ## v0.3 – asystent pracy

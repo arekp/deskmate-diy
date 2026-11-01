@@ -37,6 +37,7 @@ import pl.arekp.deskmate.voice.Speech
 class DeskMateBrain(private val activity: ComponentActivity) {
 
     val profile: DeviceProfile = DeviceProfile.detect()
+    val settings = Settings(activity)
 
     private val _ui = MutableStateFlow(UiState(eyeScale = profile.eyeScale))
     val ui: StateFlow<UiState> = _ui.asStateFlow()
@@ -46,7 +47,7 @@ class DeskMateBrain(private val activity: ComponentActivity) {
     private val head = HeadController(profile) { robot.send(it) }
     private val faces = FaceTracker(activity, activity)
     private val speech = Speech(activity)
-    private val claude = ClaudeClient(buildTools())
+    private val claude = ClaudeClient(buildTools(), settings)
 
     private var faceSince = 0L
     private var lastFaceAt = SystemClock.uptimeMillis()
@@ -67,6 +68,9 @@ class DeskMateBrain(private val activity: ComponentActivity) {
         scope.launch {
             robot.state.collect { s -> _ui.update { it.copy(status = "${profile.label} · ${s.label}") } }
         }
+        if (settings.apiKey.isBlank()) {
+            _ui.update { it.copy(caption = "Przytrzymaj palec na ekranie, żeby wpisać klucz API") }
+        }
         scope.launch { conversationLoop() }
         scope.launch { sleepWatcher() }
     }
@@ -83,7 +87,7 @@ class DeskMateBrain(private val activity: ComponentActivity) {
             gesture?.let { gesture(it) }
         },
         TimeTool(),
-        ScreenTool.fromConfig(),
+        ScreenTool(settings),
         // TODO: GmailTool, CalendarTool, SlackTool… – patrz docs/roadmapa.md
     )
 

@@ -28,16 +28,10 @@ object Config {
     const val SLEEP_AFTER_MS = 60_000L    // brak twarzy tyle ms -> zasypia
     const val SPEECH_LANG = "pl-PL"
 
-    // --- Model językowy (z local.properties) ---
-    val ANTHROPIC_API_KEY: String = BuildConfig.ANTHROPIC_API_KEY
-    val ANTHROPIC_MODEL: String = BuildConfig.ANTHROPIC_MODEL
+    // --- Model językowy (klucz i model: Settings.kt) ---
     const val MAX_TOKENS = 400
     const val MAX_TOOL_ROUNDS = 4
     const val HISTORY_LIMIT = 20
-
-    // --- Pomocnik ekranu na PC (desktop/screen_helper.py), pusty = wyłączony ---
-    val SCREEN_HELPER_URL: String = BuildConfig.SCREEN_HELPER_URL
-    val SCREEN_HELPER_TOKEN: String = BuildConfig.SCREEN_HELPER_TOKEN
 
     val SYSTEM_PROMPT = """
         Jesteś DeskMate – małym robotem-asystentem stojącym na biurku użytkownika.

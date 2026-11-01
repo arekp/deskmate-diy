@@ -14,6 +14,7 @@ import kotlin.math.abs
  */
 class HeadController(
     private val profile: DeviceProfile,
+    private val clock: () -> Long = { SystemClock.uptimeMillis() },
     private val send: (String) -> Unit,
 ) {
     var pan = 0f
@@ -28,12 +29,12 @@ class HeadController(
 
     /** Wstrzymaj śledzenie (np. na czas gestu, żeby go nie przerwać). */
     fun pauseFor(ms: Long) {
-        pausedUntil = SystemClock.uptimeMillis() + ms
+        pausedUntil = clock() + ms
     }
 
     fun onFace(face: FaceObservation) {
         if (!face.present) return
-        val now = SystemClock.uptimeMillis()
+        val now = clock()
         if (now < pausedUntil) return
 
         val panSign = if (profile.invertPan) -1f else 1f

@@ -9,13 +9,20 @@ import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.core.content.ContextCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import pl.arekp.deskmate.ui.EyesScreen
+import pl.arekp.deskmate.ui.SettingsDialog
 
 class MainActivity : ComponentActivity() {
 
@@ -38,7 +45,13 @@ class MainActivity : ComponentActivity() {
         brain = DeskMateBrain(this)
         setContent {
             val state by brain.ui.collectAsStateWithLifecycle()
-            EyesScreen(state)
+            var showSettings by remember { mutableStateOf(false) }
+            // Przytrzymanie palca na oczach otwiera ustawienia (klucz API, model, pomocnik ekranu)
+            EyesScreen(
+                state,
+                Modifier.pointerInput(Unit) { detectTapGestures(onLongPress = { showSettings = true }) },
+            )
+            if (showSettings) SettingsDialog(brain.settings) { showSettings = false }
         }
 
         val missing = requiredPermissions().filter {

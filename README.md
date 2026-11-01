@@ -56,12 +56,23 @@ Plan dalszych prac (Gmail, kalendarz, tryb skupienia, ekran okładki Flipa…): 
 | [`hardware/`](hardware/) | obudowa, uchwyt, schemat połączeń |
 | [`docs/`](docs/) | dokumentacja |
 
+## Instalacja aplikacji na telefonie
+
+Każda zmiana w gałęzi `main` jest automatycznie kompilowana i testowana, a gotowy plik APK trafia do zakładki Releases.
+
+1. Na telefonie otwórz: **https://github.com/arekp/deskmate-diy/releases/latest/download/deskmate-diy.apk**
+2. Pobierz plik i otwórz go. Android zapyta o zgodę na instalację z tego źródła (przeglądarki) – zezwól.
+3. Uruchom **DeskMate DIY**, nadaj uprawnienia (kamera, mikrofon, urządzenia w pobliżu).
+4. **Przytrzymaj palec na ekranie z oczami** → wpisz klucz API Anthropic → Zapisz.
+
+Kolejne wersje instalują się jako aktualizacja (wspólny klucz podpisu testowego). To wersja testowa (debug) – nie do publikacji w sklepie.
+
 ## Szybki start
 
 1. **Kup części** – [docs/bom.md](docs/bom.md) (ok. 300–550 zł).
 2. **Złóż elektronikę** – [docs/montaz.md](docs/montaz.md).
 3. **Wgraj firmware** – `cd firmware && pio run -e esp32-s3 -t upload`, potem przetestuj: `python tools/ble_console.py` → `demo`.
-4. **Zbuduj aplikację** – otwórz katalog `android/` w Android Studio, skopiuj `local.properties.example` jako `local.properties`, wpisz klucz API, uruchom na telefonie.
+4. **Zainstaluj aplikację** – gotowy APK (sekcja wyżej) albo zbuduj sam: katalog `android/` w Android Studio (opcjonalnie klucz w `local.properties`, wzór: `local.properties.example`).
 5. **Postaw telefon na robocie** i popatrz na niego 🙂
 
 ## Licencja

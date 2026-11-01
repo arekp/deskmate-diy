@@ -25,3 +25,6 @@ __pycache__/
 # System
 .DS_Store
 Thumbs.db
+
+# Wspólny klucz testowy – dzięki niemu kolejne buildy z CI instalują się jako aktualizacja
+!android/app/debug.keystore
