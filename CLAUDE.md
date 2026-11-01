@@ -19,4 +19,4 @@ Biurkowy robot-asystent: telefon z Androidem = mózg i twarz, ESP32 + 2 serwa = 
 
 ## Mapa dokumentów
 
-`docs/inspiracja-funkcje.md` (funkcje oryginału + status), `docs/telefony.md` (telefony, ładowarka), `docs/sterowanie-mocowaniem.md`, `docs/bom.md`, `docs/montaz.md`, `docs/roadmapa.md`, `hardware/` (CAD, STL).
+`docs/aplikacja-android.md` (moduły aplikacji, połączenia, jak rozwijać), `docs/inspiracja-funkcje.md` (funkcje oryginału + status), `docs/telefony.md` (telefony, ładowarka), `docs/sterowanie-mocowaniem.md`, `docs/bom.md`, `docs/montaz.md`, `docs/roadmapa.md`, `hardware/` (CAD, STL).

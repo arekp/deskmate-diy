@@ -30,7 +30,7 @@ Szczegóły, wymiary i dobór uchwytu: [docs/telefony.md](docs/telefony.md). Inn
  └──────────────────────────────────────────┘
 ```
 
-Więcej: [docs/architektura.md](docs/architektura.md) · sterowanie głową: [docs/sterowanie-mocowaniem.md](docs/sterowanie-mocowaniem.md) · protokół: [docs/protokol-ble.md](docs/protokol-ble.md)
+Więcej: [docs/aplikacja-android.md](docs/aplikacja-android.md) (oprogramowanie telefonu) · [docs/architektura.md](docs/architektura.md) · sterowanie głową: [docs/sterowanie-mocowaniem.md](docs/sterowanie-mocowaniem.md) · protokół: [docs/protokol-ble.md](docs/protokol-ble.md)
 
 ## Co już działa w szkielecie (v0.1)
 
