@@ -26,7 +26,7 @@ Konsekwencje dla projektu:
 - **Zasilacz Quick Charge 2.0/3.0** (min. 5 V/2 A, dla trybu 10 W 9 V/2 A) – nie ma go w zestawie.
 - **Moc:** pełne 10 W Anker obiecuje tylko dla starszych Galaxy (do S20 / Note 10). S23, Flip6 i Fold8 Ultra ładują się w trybie podstawowym, realnie ok. 5 W – przy ciągłej pracy ekranu, kamery i AI może to jedynie spowalniać rozładowanie. Zapas: przewód USB-C przez wycięcie w półce uchwytu.
 - Cewka podkładki musi wypaść na środku tyłu telefonu – położenie zależy od modelu (parametr w CAD).
-- Wymiary podkładki **do zmierzenia** (w projekcie tymczasowo Ø 100 × 11 mm).
+- Wymiary podkładki (dokumentacja): **Ø 100 × 11,2 mm, 67 g**, gniazdo micro-USB z boku, cewka na środku ([electric.garden – dane A2503](https://electric.garden/anker-innovations-2aokb/anker-313-wireless-charger-pad-a2503c), [Anker US](https://www.anker.com/products/a2503)). Do sprawdzenia na miejscu tylko kąt położenia gniazda.
 
 ## Mocowanie ładujące – rekomendacja (magnetyczna alternatywa)
 
