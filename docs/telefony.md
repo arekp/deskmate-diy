@@ -20,7 +20,10 @@ Projekt jest przygotowany pod trzy modele Samsunga. Aplikacja rozpoznaje telefon
 
 Żaden z trzech telefonów nie ma wbudowanych magnesów, więc najlepszy jest **jeden uniwersalny układ**:
 
-1. **Magnetyczna ładowarka Qi2 typu „krążek”** wbudowana w płytkę głowy, np. [ESR HaloLock Qi2 Mini 15 W (homescreen.pl)](https://homescreen.pl/pl/ladowarki-indukcyjne/76006-ladowarka-indukcyjna-esr-halolock-qi2-mini-magnetic-magsafe-15w-black-4894240189238.html). Jest mała i płaska, więc łatwo ją osadzić w wydruku 3D.
+1. **Magnetyczna ładowarka Qi2 typu „krążek”** wbudowana w płytkę głowy. Rekomendacja: **Samsung Magnet Wireless Charger EP-P2900** (Qi2, do 25 W, grubość tylko 4,4 mm, kabel 1,5 m USB-C). Najlepiej kupić wariant **EP-P2900TB z zasilaczem 45 W**, bo pełną moc daje tylko z zasilaczem Samsung 45 W / PPS 20 V – np. [MediaMarkt (z zasilaczem 45 W)](https://mediamarkt.pl/pl/product/_ladowarka-bezprzewodowa-samsung-25w-ciemnoszary-ladowarka-sieciowa-45-w-1504055.html), [MediaMarkt (sama ładowarka)](https://mediamarkt.pl/pl/product/_ladowarka-bezprzewodowa-samsung-25w-ciemnoszary-1504054.html), [oleole.pl](https://www.oleole.pl/ladowarki-bezprzewodowe/samsung-lad-magnet-ep-p2900tb-qi2-25w-zasil-45w.bhtml).
+   - Fold8 / Fold8 Ultra: wskazywana jako najlepsza ładowarka bezprzewodowa – osiąga limit telefonu 20 W (z etui magnetycznym i zasilaczem 45 W).
+   - Flip6: do 15 W (limit telefonu). S23: zgodność nieopisana przez Samsunga (magnesy dla S25 i nowszych) – powinien ładować jako zwykły Qi, prędkość do sprawdzenia.
+   - Alternatywy: ESR HaloLock Qi2 Mini 15 W; Anker Zolo A25M2 15 W (tani, ale grubszy 10,5 mm, nagrzewa się, producent nie deklaruje zgodności z Androidem).
 2. **Magnetyczne etui na każdy telefon**:
    - Fold8 Ultra – oryginalne etui Samsung z magnesem (np. [Silicone Magnet Case EF-EF976](https://www.samsung.com/ie/mobile-accessories/galaxy-z-fold8-ultra-silicone-magnet-case-violet-shadow-ef-ef976cvegww/)); z takim etui telefon spełnia Qi2.
    - S23 i Flip6 – etui „MagSafe compatible” z pierścieniem magnetycznym (np. dla Flip6 [takie](https://www.bestbuy.ca/en-ca/product/hexinyigjly-case-for-galaxy-z-flip-6-with-metal-ring-magsafe-compatible-black/19959356) – poszukaj odpowiednika w polskim sklepie).

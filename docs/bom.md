@@ -21,7 +21,7 @@ Ceny orientacyjne w PLN (sklepy z elektroniką, Allegro, AliExpress). Wybór ser
 
 | # | Część | ~Cena | Uwagi |
 |---|---|---|---|
-| 11 | Magnetyczna ładowarka Qi2 typu krążek, np. [ESR HaloLock Qi2 Mini 15 W](https://homescreen.pl/pl/ladowarki-indukcyjne/76006-ladowarka-indukcyjna-esr-halolock-qi2-mini-magnetic-magsafe-15w-black-4894240189238.html) | 80–150 zł | wbudowana w płytkę głowy |
+| 11 | Magnetyczna ładowarka Qi2: **Samsung EP-P2900TB** (25 W, 4,4 mm, z zasilaczem 45 W) – [MediaMarkt](https://mediamarkt.pl/pl/product/_ladowarka-bezprzewodowa-samsung-25w-ciemnoszary-ladowarka-sieciowa-45-w-1504055.html); alternatywa ESR HaloLock Qi2 Mini | 150–250 zł | wbudowana w płytkę głowy; zasilacz 45 W tylko dla ładowarki |
 | 12 | Etui magnetyczne Fold8 Ultra (np. Samsung Silicone/Carbon Magnet Case) | 150–250 zł | |
 | 13 | Etui z pierścieniem magnetycznym S23 | 30–80 zł | |
 | 14 | Etui z pierścieniem magnetycznym Flip6 | 30–80 zł | |
