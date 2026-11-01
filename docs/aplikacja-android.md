@@ -19,9 +19,11 @@ Aplikacja **DeskMate DIY** zamienia telefon w „mózg” i „twarz” robota. 
              Bluetooth LE (GATT, tekst) ◄────┘       └────► HTTPS
                        │                                     │
             ┌──────────▼─────────┐            ┌──────────────▼──────────────┐
-            │ ESP32 – ciało       │            │ api.anthropic.com           │
-            │ serwa, dotyk        │            │ (Messages API, model AI)    │
-            └────────────────────┘            └─────────────────────────────┘
+            │ ESP32 – ciało       │            │ LlmRouter – wybiera model:  │
+            │ serwa, dotyk        │            │  Gemini API (darmowy)       │
+            └────────────────────┘            │  OpenRouter (darmowe modele)│
+                                             │  Claude API (płatny)        │
+                                             └─────────────────────────────┘
                                              ┌─────────────────────────────┐
               HTTP w sieci lokalnej (opcja) ─►│ PC: desktop/screen_helper.py│
                                              │ zrzut ekranu na żądanie      │
@@ -31,7 +33,7 @@ Aplikacja **DeskMate DIY** zamienia telefon w „mózg” i „twarz” robota. 
 | Połączenie | Protokół | Co płynie | Kiedy |
 |---|---|---|---|
 | **Robot (ESP32)** | Bluetooth LE, usługa `4d7d0001-…` | komendy tekstowe `L`/`G`/`H` → robot; zdarzenia `TOUCH`, `OK` ← robot | stale, gdy robot jest w zasięgu ([protokol-ble.md](protokol-ble.md)) |
-| **Model AI** | HTTPS → `https://api.anthropic.com/v1/messages` | tekst rozmowy, definicje narzędzi; opcjonalnie zrzut ekranu | po każdej wypowiedzi użytkownika |
+| **Modele AI (przez router)** | HTTPS → Gemini API (`generativelanguage.googleapis.com`), OpenRouter (`openrouter.ai`), Claude (`api.anthropic.com`) | tekst rozmowy, definicje narzędzi; opcjonalnie zrzut ekranu | po każdej wypowiedzi użytkownika |
 | **Rozpoznawanie mowy** | systemowa usługa Androida (`SpeechRecognizer`) | dźwięk z mikrofonu → tekst; zwykle przetwarzany przez usługę Google/Samsung, często w chmurze | gdy robot „słucha” |
 | **Synteza mowy** | systemowy `TextToSpeech` (głos pl-PL) | tekst → dźwięk | gdy robot odpowiada |
 | **Pomocnik ekranu PC** (opcja) | HTTP w LAN, nagłówek `X-Token` | JPEG ze zrzutem ekranu | tylko gdy poprosisz „spójrz na mój ekran” |
@@ -45,14 +47,17 @@ Uprawnienia: `CAMERA`, `RECORD_AUDIO`, `BLUETOOTH_SCAN`, `BLUETOOTH_CONNECT` (An
 |---|---|---|
 | `MainActivity.kt` | start, pełny ekran, ekran nie gaśnie, prośba o uprawnienia, przytrzymanie palca → ustawienia | Compose, `DeskMateBrain` |
 | `DeskMateBrain.kt` | **orkiestrator zachowań** – łączy wszystkie moduły, prowadzi rozmowę, sen/pobudka, emocje, gesty | wszystkie poniższe |
-| `Settings.kt` | klucz API, model, adres i token pomocnika ekranu (SharedPreferences, z zapasem z `local.properties`) | – |
+| `Settings.kt` | tryb routera, klucze i modele Gemini / OpenRouter / Claude, pomocnik ekranu (SharedPreferences, z zapasem z `local.properties`) | – |
 | `Config.kt` | stałe: UUID BLE, limity ruchu, czułość śledzenia, czasy, prompt systemowy | – |
 | `DeviceProfile.kt` | profile telefonów: S23, Fold8 Ultra, Flip6, GENERIC (pole widzenia kamery, odwrócenie osi, wielkość oczu) | `Build.MODEL` |
 | `ble/RobotLink.kt` | skanowanie po UUID, połączenie GATT, kolejka zapisów (jeden naraz), powiadomienia, auto-reconnect co 3 s | Android Bluetooth LE |
 | `vision/FaceTracker.kt` | kamera przednia → ML Kit → `FaceObservation` (pozycja −1…1, rozmiar, uśmiech, czy patrzy w kamerę) | CameraX, ML Kit |
 | `vision/HeadController.kt` | pętla śledzenia: odchyłka twarzy w stopniach × wzmocnienie → komenda `L pan tilt 180`, max 10/s, strefa martwa, pauza po geście | `DeviceProfile`, `Config` |
 | `voice/Speech.kt` | `listenOnce()` – jedna wypowiedź → tekst; `say()` – mówi i czeka na koniec | SpeechRecognizer, TextToSpeech |
-| `ai/ClaudeClient.kt` | zapytanie do modelu, **pętla narzędzi** (do 4 rund), historia rozmowy (20 wiadomości), wycofanie tury po błędzie | OkHttp, org.json, `Settings` |
+| `ai/Assistant.kt` | rozmowa: historia (20 wiadomości) we wspólnym formacie, **pętla narzędzi** (do 4 rund), wycofanie tury po błędzie | `LlmRouter` |
+| `ai/llm/LlmRouter.kt` | **router modeli**: kolejność wg trybu, automatyczne przełączanie przy limitach i błędach, „ławka kar” | dostawcy |
+| `ai/llm/GeminiProvider.kt`, `OpenRouterProvider.kt`, `ClaudeProvider.kt` | tłumaczenie wspólnego formatu na API danego dostawcy i z powrotem | OkHttp, org.json |
+| `ai/llm/Model.kt` | wspólny format: wiadomości, tekst, obrazy, wywołania i wyniki narzędzi, klasy błędów | – |
 | `ai/AssistantTool.kt` | interfejs narzędzia + pomocniki do schematów JSON | – |
 | `ai/Tools.kt` | narzędzia: `express` (emocja + gest), `get_current_time`, `look_at_screen` | `Settings`, OkHttp |
 | `ui/EyesScreen.kt` | rysowanie oczu na Canvas: mruganie, kierunek spojrzenia, 8 emocji, kropka „słucham”, napisy | Compose |
@@ -85,7 +90,7 @@ sleepWatcher()     ─► 60 s bez twarzy → G sleep + oczy SLEEPY
                   (przerwa rośnie 1→10 s)       │
                                                ▼
                                          [MYŚLI] (oczy THINKING)
-                                               │ ClaudeClient.ask()
+                                               │ Assistant.ask() → LlmRouter
                                                │   model ⇄ narzędzia (express, czas, ekran)
                                                ▼
                                          [MÓWI] TTS + napis + emocje/gesty
@@ -99,7 +104,37 @@ Model sam decyduje o mimice: wywołuje narzędzie `express`, np. `{"emotion":"ha
 
 Kamera jest w telefonie i obraca się razem z głową, więc to pętla sprzężenia zwrotnego. Szczegóły i strojenie: [sterowanie-mocowaniem.md](sterowanie-mocowaniem.md).
 
-## 4. Jak rozwijać
+## 4. Router modeli AI
+
+Aplikacja nie jest przywiązana do jednego modelu. `LlmRouter` wybiera dostawcę według trybu z ustawień i sam przełącza się na następnego, gdy coś pójdzie nie tak.
+
+| Tryb | Kolejność prób |
+|---|---|
+| **Automatycznie** (domyślny) | Gemini (darmowy) → OpenRouter (darmowe) → Claude (płatny, awaryjnie) |
+| Najlepsza jakość | Claude → Gemini → OpenRouter |
+| Tylko darmowe | Gemini → OpenRouter (nigdy płatny) |
+| Tylko Gemini / OpenRouter / Claude | wyłącznie wybrany |
+
+Dostawcy bez klucza są pomijani. Po błędzie dostawca trafia na „ławkę kar”:
+
+| Błąd | Przerwa |
+|---|---|
+| 429 – limit zapytań | czas z `Retry-After` albo 60 s |
+| 402 – brak środków / pakietu | 1 h |
+| 401/403 – zły klucz | 30 min |
+| 5xx, brak sieci | 30 s |
+| 400 – odrzucone zapytanie | bez przerwy, od razu następny |
+
+Historia rozmowy jest w formacie wspólnym (`ai/llm/Model.kt`), więc zmiana modelu w środku rozmowy nie gubi kontekstu ani wyników narzędzi. Aktualnie używany model widać w napisie statusu w lewym górnym rogu.
+
+**Klucze** (wpisuje się je w aplikacji – przytrzymaj palec na oczach):
+- **Gemini** – darmowy pakiet z [Google AI Studio](https://aistudio.google.com/apikey); domyślny model `gemini-flash-latest`. W darmowym pakiecie Google może używać danych do ulepszania produktów.
+- **OpenRouter** – [openrouter.ai/keys](https://openrouter.ai/keys); domyślnie `openrouter/free` (OpenRouter sam wybiera dostępny darmowy model). Darmowe modele: ok. 20 zapytań/min i 50/dzień (1000/dzień po jednorazowym doładowaniu 10 USD). Gdy wybrany model nie obsługuje narzędzi, aplikacja rozmawia z nim bez gestów.
+- **Claude** – płatne API z [console.anthropic.com](https://console.anthropic.com/). Subskrypcja Claude Pro **nie** obejmuje API.
+
+**Nowy dostawca** (np. Gemini Nano offline na Fold8 Ultra, lokalny model, Mistral): klasa implementująca `LlmProvider` (`buildBody` / `parse` dla formatu API) + wpis na liście w `DeskMateBrain` + test w `ProviderFormatTest`.
+
+## 5. Jak rozwijać
 
 ### 4.1 Nowa integracja (np. Gmail, Kalendarz, Home Assistant)
 
@@ -144,17 +179,17 @@ Większość „charakteru” jest w dwóch miejscach:
 - `Config.SYSTEM_PROMPT` – osobowość, długość odpowiedzi, kiedy gestykulować,
 - `Config` – czasy (`ENGAGE_AFTER_MS`, `SLEEP_AFTER_MS`), czułość śledzenia (`TRACK_GAIN`, `TRACK_DEADZONE_DEG`).
 
-## 5. Budowanie, testy, wydania
+## 6. Budowanie, testy, wydania
 
 | Co | Jak |
 |---|---|
 | Lokalnie | otwórz `android/` w Android Studio, uruchom na telefonie (debugowanie USB) |
-| Testy jednostkowe | `gradle -p android testDebugUnitTest` – `HeadControllerTest`, `DeviceProfileTest`, `ToolsTest` |
+| Testy jednostkowe | `gradle -p android testDebugUnitTest` – `HeadControllerTest`, `DeviceProfileTest`, `ToolsTest`, `LlmRouterTest`, `ProviderFormatTest` |
 | CI | każdy push: testy + APK ([build.yml](../.github/workflows/build.yml)) |
 | Instalacja | push do `main` → APK w Releases: https://github.com/arekp/deskmate-diy/releases/latest/download/deskmate-diy.apk |
 | Test robota bez telefonu | `python tools/ble_console.py` → `demo`, `track` |
 
-## 6. Znane ograniczenia i kolejne kroki
+## 7. Znane ograniczenia i kolejne kroki
 
 | Ograniczenie | Pomysł na rozwiązanie |
 |---|---|
@@ -164,6 +199,8 @@ Większość „charakteru” jest w dwóch miejscach:
 | Fold8 Ultra rozłożony – możliwy wybór złej kamery przedniej | wybór kamery po `CameraCharacteristics` i stanie zawiasu (Jetpack WindowManager) |
 | Aplikacja nie startuje sama po postawieniu na robocie | usługa pierwszoplanowa + start po połączeniu BLE / ładowaniu |
 | Rozpoznawanie mowy zależy od usługi systemowej (chmura) | lokalny Whisper (whisper.cpp) dla prywatności i trybu offline |
+| Rozmowa tekstowa przez rozpoznawanie mowy systemu | tryb głos-głos przez Gemini Live API (WebSocket, przerywanie, darmowy pakiet) |
+| Brak trybu offline | dostawca Gemini Nano (ML Kit GenAI) – Fold8 Ultra tak, S23 nie |
 | Ładowarka Anker 313 daje ~5 W | monitorować baterię (`BatteryManager`) i usypiać ekran/kamerę przy niskim poziomie |
 
 Pełna lista: [roadmapa.md](roadmapa.md).

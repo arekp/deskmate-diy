@@ -2,6 +2,8 @@ package pl.arekp.deskmate.ai
 
 import org.json.JSONArray
 import org.json.JSONObject
+import pl.arekp.deskmate.ai.llm.ImageData
+import pl.arekp.deskmate.ai.llm.ToolSpec
 
 /**
  * Narzędzie, które model może wywołać (tool use).
@@ -16,13 +18,18 @@ interface AssistantTool {
     suspend fun run(input: JSONObject): ToolResult
 }
 
-/** Wynik narzędzia: tekst albo tablica bloków treści (np. obraz + tekst). */
-class ToolResult private constructor(val content: Any, val isError: Boolean) {
+/** Wynik narzędzia: tekst i opcjonalnie obrazy (np. zrzut ekranu). */
+class ToolResult(
+    val text: String,
+    val images: List<ImageData> = emptyList(),
+    val isError: Boolean = false,
+) {
     companion object {
-        fun text(text: String, isError: Boolean = false) = ToolResult(text, isError)
-        fun blocks(blocks: JSONArray) = ToolResult(blocks, false)
+        fun text(text: String, isError: Boolean = false) = ToolResult(text, isError = isError)
     }
 }
+
+fun AssistantTool.toSpec() = ToolSpec(name, description, inputSchema)
 
 /** Pomocnik do budowania schematów. */
 fun objectSchema(vararg props: Pair<String, JSONObject>, required: List<String> = emptyList()): JSONObject =

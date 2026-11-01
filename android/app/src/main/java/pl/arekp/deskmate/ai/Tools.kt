@@ -5,9 +5,9 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
-import org.json.JSONArray
 import org.json.JSONObject
 import pl.arekp.deskmate.Settings
+import pl.arekp.deskmate.ai.llm.ImageData
 import pl.arekp.deskmate.ui.Emotion
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
@@ -79,16 +79,10 @@ class ScreenTool(private val settings: Settings) : AssistantTool {
         http.newCall(request).execute().use { resp ->
             if (!resp.isSuccessful) return@withContext ToolResult.text("Pomocnik ekranu zwrócił ${resp.code}", true)
             val bytes = resp.body?.bytes() ?: return@withContext ToolResult.text("Pusty zrzut", true)
-            val image = JSONObject()
-                .put("type", "image")
-                .put(
-                    "source",
-                    JSONObject()
-                        .put("type", "base64")
-                        .put("media_type", "image/jpeg")
-                        .put("data", Base64.encodeToString(bytes, Base64.NO_WRAP)),
-                )
-            ToolResult.blocks(JSONArray().put(image).put(JSONObject().put("type", "text").put("text", "Zrzut ekranu użytkownika.")))
+            ToolResult(
+                text = "Zrzut ekranu użytkownika.",
+                images = listOf(ImageData("image/jpeg", Base64.encodeToString(bytes, Base64.NO_WRAP))),
+            )
         }
     }
 }

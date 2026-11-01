@@ -37,6 +37,7 @@ Więcej: [docs/aplikacja-android.md](docs/aplikacja-android.md) (oprogramowanie 
 - animowane oczy z mruganiem i emocjami (radość, smutek, ciekawość, zamyślenie, senność, zaskoczenie, słuchanie),
 - śledzenie twarzy kamerą (lokalnie, ML Kit) i obracanie głowy za użytkownikiem,
 - rozmowa głosowa po polsku **bez słowa-klucza**: patrzysz w robota → słucha,
+- **router modeli AI**: Gemini (darmowy) → OpenRouter (darmowe) → Claude (płatny), automatyczne przełączanie przy limitach,
 - model językowy z narzędziami: emocje i gesty głową, aktualna data/godzina, „spójrz na mój ekran” (opcjonalny pomocnik na PC),
 - gesty serw: kiwanie, kręcenie głową, radość, smutek, ciekawość, sen/pobudka, mikro-ruchy w spoczynku,
 - zasypianie, gdy nikogo nie ma, i budzenie po zobaczeniu twarzy,
@@ -63,7 +64,7 @@ Każda zmiana w gałęzi `main` jest automatycznie kompilowana i testowana, a go
 1. Na telefonie otwórz: **https://github.com/arekp/deskmate-diy/releases/latest/download/deskmate-diy.apk**
 2. Pobierz plik i otwórz go. Android zapyta o zgodę na instalację z tego źródła (przeglądarki) – zezwól.
 3. Uruchom **DeskMate DIY**, nadaj uprawnienia (kamera, mikrofon, urządzenia w pobliżu).
-4. **Przytrzymaj palec na ekranie z oczami** → wpisz klucz API Anthropic → Zapisz.
+4. **Przytrzymaj palec na ekranie z oczami** → wpisz klucz **Gemini** (darmowy, aistudio.google.com) i/lub **OpenRouter** (darmowe modele) albo płatny klucz **Claude API** → Zapisz. Router sam wybiera dostępny model.
 
 Kolejne wersje instalują się jako aktualizacja (wspólny klucz podpisu testowego). To wersja testowa (debug) – nie do publikacji w sklepie.
 

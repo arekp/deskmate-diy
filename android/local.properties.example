@@ -1,7 +1,15 @@
 # Skopiuj ten plik jako local.properties (NIE commituj go – jest w .gitignore).
 # Android Studio samo dopisze tu sdk.dir.
 
-# Klucz API Anthropic: https://console.anthropic.com/
+# Wszystkie klucze można też wpisać w aplikacji (przytrzymaj palec na oczach).
+
+# Gemini – darmowy pakiet: https://aistudio.google.com/apikey
+gemini.apiKey=
+
+# OpenRouter – darmowe modele: https://openrouter.ai/keys
+openrouter.apiKey=
+
+# Claude – płatne API (subskrypcja Claude Pro go nie obejmuje): https://console.anthropic.com/
 anthropic.apiKey=sk-ant-...
 # Model – szybki model obniża opóźnienie rozmowy głosowej
 anthropic.model=claude-haiku-5-5

@@ -1,6 +1,7 @@
 package pl.arekp.deskmate
 
 import android.content.Context
+import pl.arekp.deskmate.ai.llm.LlmRouter
 
 /**
  * Ustawienia wpisywane w aplikacji (przytrzymaj palec na ekranie z oczami).
@@ -9,14 +10,39 @@ import android.content.Context
 class Settings(context: Context) {
     private val prefs = context.getSharedPreferences("deskmate", Context.MODE_PRIVATE)
 
-    var apiKey: String
-        get() = read(KEY_API, BuildConfig.ANTHROPIC_API_KEY)
-        set(v) = write(KEY_API, v)
+    // --- Router modeli ---
+    var routerMode: LlmRouter.Mode
+        get() = runCatching { LlmRouter.Mode.valueOf(read(KEY_MODE, "")) }.getOrDefault(LlmRouter.Mode.AUTO)
+        set(v) = write(KEY_MODE, v.name)
 
-    var model: String
-        get() = read(KEY_MODEL, BuildConfig.ANTHROPIC_MODEL)
-        set(v) = write(KEY_MODEL, v)
+    // --- Gemini (darmowy pakiet, klucz z Google AI Studio) ---
+    var geminiKey: String
+        get() = read(KEY_GEMINI, BuildConfig.GEMINI_API_KEY)
+        set(v) = write(KEY_GEMINI, v)
 
+    var geminiModel: String
+        get() = read(KEY_GEMINI_MODEL, DEFAULT_GEMINI_MODEL)
+        set(v) = write(KEY_GEMINI_MODEL, v)
+
+    // --- OpenRouter (darmowe modele) ---
+    var openRouterKey: String
+        get() = read(KEY_OPENROUTER, BuildConfig.OPENROUTER_API_KEY)
+        set(v) = write(KEY_OPENROUTER, v)
+
+    var openRouterModel: String
+        get() = read(KEY_OPENROUTER_MODEL, DEFAULT_OPENROUTER_MODEL)
+        set(v) = write(KEY_OPENROUTER_MODEL, v)
+
+    // --- Claude (płatne API, console.anthropic.com) ---
+    var claudeKey: String
+        get() = read(KEY_CLAUDE, BuildConfig.ANTHROPIC_API_KEY)
+        set(v) = write(KEY_CLAUDE, v)
+
+    var claudeModel: String
+        get() = read(KEY_CLAUDE_MODEL, BuildConfig.ANTHROPIC_MODEL)
+        set(v) = write(KEY_CLAUDE_MODEL, v)
+
+    // --- Pomocnik ekranu PC ---
     var screenHelperUrl: String
         get() = read(KEY_SCREEN_URL, BuildConfig.SCREEN_HELPER_URL)
         set(v) = write(KEY_SCREEN_URL, v)
@@ -32,10 +58,18 @@ class Settings(context: Context) {
         prefs.edit().putString(key, value.trim()).apply()
     }
 
-    private companion object {
-        const val KEY_API = "apiKey"
-        const val KEY_MODEL = "model"
-        const val KEY_SCREEN_URL = "screenUrl"
-        const val KEY_SCREEN_TOKEN = "screenToken"
+    companion object {
+        const val DEFAULT_GEMINI_MODEL = "gemini-flash-latest"
+        const val DEFAULT_OPENROUTER_MODEL = "openrouter/free"
+
+        private const val KEY_MODE = "routerMode"
+        private const val KEY_GEMINI = "geminiKey"
+        private const val KEY_GEMINI_MODEL = "geminiModel"
+        private const val KEY_OPENROUTER = "openRouterKey"
+        private const val KEY_OPENROUTER_MODEL = "openRouterModel"
+        private const val KEY_CLAUDE = "apiKey" // zgodność z wersją 0.1
+        private const val KEY_CLAUDE_MODEL = "model"
+        private const val KEY_SCREEN_URL = "screenUrl"
+        private const val KEY_SCREEN_TOKEN = "screenToken"
     }
 }

@@ -28,6 +28,8 @@ android {
 
         buildConfigField("String", "ANTHROPIC_API_KEY", "\"${secret("anthropic.apiKey")}\"")
         buildConfigField("String", "ANTHROPIC_MODEL", "\"${secret("anthropic.model", "claude-haiku-5-5")}\"")
+        buildConfigField("String", "GEMINI_API_KEY", "\"${secret("gemini.apiKey")}\"")
+        buildConfigField("String", "OPENROUTER_API_KEY", "\"${secret("openrouter.apiKey")}\"")
         buildConfigField("String", "SCREEN_HELPER_URL", "\"${secret("screenHelper.url")}\"")
         buildConfigField("String", "SCREEN_HELPER_TOKEN", "\"${secret("screenHelper.token")}\"")
     }

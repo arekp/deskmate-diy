@@ -12,7 +12,11 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import pl.arekp.deskmate.ai.AssistantTool
-import pl.arekp.deskmate.ai.ClaudeClient
+import pl.arekp.deskmate.ai.Assistant
+import pl.arekp.deskmate.ai.llm.ClaudeProvider
+import pl.arekp.deskmate.ai.llm.GeminiProvider
+import pl.arekp.deskmate.ai.llm.LlmRouter
+import pl.arekp.deskmate.ai.llm.OpenRouterProvider
 import pl.arekp.deskmate.ai.ExpressTool
 import pl.arekp.deskmate.ai.ScreenTool
 import pl.arekp.deskmate.ai.TimeTool
@@ -47,7 +51,21 @@ class DeskMateBrain(private val activity: ComponentActivity) {
     private val head = HeadController(profile) { robot.send(it) }
     private val faces = FaceTracker(activity, activity)
     private val speech = Speech(activity)
-    private val claude = ClaudeClient(buildTools(), settings)
+    /** Router modeli: Gemini (darmowy) → OpenRouter (darmowe) → Claude (płatny), wg trybu w ustawieniach. */
+    val router = LlmRouter(
+        providers = listOf(
+            GeminiProvider({ settings.geminiKey }, { settings.geminiModel }),
+            OpenRouterProvider({ settings.openRouterKey }, { settings.openRouterModel }),
+            ClaudeProvider({ settings.claudeKey }, { settings.claudeModel }),
+        ),
+        mode = { settings.routerMode },
+    )
+    private var robotStatus = ""
+    private var aiStatus = ""
+    private val assistant = Assistant(router, buildTools()) { label ->
+        aiStatus = label
+        refreshStatus()
+    }
 
     private var faceSince = 0L
     private var lastFaceAt = SystemClock.uptimeMillis()
@@ -66,10 +84,13 @@ class DeskMateBrain(private val activity: ComponentActivity) {
         scope.launch { faces.faces.collect { onFace(it) } }
         scope.launch { robot.events.collect { if (it.startsWith("TOUCH")) onTouch() } }
         scope.launch {
-            robot.state.collect { s -> _ui.update { it.copy(status = "${profile.label} · ${s.label}") } }
+            robot.state.collect { s ->
+                robotStatus = s.label
+                refreshStatus()
+            }
         }
-        if (settings.apiKey.isBlank()) {
-            _ui.update { it.copy(caption = "Przytrzymaj palec na ekranie, żeby wpisać klucz API") }
+        if (!router.isAnyConfigured()) {
+            _ui.update { it.copy(caption = "Przytrzymaj palec na ekranie, żeby wpisać klucz Gemini / OpenRouter / Claude") }
         }
         scope.launch { conversationLoop() }
         scope.launch { sleepWatcher() }
@@ -79,6 +100,11 @@ class DeskMateBrain(private val activity: ComponentActivity) {
         robot.stop()
         faces.stop()
         speech.shutdown()
+    }
+
+    private fun refreshStatus() {
+        val ai = aiStatus.ifBlank { "AI: ${settings.routerMode.label}" }
+        _ui.update { it.copy(status = "${profile.label} · $robotStatus · $ai") }
     }
 
     private fun buildTools(): List<AssistantTool> = listOfNotNull(
@@ -157,7 +183,7 @@ class DeskMateBrain(private val activity: ComponentActivity) {
 
             _ui.update { it.copy(caption = "„$heard”") }
             setEmotion(Emotion.THINKING)
-            val answer = claude.ask(heard)
+            val answer = assistant.ask(heard)
             if (_ui.value.emotion == Emotion.THINKING) setEmotion(Emotion.NEUTRAL)
             _ui.update { it.copy(caption = answer) }
             speech.say(answer)

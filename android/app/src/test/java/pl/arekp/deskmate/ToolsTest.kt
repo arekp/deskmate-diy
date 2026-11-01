@@ -43,7 +43,7 @@ class ToolsTest {
     @Test
     fun timeTool_returnsText() = runBlocking {
         val result = TimeTool().run(JSONObject())
-        assertTrue((result.content as String).isNotBlank())
+        assertTrue(result.text.isNotBlank())
     }
 
     @Test
