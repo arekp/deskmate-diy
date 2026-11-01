@@ -16,7 +16,19 @@ Projekt jest przygotowany pod trzy modele Samsunga. Aplikacja rozpoznaje telefon
 ¹ Wartości z pamięci/specyfikacji producenta – zmierz telefon w etui przed projektowaniem uchwytu.
 ² Ustawienia → Informacje o telefonie → Model. Jeśli różni się od prefiksów w `DeviceProfile.kt`, dopisz go tam.
 
-## Mocowanie ładujące – rekomendacja
+## ✅ Wybrana ładowarka (decyzja z 1.11.2026)
+
+**Anker 313 Wireless Charger (Pad), model A2503** – Qi 10 W, bez magnesów, kabel micro-USB, bez zasilacza w zestawie ([Anker](https://www.anker.com/uk/products/a2503)).
+
+Konsekwencje dla projektu:
+- **Telefon trzymany mechanicznie** – kołyska z dolną półką i regulowanymi zaczepami na płytce głowy, z wymiennymi wkładkami pod S23, Flip6 i Fold8 Ultra (złożony / rozłożony).
+- **Etui bez magnesów i metalowych pierścieni** – według Ankera magnesy, metal i karty zakłócają ładowanie; etui do 5 mm.
+- **Zasilacz Quick Charge 2.0/3.0** (min. 5 V/2 A, dla trybu 10 W 9 V/2 A) – nie ma go w zestawie.
+- **Moc:** pełne 10 W Anker obiecuje tylko dla starszych Galaxy (do S20 / Note 10). S23, Flip6 i Fold8 Ultra ładują się w trybie podstawowym, realnie ok. 5 W – przy ciągłej pracy ekranu, kamery i AI może to jedynie spowalniać rozładowanie. Zapas: przewód USB-C przez wycięcie w półce uchwytu.
+- Cewka podkładki musi wypaść na środku tyłu telefonu – położenie zależy od modelu (parametr w CAD).
+- Wymiary podkładki **do zmierzenia** (w projekcie tymczasowo Ø 100 × 11 mm).
+
+## Mocowanie ładujące – rekomendacja (magnetyczna alternatywa)
 
 Żaden z trzech telefonów nie ma wbudowanych magnesów, więc najlepszy jest **jeden uniwersalny układ**:
 

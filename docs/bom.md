@@ -21,10 +21,11 @@ Ceny orientacyjne w PLN (sklepy z elektroniką, Allegro, AliExpress). Wybór ser
 
 | # | Część | ~Cena | Uwagi |
 |---|---|---|---|
-| 11 | Magnetyczna ładowarka Qi2: **Samsung EP-P2900TB** (25 W, 4,4 mm, z zasilaczem 45 W) – [MediaMarkt](https://mediamarkt.pl/pl/product/_ladowarka-bezprzewodowa-samsung-25w-ciemnoszary-ladowarka-sieciowa-45-w-1504055.html); alternatywa ESR HaloLock Qi2 Mini | 150–250 zł | wbudowana w płytkę głowy; zasilacz 45 W tylko dla ładowarki |
-| 12 | Etui magnetyczne Fold8 Ultra (np. Samsung Silicone/Carbon Magnet Case) | 150–250 zł | |
-| 13 | Etui z pierścieniem magnetycznym S23 | 30–80 zł | |
-| 14 | Etui z pierścieniem magnetycznym Flip6 | 30–80 zł | |
+| 11 | **Wybrana:** Anker 313 Wireless Charger (Pad) A2503 – Qi 10 W, bez magnesów, micro-USB (✅ kupiona) | ~60–100 zł | wbudowana w płytkę głowy; telefon w uchwycie mechanicznym |
+| 11a | Zasilacz Quick Charge 3.0 (min. 9 V/2 A) do ładowarki | 30–60 zł | nie ma go w zestawie z Ankerem |
+| 11b | Alternatywa magnetyczna: Samsung EP-P2900TB (Qi2 25 W, 4,4 mm, z zasilaczem 45 W) – [MediaMarkt](https://mediamarkt.pl/pl/product/_ladowarka-bezprzewodowa-samsung-25w-ciemnoszary-ladowarka-sieciowa-45-w-1504055.html) | 150–250 zł | wymaga etui magnetycznych |
+| 12 | Etui **bez magnesów i metalu** (cienkie, do 5 mm) – S23, Flip6, Fold8 Ultra | 30–150 zł/szt. | przy ładowarce Anker 313; etui magnetyczne tylko dla wariantu 11b |
+| 13 | Filament TPU (miękkie wkładki uchwytu) | 30 zł | opcjonalnie |
 
 ## Mechanika
 
