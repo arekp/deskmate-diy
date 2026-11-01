@@ -1,0 +1,92 @@
+package pl.arekp.deskmate.ai
+
+import android.util.Base64
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import org.json.JSONArray
+import org.json.JSONObject
+import pl.arekp.deskmate.Config
+import pl.arekp.deskmate.ui.Emotion
+import java.time.ZonedDateTime
+import java.time.format.DateTimeFormatter
+import java.util.Locale
+import java.util.concurrent.TimeUnit
+
+/** Pozwala modelowi okazywać emocje (oczy) i gestykulować (serwa). */
+class ExpressTool(private val onExpress: (Emotion, String?) -> Unit) : AssistantTool {
+    override val name = "express"
+    override val description =
+        "Pokaż emocję na twarzy robota i opcjonalnie wykonaj gest głową. " +
+            "Używaj naturalnie, np. kiwnij przy zgodzie, pokaż radość przy dobrej wiadomości."
+    override val inputSchema = objectSchema(
+        "emotion" to enumProp(
+            "Emocja widoczna w oczach",
+            listOf("neutral", "happy", "sad", "curious", "thinking", "sleepy", "surprised"),
+        ),
+        "gesture" to enumProp(
+            "Gest głową",
+            listOf("none", "nod", "shake", "happy", "sad", "curious"),
+        ),
+        required = listOf("emotion"),
+    )
+
+    override suspend fun run(input: JSONObject): ToolResult {
+        val gesture = input.optString("gesture", "none").takeIf { it != "none" && it.isNotBlank() }
+        onExpress(Emotion.parse(input.optString("emotion")), gesture)
+        return ToolResult.text("ok")
+    }
+}
+
+class TimeTool : AssistantTool {
+    override val name = "get_current_time"
+    override val description = "Zwraca aktualną datę, dzień tygodnia i godzinę u użytkownika."
+    override val inputSchema = objectSchema()
+
+    override suspend fun run(input: JSONObject): ToolResult {
+        val now = ZonedDateTime.now()
+        val fmt = DateTimeFormatter.ofPattern("EEEE, d MMMM yyyy, HH:mm", Locale.forLanguageTag("pl-PL"))
+        return ToolResult.text("${now.format(fmt)} (${now.zone})")
+    }
+}
+
+/**
+ * "Spójrz na mój ekran" – pobiera zrzut ekranu z komputera (desktop/screen_helper.py).
+ * Działa tylko na wyraźną prośbę użytkownika; zrzut trafia do modelu i nie jest zapisywany.
+ */
+class ScreenTool(private val baseUrl: String, private val token: String) : AssistantTool {
+    override val name = "look_at_screen"
+    override val description =
+        "Pobiera aktualny zrzut ekranu komputera użytkownika. Używaj TYLKO, gdy użytkownik " +
+            "wyraźnie prosi, żebyś spojrzał na jego ekran / pomógł z tym, co ma otwarte."
+    override val inputSchema = objectSchema()
+
+    private val http = OkHttpClient.Builder().callTimeout(10, TimeUnit.SECONDS).build()
+
+    override suspend fun run(input: JSONObject): ToolResult = withContext(Dispatchers.IO) {
+        val request = Request.Builder()
+            .url(baseUrl.trimEnd('/') + "/screenshot")
+            .header("X-Token", token)
+            .build()
+        http.newCall(request).execute().use { resp ->
+            if (!resp.isSuccessful) return@withContext ToolResult.text("Pomocnik ekranu zwrócił ${resp.code}", true)
+            val bytes = resp.body?.bytes() ?: return@withContext ToolResult.text("Pusty zrzut", true)
+            val image = JSONObject()
+                .put("type", "image")
+                .put(
+                    "source",
+                    JSONObject()
+                        .put("type", "base64")
+                        .put("media_type", "image/jpeg")
+                        .put("data", Base64.encodeToString(bytes, Base64.NO_WRAP)),
+                )
+            ToolResult.blocks(JSONArray().put(image).put(JSONObject().put("type", "text").put("text", "Zrzut ekranu użytkownika.")))
+        }
+    }
+
+    companion object {
+        fun fromConfig(): ScreenTool? =
+            Config.SCREEN_HELPER_URL.takeIf { it.isNotBlank() }?.let { ScreenTool(it, Config.SCREEN_HELPER_TOKEN) }
+    }
+}

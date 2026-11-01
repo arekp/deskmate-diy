@@ -1,0 +1,12 @@
+# Skopiuj ten plik jako local.properties (NIE commituj go – jest w .gitignore).
+# Android Studio samo dopisze tu sdk.dir.
+
+# Klucz API Anthropic: https://console.anthropic.com/
+anthropic.apiKey=sk-ant-...
+# Model – szybki model obniża opóźnienie rozmowy głosowej
+anthropic.model=claude-haiku-5-5
+
+# Opcjonalnie: pomocnik ekranu na komputerze (desktop/screen_helper.py)
+# Zostaw puste, żeby wyłączyć narzędzie "spójrz na mój ekran".
+screenHelper.url=http://192.168.1.50:8765
+screenHelper.token=zmien-mnie
