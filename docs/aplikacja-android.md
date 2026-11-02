@@ -62,6 +62,7 @@ Uprawnienia: `CAMERA`, `RECORD_AUDIO`, `BLUETOOTH_SCAN`, `BLUETOOTH_CONNECT` (An
 | `ai/Tools.kt` | narzędzia: `express` (emocja + gest), `get_current_time`, `look_at_screen` | `Settings`, OkHttp |
 | `ui/EyesScreen.kt` | rysowanie oczu na Canvas: mruganie, kierunek spojrzenia, 8 emocji, kropka „słucham”, napisy | Compose |
 | `ui/Emotion.kt` | lista emocji | – |
+| `ui/Ticker.kt` | **pasek informacji** na dole ekranu (styl wiadomości TV): czynność, co zrozumiał, model, tryb, zdarzenia | – |
 | `ui/SettingsDialog.kt` | okno ustawień | Compose Material 3 |
 
 ## 3. Jak działa – przepływ
@@ -103,6 +104,14 @@ Model sam decyduje o mimice: wywołuje narzędzie `express`, np. `{"emotion":"ha
 ### 3.4 Śledzenie twarzy
 
 Kamera jest w telefonie i obraca się razem z głową, więc to pętla sprzężenia zwrotnego. Szczegóły i strojenie: [sterowanie-mocowaniem.md](sterowanie-mocowaniem.md).
+
+### 3.5 Pasek informacji (na dole ekranu)
+
+Jak w wiadomościach TV: czerwony blok z bieżącą czynnością – **CZEKAM / SŁUCHAM / MYŚLĘ / MÓWIĘ / ŚPIĘ** – a obok przesuwający się tekst:
+
+`ROZUMIEM: „…”  ◆  MODEL: Gemini (gemini-flash-latest)  ◆  TRYB: Automatycznie  ◆  ROBOT: POŁĄCZONY  ◆  20:41 Gest: kiwam głową  ◆  20:40 Gemini: limit zapytań – próbuję dalej`
+
+Zdarzenia (5 ostatnich, z godziną): zmiana modelu, przełączenie routera i powód (limit, zły klucz, awaria), gesty, połączenie i utrata połączenia z robotem, zaśnięcie, pobudka, dotyk. Nowe zdarzenie dodajesz wywołaniem `event("…")` w `DeskMateBrain`.
 
 ## 4. Router modeli AI
 

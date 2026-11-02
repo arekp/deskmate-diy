@@ -21,6 +21,7 @@ import pl.arekp.deskmate.ai.ExpressTool
 import pl.arekp.deskmate.ai.ScreenTool
 import pl.arekp.deskmate.ai.TimeTool
 import pl.arekp.deskmate.ble.RobotLink
+import pl.arekp.deskmate.ui.Activity
 import pl.arekp.deskmate.ui.Emotion
 import pl.arekp.deskmate.ui.UiState
 import pl.arekp.deskmate.vision.FaceObservation
@@ -59,10 +60,12 @@ class DeskMateBrain(private val activity: ComponentActivity) {
             ClaudeProvider({ settings.claudeKey }, { settings.claudeModel }),
         ),
         mode = { settings.routerMode },
+        onEvent = { event(it) },
     )
     private var robotStatus = ""
     private var aiStatus = ""
     private val assistant = Assistant(router, buildTools()) { label ->
+        if (label != aiStatus && aiStatus.isNotBlank()) event("Model zmieniony na $label")
         aiStatus = label
         refreshStatus()
     }
@@ -84,7 +87,12 @@ class DeskMateBrain(private val activity: ComponentActivity) {
         scope.launch { faces.faces.collect { onFace(it) } }
         scope.launch { robot.events.collect { if (it.startsWith("TOUCH")) onTouch() } }
         scope.launch {
+            var wasConnected = false
             robot.state.collect { s ->
+                val connected = s == RobotLink.State.CONNECTED
+                if (connected && !wasConnected) event("Połączono z robotem")
+                if (!connected && wasConnected) event("Utracono połączenie z robotem")
+                wasConnected = connected
                 robotStatus = s.label
                 refreshStatus()
             }
@@ -104,13 +112,27 @@ class DeskMateBrain(private val activity: ComponentActivity) {
 
     private fun refreshStatus() {
         val ai = aiStatus.ifBlank { "AI: ${settings.routerMode.label}" }
-        _ui.update { it.copy(status = "${profile.label} · $robotStatus · $ai") }
+        _ui.update {
+            it.copy(
+                status = "${profile.label} · $robotStatus · $ai",
+                ticker = it.ticker.copy(model = aiStatus, mode = settings.routerMode.label, robot = robotStatus),
+            )
+        }
     }
+
+    // --- Pasek informacji ------------------------------------------------------
+
+    private fun setActivity(a: Activity) = _ui.update { it.copy(ticker = it.ticker.copy(activity = a)) }
+
+    private fun event(text: String) = _ui.update { it.copy(ticker = it.ticker.withEvent(text)) }
 
     private fun buildTools(): List<AssistantTool> = listOfNotNull(
         ExpressTool { emotion, gesture ->
             setEmotion(emotion, holdMs = 4000)
-            gesture?.let { gesture(it) }
+            gesture?.let {
+                gesture(it)
+                event("Gest: ${GESTURE_NAMES[it] ?: it}")
+            }
         },
         TimeTool(),
         ScreenTool(settings),
@@ -141,6 +163,8 @@ class DeskMateBrain(private val activity: ComponentActivity) {
             delay(2000)
             if (!asleep && SystemClock.uptimeMillis() - lastFaceAt > Config.SLEEP_AFTER_MS) {
                 asleep = true
+                setActivity(Activity.SLEEPING)
+                event("Nikogo nie ma – zasypiam")
                 head.reset()
                 gesture("sleep", pauseMs = Long.MAX_VALUE / 4)
                 setEmotion(Emotion.SLEEPY)
@@ -150,6 +174,8 @@ class DeskMateBrain(private val activity: ComponentActivity) {
 
     private fun wakeUp() {
         asleep = false
+        setActivity(Activity.IDLE)
+        event("Widzę Cię – budzę się")
         head.pauseFor(0)
         gesture("wake")
         setEmotion(Emotion.HAPPY, holdMs = 1500)
@@ -168,9 +194,11 @@ class DeskMateBrain(private val activity: ComponentActivity) {
             }
 
             setEmotion(Emotion.LISTENING)
+            setActivity(Activity.LISTENING)
             _ui.update { it.copy(listening = true) }
             val heard = speech.listenOnce()
             _ui.update { it.copy(listening = false) }
+            setActivity(Activity.IDLE)
 
             if (heard.isNullOrBlank()) {
                 // Cisza – nie nasłuchuj bez przerwy, wydłużaj przerwy aż twarz zniknie i wróci
@@ -181,12 +209,15 @@ class DeskMateBrain(private val activity: ComponentActivity) {
             }
             emptyListens = 0
 
-            _ui.update { it.copy(caption = "„$heard”") }
+            _ui.update { it.copy(caption = "„$heard”", ticker = it.ticker.copy(heard = heard)) }
             setEmotion(Emotion.THINKING)
+            setActivity(Activity.THINKING)
             val answer = assistant.ask(heard)
             if (_ui.value.emotion == Emotion.THINKING) setEmotion(Emotion.NEUTRAL)
             _ui.update { it.copy(caption = answer) }
+            setActivity(Activity.SPEAKING)
             speech.say(answer)
+            setActivity(Activity.IDLE)
             delay(400)
         }
     }
@@ -194,6 +225,7 @@ class DeskMateBrain(private val activity: ComponentActivity) {
     // --- Dotyk, emocje, gesty --------------------------------------------------
 
     private fun onTouch() {
+        event("Ktoś mnie pogłaskał")
         if (asleep) wakeUp()
         setEmotion(Emotion.HAPPY, holdMs = 2500)
     }
@@ -212,5 +244,15 @@ class DeskMateBrain(private val activity: ComponentActivity) {
                 if (!asleep) _ui.update { it.copy(emotion = Emotion.NEUTRAL) }
             }
         }
+    }
+
+    private companion object {
+        val GESTURE_NAMES = mapOf(
+            "nod" to "kiwam głową",
+            "shake" to "kręcę głową",
+            "happy" to "radość",
+            "sad" to "smutek",
+            "curious" to "ciekawość",
+        )
     }
 }

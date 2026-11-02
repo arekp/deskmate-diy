@@ -17,6 +17,8 @@ class LlmRouter(
     private val providers: List<LlmProvider>,
     private val mode: () -> Mode,
     private val clock: () -> Long = { System.currentTimeMillis() },
+    /** Zdarzenia do pokazania użytkownikowi (pasek informacji), np. "Gemini: limit zapytań". */
+    private val onEvent: (String) -> Unit = {},
 ) {
     enum class Mode(val label: String) {
         /** Najpierw darmowe (Gemini → OpenRouter), płatny Claude tylko awaryjnie. */
@@ -71,10 +73,12 @@ class LlmRouter(
             } catch (e: ProviderException) {
                 errors[p.id] = e
                 penalize(p, e)
+                onEvent("${p.label}: ${describe(e.kind)} – próbuję dalej")
                 logWarn("${p.label}: ${e.kind} ${e.message}")
             } catch (e: Exception) {
                 errors[p.id] = e
                 cooldownUntil[p.id] = clock() + SERVER_COOLDOWN_MS
+                onEvent("${p.label}: błąd – próbuję dalej")
                 logWarn("${p.label}: ${e.message}")
             }
         }
@@ -90,6 +94,15 @@ class LlmRouter(
             ProviderException.Kind.BAD_REQUEST -> 0L
         }
         if (ms > 0) cooldownUntil[p.id] = clock() + ms
+    }
+
+    private fun describe(kind: ProviderException.Kind) = when (kind) {
+        ProviderException.Kind.RATE_LIMIT -> "limit zapytań"
+        ProviderException.Kind.QUOTA -> "wyczerpany pakiet"
+        ProviderException.Kind.AUTH -> "zły klucz"
+        ProviderException.Kind.SERVER -> "awaria serwera"
+        ProviderException.Kind.NETWORK -> "brak sieci"
+        ProviderException.Kind.BAD_REQUEST -> "odrzucone zapytanie"
     }
 
     private fun logWarn(msg: String) {

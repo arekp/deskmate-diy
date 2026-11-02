@@ -41,7 +41,8 @@ class LlmRouterTest {
     private val claude = Fake(ClaudeProvider.ID, isFree = false)
     private var mode = Mode.AUTO
     private var now = 0L
-    private val router = LlmRouter(listOf(gemini, openrouter, claude), { mode }, { now })
+    private val events = mutableListOf<String>()
+    private val router = LlmRouter(listOf(gemini, openrouter, claude), { mode }, { now }, { events += it })
     private val request = ChatRequest("system", emptyList(), emptyList(), 100)
 
     private fun ask() = runBlocking { router.complete(request).provider.id }
@@ -138,6 +139,13 @@ class LlmRouterTest {
         gemini.failures += ProviderException(Kind.SERVER, "500")
         runCatching { ask() }
         assertEquals("gemini", ask()) // jedyny dostępny – próbuje mimo kary
+    }
+
+    @Test
+    fun fallbackIsReportedForTicker() {
+        gemini.failures += ProviderException(Kind.RATE_LIMIT, "429")
+        ask()
+        assertEquals(listOf("gemini: limit zapytań – próbuję dalej"), events)
     }
 
     @Test

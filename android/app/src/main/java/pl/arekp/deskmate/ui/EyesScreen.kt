@@ -9,8 +9,13 @@ import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -30,6 +35,7 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -45,6 +51,7 @@ data class UiState(
     val listening: Boolean = false,
     val caption: String = "",
     val eyeScale: Float = 1f,
+    val ticker: TickerState = TickerState(),
 )
 
 private val EyeColor = Color(0xFF7FE7FF)
@@ -108,9 +115,45 @@ fun EyesScreen(state: UiState, modifier: Modifier = Modifier) {
                 fontSize = 16.sp,
                 textAlign = TextAlign.Center,
                 maxLines = 3,
-                modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth().padding(16.dp),
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .fillMaxWidth()
+                    .padding(start = 16.dp, end = 16.dp, bottom = TickerHeight + 8.dp),
             )
         }
+
+        NewsTicker(state.ticker, Modifier.align(Alignment.BottomCenter))
+    }
+}
+
+private val TickerHeight = 34.dp
+private val TickerRed = Color(0xFFD32F2F)
+private val TickerBar = Color(0xFF101820)
+
+/** Pasek w stylu wiadomości TV: czynność po lewej, przesuwające się informacje po prawej. */
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun NewsTicker(ticker: TickerState, modifier: Modifier = Modifier) {
+    Row(
+        modifier.fillMaxWidth().height(TickerHeight).background(TickerBar),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(
+            Modifier.fillMaxHeight().background(TickerRed).padding(horizontal = 12.dp),
+            contentAlignment = Alignment.Center,
+        ) {
+            Text(ticker.activity.label, color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+        }
+        Text(
+            ticker.text(),
+            color = Color(0xFFE0E0E0),
+            fontSize = 14.sp,
+            maxLines = 1,
+            modifier = Modifier
+                .weight(1f)
+                .padding(start = 12.dp)
+                .basicMarquee(iterations = Int.MAX_VALUE, velocity = 60.dp),
+        )
     }
 }
 
