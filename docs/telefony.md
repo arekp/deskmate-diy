@@ -21,8 +21,9 @@ Projekt jest przygotowany pod trzy modele Samsunga. Aplikacja rozpoznaje telefon
 **Anker 313 Wireless Charger (Pad), model A2503** – Qi 10 W, bez magnesów, kabel micro-USB, bez zasilacza w zestawie ([Anker](https://www.anker.com/uk/products/a2503)).
 
 Konsekwencje dla projektu:
-- **Telefon trzymany mechanicznie** – kołyska z dolną półką i regulowanymi zaczepami na płytce głowy, z wymiennymi wkładkami pod S23, Flip6 i Fold8 Ultra (złożony / rozłożony).
-- **Etui bez magnesów i metalowych pierścieni** – według Ankera magnesy, metal i karty zakłócają ładowanie; etui do 5 mm.
+- **Telefon trzymany magnetycznie (decyzja z 2.11.2026)** – w przedniej ściance kasku pierścień magnesów neodymowych wokół cewki, a pod telefonem krótka półka, która podpiera jego ciężar. Na telefonie etui albo naklejany pierścień magnetyczny (typu MagSafe, „do ładowania bezprzewodowego”), wyśrodkowany na cewce telefonu.
+- ⚠️ **Do sprawdzenia przed drukiem:** Anker ostrzega, że magnesy i metal mogą zakłócać ładowanie tej podkładki (wykrywanie obcych przedmiotów). Połóż telefon z etui lub pierścieniem na podkładce i sprawdź, czy ładuje. Jeśli nie, przejdź na Samsung EP-P2900 (Qi2, magnesy wbudowane) – patrz alternatywa niżej.
+- Etui do 5 mm, bez kart i metalowych płytek na środku.
 - **Zasilacz Quick Charge 2.0/3.0** (min. 5 V/2 A, dla trybu 10 W 9 V/2 A) – nie ma go w zestawie.
 - **Moc:** pełne 10 W Anker obiecuje tylko dla starszych Galaxy (do S20 / Note 10). S23, Flip6 i Fold8 Ultra ładują się w trybie podstawowym, realnie ok. 5 W – przy ciągłej pracy ekranu, kamery i AI może to jedynie spowalniać rozładowanie. Zapas: przewód USB-C przez wycięcie w półce uchwytu.
 - Cewka podkładki musi wypaść na środku tyłu telefonu – położenie zależy od modelu (parametr w CAD).

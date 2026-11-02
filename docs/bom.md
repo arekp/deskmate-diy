@@ -21,11 +21,12 @@ Ceny orientacyjne w PLN (sklepy z elektroniką, Allegro, AliExpress). Wybór ser
 
 | # | Część | ~Cena | Uwagi |
 |---|---|---|---|
-| 11 | **Wybrana:** Anker 313 Wireless Charger (Pad) A2503 – Qi 10 W, bez magnesów, micro-USB, Ø 100 × 11,2 mm, 67 g (✅ kupiona) | ~60–100 zł | wbudowana w płytkę głowy; telefon w uchwycie mechanicznym |
+| 11 | **Wybrana:** Anker 313 Wireless Charger (Pad) A2503 – Qi 10 W, bez magnesów, micro-USB, Ø 100 × 11,2 mm, 67 g (✅ kupiona) | ~60–100 zł | wbudowana w głowę; telefon trzymany magnetycznie |
 | 11a | Zasilacz Quick Charge 3.0 (min. 9 V/2 A) do ładowarki | 30–60 zł | nie ma go w zestawie z Ankerem |
 | 11b | Alternatywa magnetyczna: Samsung EP-P2900TB (Qi2 25 W, 4,4 mm, z zasilaczem 45 W) – [MediaMarkt](https://mediamarkt.pl/pl/product/_ladowarka-bezprzewodowa-samsung-25w-ciemnoszary-ladowarka-sieciowa-45-w-1504055.html) | 150–250 zł | wymaga etui magnetycznych |
-| 12 | Etui **bez magnesów i metalu** (cienkie, do 5 mm) – S23, Flip6, Fold8 Ultra | 30–150 zł/szt. | przy ładowarce Anker 313; etui magnetyczne tylko dla wariantu 11b |
-| 13 | Filament TPU (miękkie wkładki uchwytu) | 30 zł | opcjonalnie |
+| 12 | Etui magnetyczne (typu MagSafe) **albo** naklejany pierścień magnetyczny do ładowania bezprzewodowego – S23, Flip6, Fold8 Ultra | 20–150 zł/szt. | telefony nie mają własnych magnesów; najpierw sprawdź ładowanie na Ankerze (patrz [telefony.md](telefony.md)) |
+| 12a | Magnesy neodymowe N52 do głowy (liczba i rozmiar: [hardware/cad/README.md](../hardware/cad/README.md)) + klej CA/epoksyd | 20–40 zł | wklejane w przednią ściankę kasku, wszystkie tym samym biegunem do telefonu |
+| 13 | Filament TPU (miękka nakładka półki) | 30 zł | opcjonalnie |
 
 ## Mechanika
 
