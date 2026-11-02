@@ -14,7 +14,7 @@
 // =====================================================================
 
 /* [Wybór wariantu] */
-// Profil telefonu (każdy ma własny przód i tył kasku oraz daszek)
+// Profil telefonu (każdy ma własny przód i tył kasku)
 profile = "s23"; // [s23, fold8_open, fold8_closed, flip6_open]
 // Ładowarka w płycie głowy (domyślnie Anker 313 Pad – bez magnesów)
 pad = "anker313"; // [anker313, samsung_ep_p2900, esr_halolock_mini, anker_zolo_a25m2]
@@ -108,9 +108,8 @@ b608_od = 22.0; b608_id = 8.0; b608_w = 7.0;
 b608_fit = 0.1;    // naddatek średnicy gniazda (0.0–0.2 dopasuj próbką)
 
 /* [Głowa – kask] */
-D_back = 28;       // odległość osi TILT od tyłu telefonu (Y)
-gap = 2.5;         // szczelina wentylacyjna telefon–płyta
-pad_proud = 0.0;   // wierzch ładowarki względem tyłu telefonu (0 = styk, bez plastiku)
+D_back = 30.7;     // odległość osi TILT od tyłu telefonu (Y) = 28 + ścianka z magnesami
+gap = 2.5;         // szczelina wentylacyjna telefon–płyta (poza tarczą magnesów)
 rib_h = 2.5;       // żebra pod ładowarką (kanał powietrza)
 floor_t = 3.0;     // dno kieszeni
 head_w = 92;       // połowa szerokości kasku (X) – wspólna dla profili
@@ -123,11 +122,20 @@ lip_t = 2.5;       // grubość wargi
 fit_t = 0.6;       // luz na grubość telefonu (pod wkładkę TPU 0.5–1 mm)
 shelf_cut_w = 60;  // wnęka w półce na przyciski boczne / palec
 bottom_bar = 6;    // ramka pod półką
-vis_w = 70;        // szerokość daszka (górny zaczep)
-vis_h = 16;        // wysokość daszka nad telefonem
-vis_travel = 6;    // regulacja daszka (mm w górę)
-vis_screw_x = 28;  // śruby daszka ±X
-forehead = 28;     // czoło kasku nad telefonem
+lift = 5.5;        // zapas nad telefonem: podnosisz telefon ponad wargę półki i wkładasz
+forehead = 22;     // czoło kasku nad telefonem
+lip_round = 1.5;   // zaokrąglenie wargi półki
+
+/* [Magnesy – pierścień w tarczy przed ładowarką] */
+// Neodymowe N52, wszystkie tym samym biegunem do telefonu (README)
+mag_n = 12;        // liczba magnesów
+mag_d = 8;         // średnica
+mag_t = 2;         // grubość
+mag_ring_d = 54;   // średnica okręgu środków magnesów (współosiowo z cewką)
+mag_skin = 0.6;    // skórka plastiku od strony telefonu
+mag_fit = 0.2;     // luz średnicy gniazda
+mag_depth_clear = 0.1;
+disc_fl = 1.0;     // kołnierz tarczy (trzyma ją za wargą kieszeni)
 chan_len = 22;     // kanał wtyku/kabla ładowarki poza jej krawędzią
 skirt = 6;         // zakładka tylnej skorupy na przód kasku
 shell_t = 2.0;     // ścianka skorup
@@ -218,7 +226,10 @@ function pad_m()  = pd()[3];
 function pad_rp() = (pd()[1] + pd()[4]) / 2;          // promień kieszeni
 function port_w() = pd()[6] + 0.6;
 function pad_cz(n=profile) = ph_cz(n) + ph(n)[6];
-function pad_top_y()    = D_back + pad_proud;
+function front_wall()   = mag_t + mag_depth_clear + mag_skin;   // plastik ładowarka→telefon
+function pad_top_y()    = D_back - front_wall();
+function disc_r()       = pad_rp() - 0.2;                      // kołnierz tarczy
+function disc_boss_r()  = pad_rp() - 3;                        // część tarczy w otworze
 function pocket_floor() = pad_top_y() - pad_h() - rib_h;
 slab_front = D_back - gap;
 function slab_back() = min(slab_front - 8, pocket_floor() - floor_t);

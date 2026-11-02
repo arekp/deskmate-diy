@@ -35,10 +35,10 @@ if [[ $MODE == stl || $MODE == all ]]; then
   stl spacers.stl         spacer.scad
   stl antenna.stl         antenna.scad -D 'part="antenna"'
   stl antenna_cap.stl     antenna.scad -D 'part="cap"'
+  stl magnet_disc.stl     magnet_disc.scad
   for p in $PROFILES; do
     stl "head_front_$p.stl" head_plate.scad -D "profile=\"$p\""
     stl "head_back_$p.stl"  head_back.scad  -D "profile=\"$p\""
-    stl "visor_$p.stl"      visor.scad      -D "profile=\"$p\""
   done
 fi
 
@@ -47,24 +47,22 @@ if [[ $MODE == png || $MODE == all ]]; then
   S=0,0,0,85,0,270,1100      # bok
   Q=0,0,0,70,0,225,1100      # 3/4
   B=0,0,0,70,0,35,1100       # 3/4 z tyłu
-  png asm_front_fold8_open.png assembly.scad $F -D 'profile="fold8_open"'
-  png asm_34_fold8_open.png    assembly.scad $Q -D 'profile="fold8_open"'
+  for p in $PROFILES; do
+    png "asm_front_$p.png" assembly.scad $F -D "profile=\"$p\""
+    png "asm_34_$p.png"    assembly.scad $Q -D "profile=\"$p\""
+    png "asm_side_$p.png"  assembly.scad $S -D "profile=\"$p\""
+    png "part_head_front_$p.png" head_plate.scad 0,0,0,45,0,20,650 -D "profile=\"$p\""
+  done
   png asm_back_fold8_open.png  assembly.scad $B -D 'profile="fold8_open"'
   png asm_side_fold8_open_tilt-25.png assembly.scad $S -D 'profile="fold8_open"' -D 'tilt=-25'
   png asm_side_fold8_open_tilt+30.png assembly.scad $S -D 'profile="fold8_open"' -D 'tilt=30'
   png asm_34_fold8_open_pan80_tilt-25.png assembly.scad $Q -D 'profile="fold8_open"' -D 'pan=80' -D 'tilt=-25'
-  for p in s23 fold8_closed flip6_open; do
-    png "asm_front_$p.png" assembly.scad $F -D "profile=\"$p\""
-    png "asm_34_$p.png"    assembly.scad $Q -D "profile=\"$p\""
-  done
-  png asm_side_s23.png assembly.scad $S -D 'profile="s23"'
+  png part_magnet_disc_back.png magnet_disc.scad 0,0,0,145,0,20,300
   png part_body.png  base.scad 0,0,0,55,0,25,700 -D 'part="base"'
   png part_cover.png base.scad 0,0,0,50,0,25,700 -D 'part="cover"'
   png part_neck_shoulders.png yoke.scad 0,0,0,50,0,25,600 -D 'part="neck"'
   png part_arm_bearing.png yoke.scad 0,0,0,40,0,25,400 -D 'part="arm_bearing"'
   png part_head_mount_servo.png bracket.scad 0,0,0,50,0,30,300 -D 'side="servo"'
-  png part_head_front_s23.png head_plate.scad 0,0,0,45,0,20,600 -D 'profile="s23"'
   png part_head_back_s23.png  head_back.scad  0,0,0,45,0,20,600 -D 'profile="s23"'
-  png part_head_front_fold8_open.png head_plate.scad 0,0,0,45,0,20,700 -D 'profile="fold8_open"'
   png part_antenna.png antenna.scad 0,0,0,70,0,30,150
 fi

@@ -6,7 +6,9 @@ po bokach **uszy** chowające oś pochylenia, **krótka szyja** z „barkami”,
 **tułów-jajo** z elektroniką i **antenka z diodą** na czubku.
 
 Domyślnie: ładowarka **Anker 313 Wireless Charger (Pad) A2503** (Qi 10 W,
-**bez magnesów**, Ø 100 × 11,2 mm, 67 g), serwa **MG996R**, łożysko lazy susan
+**bez magnesów**, Ø 100 × 11,2 mm, 67 g) z **pierścieniem 12 magnesów
+neodymowych** w tarczy przed ładowarką (telefon trzyma się magnetycznie, stoi na
+krótkiej półce), serwa **MG996R**, łożysko lazy susan
 **okrągłe Ø 80** (kwadratowe 75 × 75 też obsługiwane – szyja sama się poszerza).
 
 ![Złożenie – 3/4](../renders/asm_34_fold8_open.png)
@@ -16,13 +18,13 @@ Domyślnie: ładowarka **Anker 313 Wireless Charger (Pad) A2503** (Qi 10 W,
 | `params.scad` | **wszystkie parametry**: telefony, ładowarki, serwa, łożyska, luzy, wkładki, kształty |
 | `base.scad` | tułów (`part="base"`), pokrywa dolna (`"cover"`), kołnierz szyi (`"collar"`) |
 | `yoke.scad` | szyja z barkami (`"neck"`), ramiona z uszami (`"arm_servo"`, `"arm_bearing"`), nakładki uszu (`"cap_servo"`, `"cap_bearing"`), piasta PAN (`"hub"`) |
-| `head_plate.scad` | przód kasku: ramka telefonu, półka, kieszeń ładowarki, gniazdo daszka |
+| `head_plate.scad` | przód kasku: ramka telefonu, krótka półka z wargą, kieszeń ładowarki, tarcza z magnesami (moduł `magnet_disc`) |
 | `head_back.scad` | tylna skorupa kasku |
-| `visor.scad` | daszek – regulowany górny zaczep telefonu |
+| `magnet_disc.scad` | tarcza z pierścieniem magnesów (przed ładowarką) |
 | `bracket.scad`, `spacer.scad` | uchwyty w głowie: serwo TILT (`side="servo"`) i oś z łożyskiem (`"bearing"`), tuleje osi |
 | `antenna.scad` | antenka (`part="antenna"`) i przykrywka diody (`"cap"`) |
 | `assembly.scad` | złożenie z bryłami telefonu, serw i ładowarki (`pan`, `tilt`, `profile`) |
-| `../stl/`, `../renders/`, `../tools/` | STL do druku, podglądy PNG, skrypty (`build.sh`, `stl_check.py`, `collision_check.py`) |
+| `../stl/`, `../renders/`, `../tools/` | STL do druku, podglądy PNG, skrypty (`build.sh`, `stl_check.py`, `collision_check.py`, `magnet_check.py`) |
 
 ## Jak to działa mechanicznie
 
@@ -37,21 +39,74 @@ Domyślnie: ładowarka **Anker 313 Wireless Charger (Pad) A2503** (Qi 10 W,
 - W **lewym uchu** jest łożysko 608; śruba M8 od zewnątrz przechodzi przez
   łożysko i tuleję do nakrętki uwięzionej w uchwycie w głowie.
 - Nakładki uszu zasłaniają śrubę wałka serwa i łeb M8.
-- Oś TILT leży w połowie wysokości telefonu (środek ciężkości), 28 mm za jego
+- Oś TILT leży w połowie wysokości telefonu (środek ciężkości), 30,7 mm za jego
   tyłem; ładowarka jest przesunięta do cewki danego telefonu (Fold8 rozłożony:
   górna połowa, +35,8 mm).
 
-## Ważne: ładowarka bez magnesów → telefon w kołysce
+## Mocowanie telefonu: magnesy + krótka półka
 
-Anker 313 Pad nie ma magnesów, więc telefon trzyma **kask**: telefon stoi na
-**półce** z wargą zachodzącą 4 mm na ekran, od góry dociska go **daszek**
-(2 śruby M3 w pionowych szczelinach, regulacja 6 mm). Tył telefonu leży na
-wierzchu ładowarki – **bez plastiku pomiędzy**.
+Żaden z telefonów (S23, Flip6, Fold8 Ultra) ani Anker 313 Pad nie ma magnesów,
+więc magnesy są w kasku, a na telefonie jest **etui MagSafe-compatible albo
+naklejany pierścień magnetyczny** (stalowy lub magnetyczny, ok. Ø 46 wewn. /
+56–60 zewn.), wyśrodkowany na cewce telefonu.
 
-- Wkładanie: poluzuj 2 śruby daszka, podnieś go, wstaw telefon dolną krawędzią
-  za wargę półki, dociśnij do ładowarki, opuść daszek, dokręć.
-- Etui **bez magnesów, pierścieni i metalowych płytek** (zakłócają ładowanie);
-  etui do 5 mm wg Ankera. Na półkę i wargę daszka naklej TPU / filc 0,5–1 mm.
+- **Tarcza z magnesami** (`magnet_disc.stl`, Ø 100, 2,7 mm) leży w kieszeni
+  przed ładowarką: **12 magnesów Ø 8 × 2 mm N52** na okręgu **Ø 54 mm**,
+  współosiowo z cewką ładowarki i z cewką telefonu (przesunięcie cewki – kolumny
+  `coil_dx/coil_dz` w `PHONES`, np. Fold8 rozłożony +35,8 mm). Magnesy wciskasz /
+  wklejasz **od strony ładowarki**; od strony telefonu zostaje **skórka 0,6 mm**.
+  Między ładowarką a tyłem telefonu jest **2,7 mm plastiku** (+ etui).
+- Kołnierz tarczy siedzi za wargą kieszeni, więc magnesy nie wyrwą tarczy do
+  przodu; ładowarka dociska ją od tyłu.
+- **Półka** u dołu z zaokrągloną wargą 4 mm (nad ekranem) przejmuje ciężar
+  telefonu; magnesy tylko dociskają go do tarczy. Nad telefonem jest 5,5 mm zapasu.
+- **Wkładanie:** unieś telefon nad wargę, przyłóż plecami do tarczy (magnesy
+  przyciągną), zsuń w dół na półkę. **Wyjmowanie:** podnieś i odchyl od góry.
+- Na środku wargi jest wycięcie na palec/przewód, po bokach ramki wycięcia
+  otwarte do przodu na gniazdo USB-C i głośnik.
+
+### Biegunowość (ważne!)
+
+Wszystkie 12 magnesów **tym samym biegunem do telefonu**. Z pierścieniem
+**stalowym** biegunowość nie ma znaczenia; z pierścieniem/etui **magnetycznym**
+ma: przed klejeniem przyłóż jeden magnes do pierścienia na telefonie, zaznacz
+markerem stronę, która **przyciąga**, i wszystkie wklej tą stroną do przodu
+(do telefonu). Znacznik na kołnierzu tarczy (kreska) = góra.
+
+### Siła trzymania (`tools/magnet_check.py`)
+
+Model ostrożny: udźwig katalogowy N52 Ø8×2 ≈ 15 N na grubej stali, spadek
+z odległością (pole na osi walca)², ×0,3 za cienki i wąski pierścień;
+wymagane: telefon na półce przy tilt −25° (odchyla się od płyty), współczynnik
+dynamiczny 2, ramię siły względem półki.
+
+| Profil | Telefon + etui | Wymagane | 12 × Ø8×2, szczelina 1,7 mm (etui 1 mm) | 12 × Ø8×2, szczelina 2,7 mm (etui 2 mm) |
+|---|---|---|---|---|
+| S23 | 208 g | 1,7 N | 22 N (×13) | 11 N (×6,4) |
+| Fold8 Ultra rozłożony | 255 g | 1,4 N | 22 N (×16) | 11 N (×7,8) |
+| Fold8 Ultra złożony | 255 g | 2,1 N | 22 N (×11) | 11 N (×5,2) |
+| Flip6 rozłożony | 227 g | 1,9 N | 22 N (×12) | 11 N (×5,9) |
+
+Zapas jest co najmniej 5-krotny, więc **Ø8×2 wystarcza**. Większe Ø10×3
+(×2,2 siły) wymagałyby tarczy 3,7 mm, czyli >3 mm plastiku nad cewką – zmień
+tylko, jeśli etui jest wyjątkowo grube (parametry `mag_d`, `mag_t`). Bez półki
+(tarcie μ≈0,3) magnesy musiałyby dać ~7 N na sam ciężar – dlatego półka zostaje.
+
+### Ładowanie z magnesami – ostrzeżenia
+
+- **Nie kładź magnesów nad środkiem cewki** – pierścień Ø 54 omija środek;
+  nie zmniejszaj `mag_ring_d` poniżej ~50 mm.
+- Używaj pierścienia/etui **przeznaczonego do ładowania bezprzewodowego**
+  (MagSafe-compatible) – zwykła stalowa podkładka na środku cewki blokuje
+  ładowanie i się grzeje.
+- Anker ostrzega, że metal i magnesy mogą przerywać ładowanie: **sprawdź
+  ładowanie z tarczą i pierścieniem przed drukiem kasku** (wydrukuj samą
+  `magnet_disc.stl`, przyłóż do ładowarki). Jeśli nie ładuje – spróbuj
+  `mag_ring_d = 58–60` albo plan B: ładowarka Qi2 Samsung EP-P2900
+  (`pad = "samsung_ep_p2900"`), która ma własne magnesy.
+
+### Ładowanie i zasilanie
+
 - Realna moc: 10 W tylko starsze Galaxy; S23 / Flip6 / Fold8 Ultra ładują się
   z Ankerem 313 ok. **5 W** – przy ciągłej pracy ekranu, kamery i AI to raczej
   **spowalnianie rozładowania** niż ładowanie.
@@ -84,7 +139,7 @@ wierzchu ładowarki – **bez plastiku pomiędzy**.
 | `pan_hub.stl` – piasta PAN | 1 | Ø 37 × 10,5 | szerszą częścią na stole | nie |
 | `head_front_<profil>.stl` – przód kasku | 1 na telefon | 184 × 122 × 30 (Fold8 rozł.: 184 × 187 × 27) | **płaskim tyłem na stole**, ramka do góry | nie (mostki nad komorami odchudzającymi i kieszenią TTP223) |
 | `head_back_<profil>.stl` – tylna skorupa kasku | 1 na telefon | 184 × 122 × 71 (Fold8 rozł.: 184 × 187 × 71) | **płaskim tyłem (kratką) na stole**; boki maks. 45° | nie |
-| `visor_<profil>.stl` – daszek | 1 na telefon | 70 × 20 × 12–17 | przodem na stole | nie |
+| `magnet_disc.stl` – tarcza z magnesami | 1 (wspólna) | Ø 100 × 2,7 | kołnierzem (gniazda magnesów) na stole | nie (skórka 0,6 mm nad gniazdami Ø 8 jako mostek) |
 | `head_mount_servo.stl` – uchwyt serwa TILT | 1 | 64 × 25 × 19 | płytą na stole | nie |
 | `head_mount_bearing.stl` – uchwyt osi | 1 | 64 × 30 × 29 | płytą na stole | nie |
 | `spacers.stl` – tuleje osi (10,1 + 2,5 mm) | 1 kpl. | Ø 11,5 | pionowo | nie |
@@ -92,11 +147,11 @@ wierzchu ładowarki – **bez plastiku pomiędzy**.
 | `antenna_cap.stl` – przykrywka diody | 1 | Ø 20 × 12 | płaską stroną na stole, **przezroczysty / biały PETG** | nie |
 
 Profile: `s23`, `fold8_open` (Fold8 Ultra rozłożony), `fold8_closed`, `flip6_open`.
-Wymiana telefonu = przełożenie kasku (przód + tył + daszek) razem z uchwytami,
+Wymiana telefonu = przełożenie kasku (przód + tył) razem z uchwytami, tarczą,
 serwem i ładowarką albo trzymanie kilku kompletów kasku. Ramiona, szyja i tułów są
 wspólne. Wszystko mieści się na stole **220 × 220 mm** (szyja po przekątnej).
 
-Sugerowane kolory: skorupy białe/kremowe, szyja, kołnierz, nakładki uszu i daszek
+Sugerowane kolory: skorupy białe/kremowe, szyja, kołnierz, nakładki uszu i tarcza magnesów
 w kolorze akcentu (np. pomarańczowym), przykrywka diody przezroczysta.
 
 ## Ustawienia druku
@@ -127,9 +182,8 @@ w kolorze akcentu (np. pomarańczowym), przykrywka diody przezroczysta.
 | | 4 | ramiona – nakładki uszu |
 | | 4 | przód kasku – łapy uchwytów serwa/osi |
 | | 4 | przód kasku – śruby tylnej skorupy (góra/dół) |
-| | 2 | przód kasku – daszek |
 | | 2 | przód kasku – antenka |
-| **Razem wkładek M3** | **42** | |
+| **Razem wkładek M3** | **40** | |
 | Śruba M3 × 8 stożkowa (DIN 7991) | 4 + 3 | pokrywa dolna; kołnierz szyi |
 | Śruba M3 × 8 | 8 | lazy susan (dół i góra) |
 | Śruba M3 × 8 | 4 | uszy serwa PAN |
@@ -138,7 +192,8 @@ w kolorze akcentu (np. pomarańczowym), przykrywka diody przezroczysta.
 | Śruba M3 × 8–10 | 4 | łapy uchwytów → płyta kasku (od tyłu) |
 | Śruba M3 × 10 + nakrętka | 4 | uszy serwa TILT (nakrętki w gniazdach uchwytu) |
 | Śruba M3 × 8 grzybkowa | 4 | tylna skorupa → przód kasku (góra/dół) |
-| Śruba M3 × 20 grzybkowa | 2 | daszek |
+| Magnes neodymowy **N52 Ø 8 × 2 mm** (krążek, osiowo namagnesowany) | 12 | tarcza przed ładowarką; klej CA/epoksyd |
+| Etui MagSafe-compatible lub naklejany pierścień magnetyczny (do ładowania bezprzewodowego) | 1 na telefon | tył telefonu, środek na cewce |
 | Śruba M3 × 8 stożkowa | 2 | antenka |
 | Śruba M3 × 16 + nakrętka | 4 | wentylator 30 × 30 (opcja) |
 | Śruba M8 × 35 (łeb 6-kątny) + nakrętka M8 | 1 | oś TILT – śruba od zewnątrz lewego ucha |
@@ -169,7 +224,12 @@ w kolorze akcentu (np. pomarańczowym), przykrywka diody przezroczysta.
 8. **Głowa (na stole)** – serwo TILT do uchwytu (uszy M3 × 10 + nakrętki), uchwyty
    do płyty kasku (łapy, M3 × 10 od tyłu). Ładowarka do kieszeni (wtyk micro-USB
    w kanał, kabel przez przelot do tyłu, opaska przez 2 szczeliny = odciążenie),
-   wentylator, TTP223 w kieszeń na czubku, przewody antenki. Przewody zbierz
+   wentylator, TTP223 w kieszeń na czubku, przewody antenki.
+   **Magnesy:** sprawdź biegunowość (rozdział „Biegunowość”), wciśnij 12 magnesów
+   w gniazda tarczy od strony kołnierza (kropla kleju CA lub epoksydu, wszystkie
+   tym samym biegunem do przodu), odczekaj do związania. Tarczę włóż w kieszeń
+   od tyłu, przodem do telefonu (kreska na kołnierzu u góry), dopiero potem
+   ładowarkę – dociśnie tarczę do wargi kieszeni. Przewody zbierz
    w wiązkę do otworu przy osi w lewym boku tylnej skorupy.
 9. **Tylna skorupa** – nasuń na stopień przodu kasku (okno na serwo po prawej,
    otwór Ø 16 po lewej), 4 × M3 × 8 (góra/dół).
@@ -179,13 +239,35 @@ w kolorze akcentu (np. pomarańczowym), przykrywka diody przezroczysta.
     skorupy) → nakrętka uwięziona w uchwycie. Dokręć tak, by oś szła lekko.
 11. **Przewody** – lewym ramieniem (opaski w otworach) do szyi, otwór Ø 14
     w szyi, łuk w płycie tułowia. Zostaw pętlę serwisową na ±80°.
-12. **Nakładki uszu**, **antenka** (dioda w gniazdo, przykrywka na wcisk), **daszek**.
+12. **Nakładki uszu**, **antenka** (dioda w gniazdo, przykrywka na wcisk).
+    Na telefon naklej pierścień magnetyczny (środek na cewce) albo załóż etui MagSafe.
 13. **Kalibracja** – [../../docs/sterowanie-mocowaniem.md](../../docs/sterowanie-mocowaniem.md),
     najpierw bez telefonu, potem z najcięższym (Fold8 Ultra rozłożony).
 
 ## Sprawdzenie kolizji, momentu i stabilności
 
-WYNIKI_KOLIZJI
+Wynik `tools/collision_check.py` (pełny zakres pan ±80°, tilt −25…+30°, krok
+1° tilt / 5° pan, woksele 0,5 mm; każdy profil uruchamiany osobno):
+
+| Profil | Telefon ↔ jarzmo | Głowa ↔ jarzmo | Głowa+telefon ↔ tułów | Najniższy punkt głowy | Masa głowy z telefonem (plastik) | Moment TILT | Kąt przewrócenia |
+|---|---|---|---|---|---|---|---|
+| S23 | > 10 mm | 2 mm* | > 10 mm | 111 mm | ≈ 646 g (254 g) | 1,23 kg·cm (13 % MG996R) | 34° |
+| Fold8 Ultra rozłożony | > 10 mm | 2 mm* | > 10 mm | 86 mm | ≈ 728 g (289 g) | 1,42 kg·cm (15 %) | 34° |
+| Fold8 Ultra złożony | > 10 mm | 2 mm* | > 10 mm | 110 mm | ≈ 694 g (255 g) | 1,42 kg·cm (15 %) | 34° |
+| Flip6 rozłożony | > 10 mm | 2 mm* | > 10 mm | 111 mm | ≈ 654 g (243 g) | 1,25 kg·cm (13 %) | 34° |
+
+\* skrypt raportuje 0,5 mm – to celowy luz między wałkiem serwa a tarczą orczyka
+(wielowypust wchodzi w orczyk); bok kasku od tarczy orczyka dzieli 2 mm.
+Szyja ↔ kołnierz: 1 mm (obrotowa szyja nad nieruchomym kołnierzem). Barki są
+8 mm pod najniższym punktem rozłożonego Folda przy tilt −25°.
+
+Założenia: wydruk ~55 % gęstości litego PETG, w głowie serwo TILT 55 g,
+ładowarka 67 g, tarcza z magnesami, wentylator 10 g, oś M8 z łożyskiem ~30 g;
+obciążnik 300 g w tułowiu; 6 nóżek na elipsie 187 × 180 mm. Zapas środka
+ciężkości do krawędzi wielokąta podparcia ≥ 67 mm w każdej pozycji (wymagane
+≥ 25° kąta przewrócenia – jest 34°). Moment statyczny to ~15 % możliwości
+MG996R, więc zostaje duży zapas na szybkie gesty; serwo w głowie częściowo
+wyważa telefon.
 
 ## Wymiary do zmierzenia PRZED drukiem
 
@@ -206,6 +288,9 @@ WYNIKI_KOLIZJI
    gniazd USB (wycięcia w tylnej ściance tułowia, 3–14 mm nad pokrywą).
 6. **Łożysko 608**, **wkładki M3** – próbki otworów (`b608_fit`, `ins_d`).
 7. **TTP223** (`ttp`), **dioda** (gniazdo Ø 12 × ~8 mm), **wentylator** (rozstaw 24 mm).
+8. **Magnesy**: rzeczywista średnica/grubość (`mag_d`, `mag_t`, luz `mag_fit`)
+   i **pierścień na telefonie** – jego średnica powinna pokrywać się z okręgiem
+   magnesów (`mag_ring_d` = 54 mm), a środek z cewką telefonu.
 
 ## Jak zmieniać parametry
 
@@ -221,6 +306,8 @@ WYNIKI_KOLIZJI
 - Kształt: `head_w`, `head_r`, `front_r`, `dome_back` (kask), `body_a`, `body_b`,
   `body_da` (tułów – `body_da` ≤ 29 trzyma nawisy ≤ 45°), `ear_r`, `ear_cap_r`
   (uszy), `ant_h`, `ant_ball` (antenka), `axis_above_deck` (wysokość głowy nad szyją).
+- Magnesy: `mag_n`, `mag_d`, `mag_t`, `mag_ring_d`, `mag_skin` (po zmianie
+  uruchom `python3 hardware/tools/magnet_check.py`).
 - Nowy telefon: wiersz w `PHONES`, profil w `build.sh`. Telefon dłuższy niż
   ~172 mm w etui wymaga większego `head_w`.
 
@@ -232,6 +319,10 @@ WYNIKI_KOLIZJI
 - Szyja z barkami ma 231 mm rozpiętości – na stole 220 × 220 tylko po przekątnej.
 - Między bokiem kasku a uszami jest 4,5 mm (tarcza orczyka 2,5 mm + 2 mm luzu); okno na serwo
   w prawym boku skorupy zasłania ucho.
-- Ładowarka siedzi w kieszeni na wcisk; telefon trzyma kask, nie magnes.
+- Ładowarka siedzi w kieszeni na wcisk (dociska tarczę z magnesami).
+- Siła magnesów to szacunek (model, nie pomiar) – sprawdź z prawdziwym
+  pierścieniem; przy słabym trzymaniu dodaj magnesy lub weź mocniejsze.
+- Na Fold8 rozłożonym tarcza wystaje nad górną krawędź telefonu (cewka w górnej
+  połowie) – widać ją w szczelinie 5,5 mm nad ekranem.
 - Przy mniejszych telefonach (S23, Flip6, Fold8 złożony) głowa „wisi” wyżej nad
   barkami – wysokość osi jest wspólna i dobrana do rozłożonego Fold8.

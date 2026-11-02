@@ -54,7 +54,7 @@ module antenna_asm() {
 
 // --- grupy ---
 module g_head_plastic() {
-  head_front(); head_back(); visor(); servo_mount(); bearing_mount(); head_spacers(); antenna_asm();
+  head_front(); head_back(); magnet_disc(); servo_mount(); bearing_mount(); head_spacers(); antenna_asm();
 }
 module g_head() { g_head_plastic(); pad_dummy(); m8_axle(); tilt_servo_dummy(); }
 module g_yoke_plastic() { yoke_asm(); }
@@ -104,7 +104,8 @@ else {
     }
     head_frame() {
       color(C_SHELL) { head_front(); head_back(); }
-      color(C_ACCENT) visor();
+      color(C_ACCENT) magnet_disc();
+      color("Silver") for (p = mag_pos()) translate([p[0], 0, pad_cz() + p[1]]) cyl_y(mag_d, pad_top_y() + mag_depth_clear, pad_top_y() + mag_depth_clear + mag_t);
       color(C_DARK) { servo_mount(); bearing_mount(); head_spacers(); tilt_servo_dummy(); m8_axle(); }
       color("Black") pad_dummy();
       translate([0, ant_y(), hd_zt()]) { color(C_SHELL) antenna(); color("Gold") translate([0, 0, ball_z]) antenna_cap(); }

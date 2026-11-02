@@ -1,6 +1,7 @@
 // =====================================================================
-//  DeskMate DIY – KASK, część przednia (ramka telefonu + płyta z kieszenią
-//  ładowarki) i DASZEK (górny, regulowany zaczep telefonu).
+//  DeskMate DIY – KASK, część przednia (ramka telefonu, krótka półka,
+//  kieszeń ładowarki) i TARCZA Z MAGNESAMI (przed ładowarką).
+//  Telefon trzymają magnesy (pierścień wokół cewki) + półka z wargą u dołu.
 //  Jeden komplet na profil telefonu:  -D 'profile="fold8_open"'
 //  Układ: oś TILT = oś X, telefon z przodu (+Y).
 //  Druk przodu kasku: tyłem (płaską płytą) do stołu, bez podpór.
@@ -15,8 +16,7 @@ module hd_outline(d = 0) {
   offset(r = d) rrect([-head_w, hd_zb()], [head_w, hd_zt()], hd_r());
 }
 function cav_x() = ph_L()/2 + fit_x;                     // wnęka telefonu ±X
-function vis_z0() = ph_top() + tol;                      // spód daszka (nad telefonem)
-function vis_screw_z() = vis_z0() + vis_h/2;
+function cav_top() = ph_top() + lift;                    // zapas na wkładanie
 
 // bryła z zaokrągloną przednią krawędzią (wycinki połączone hull)
 module rounded_front(y0, y1, r, d0 = 0) {
@@ -32,27 +32,32 @@ module head_front() {
   yf = y_front();
   difference() {
     union() {
-      rounded_front(slab_back() + skirt, yf, front_r);
-      // stopień pod zakładkę tylnej skorupy
-      xz_extrude(slab_back(), slab_back() + skirt + 0.01) hd_outline(-shell_t - 0.15);
+      difference() {
+        union() {
+          rounded_front(slab_back() + skirt, yf, front_r);
+          // stopień pod zakładkę tylnej skorupy
+          xz_extrude(slab_back(), slab_back() + skirt + 0.01) hd_outline(-shell_t - 0.15);
+        }
+        // ---- wnęka telefonu (z zapasem na wkładanie nad półką) i okno ekranu
+        translate([-cav_x(), slab_front, ph_bot()]) cube([2*cav_x(), lip_y0() - slab_front, cav_top() - ph_bot()]);
+        translate([-cav_x(), lip_y0() - 0.01, ph_bot() + lip_h]) cube([2*cav_x(), 30, cav_top() - ph_bot() - lip_h]);
+        // zaokrąglenie wargi półki (przód i strona ekranu)
+        lip_rounding();
+      }
+      // pierścień wokół tarczy magnesów – podparcie tyłu telefonu
+      translate([0, 0, pc]) cyl_y(2*disc_r() + 7, slab_front - 0.01, D_back);
     }
     // ---- odchudzenie: komory od tyłu (zamknięte od przodu skórą 2.5–3 mm)
     hd_lighten();
-    // ---- wnęka telefonu i okno ekranu
-    translate([-cav_x(), slab_front, ph_bot()]) cube([2*cav_x(), lip_y0() - slab_front, ph_H() + tol]);
-    translate([-cav_x(), lip_y0() - 0.01, ph_bot() + lip_h]) cube([2*cav_x(), 30, ph_H() - lip_h + tol]);
-    // wnęka w półce (przyciski boczne) i wycięcie wargi (palec)
+    // wnęka w półce (przyciski boczne) i wycięcie wargi (palec / przewód)
     translate([-shelf_cut_w/2, slab_front, ph_bot() - 2.5]) cube([shelf_cut_w, lip_y0() - slab_front, 3]);
     translate([-20, lip_y0() - 0.01, ph_bot() - 0.01]) cube([40, 30, lip_h + 0.02]);
     // okna na gniazdo USB-C / głośnik po bokach (otwarte do przodu)
     for (s = [-1, 1]) translate([s > 0 ? cav_x() - 1 : -head_w - 1, D_back - 2, ph_cz() - 7])
       cube([head_w - cav_x() + 2, 30, 14]);
-    // ---- gniazdo daszka (+ zapas na podniesienie)
-    translate([-vis_w/2 - tol, slab_front, ph_top() - 0.01])
-      cube([vis_w + 2*tol, 40, vis_h + vis_travel + 2*tol]);
-    for (s = [-1, 1]) translate([s*vis_screw_x, 0, vis_screw_z()]) cyl_y(ins_d, slab_front - ins_l, slab_front + 1);
-    // ---- kieszeń ładowarki (wierzch ładowarki = tył telefonu)
-    translate([0, 0, pc]) cyl_y(2*pad_rp(), pocket_floor(), pad_top_y() + 0.3);
+    // ---- kieszeń ładowarki + kołnierz tarczy; otwór na tarczę z magnesami
+    translate([0, 0, pc]) cyl_y(2*pad_rp(), pocket_floor(), pad_top_y() + disc_fl + 0.05);
+    translate([0, 0, pc]) cyl_y(2*disc_boss_r() + 0.4, pad_top_y(), D_back + 1);
     // kanał wtyku/kabla + przelot do tyłu + szczeliny opaski (odciążenie)
     translate([0, 0, pc]) rotate([0, -pad_port_angle, 0]) {
       translate([pad_rp() - 3, pocket_floor(), -port_w()/2]) cube([chan_len + 3, pad_top_y() + 0.3 - pocket_floor(), port_w()]);
@@ -98,10 +103,9 @@ module head_front() {
 }
 // strefy, które muszą zostać pełne (widok z przodu)
 module hd_keep2d() {
-  translate([0, pad_cz()]) circle(r = pad_rp() + 3);
+  translate([0, pad_cz()]) circle(r = disc_r() + 7);
   translate([0, pad_cz()]) rotate(pad_port_angle) translate([0, -port_w()/2 - 9]) square([pad_rp() + chan_len + 4, port_w() + 18]);
   for (s = [-1, 1], tz = tab_z) translate([s*tab_x, (tz[0] + tz[1])/2]) circle(r = 7);
-  for (s = [-1, 1]) translate([s*vis_screw_x, vis_screw_z()]) circle(r = 6);
   for (s = [-1, 1]) translate([s*dome_screw_x - 6, hd_zt() - 14]) square([12, 20]);
   for (s = [-1, 1]) translate([s*dome_screw_x - 6, hd_zb() - 6]) square([12, 20]);
   translate([-14, hd_zt() - 18]) square([28, 30]);                 // antenka
@@ -111,32 +115,42 @@ module hd_keep2d() {
 module hd_lighten() {
   // za wnęką telefonu
   xz_extrude(slab_back() - 1, slab_front - 2.5) difference() { offset(r = -5) hd_outline(); hd_keep2d(); }
-  // w ramce (boki, czoło, dół) – poza telefonem i daszkiem
+  // w ramce (boki, czoło, dół) – poza telefonem
   xz_extrude(slab_front - 3, y_front() - 3.5) difference() {
     offset(r = -5) hd_outline();
     hd_keep2d();
-    translate([-cav_x() - 3, ph_bot() - 3]) square([2*cav_x() + 6, ph_H() + 6]);
-    translate([-vis_w/2 - 4, ph_top() - 2]) square([vis_w + 8, vis_h + vis_travel + 8]);
+    translate([-cav_x() - 3, ph_bot() - 3]) square([2*cav_x() + 6, cav_top() - ph_bot() + 6]);
   }
 }
 function ant_y() = (slab_back() + skirt + slab_front) / 2;
 
-// ---------- daszek: górny zaczep telefonu (2 x M3 w szczelinach) ----------
-module visor() {
-  yf = y_front();
+// zaokrąglenie krawędzi wargi półki (usuwa naroże wokół osi X)
+module round_edge_x(yc, zc, r, sy, sz, len) {   // sy, sz = kierunek naroża (+1/-1)
+  translate([-len/2, yc, zc]) difference() {
+    translate([0, sy > 0 ? 0 : -r - 1, sz > 0 ? 0 : -r - 1]) cube([len, r + 1, r + 1]);
+    rotate([0, 90, 0]) cylinder(r = r, h = len, $fn = 32);
+  }
+}
+module lip_rounding() {
+  zt = ph_bot() + lip_h;
+  round_edge_x(y_front() - lip_round, zt - lip_round, lip_round, 1, 1, 2*cav_x());
+  round_edge_x(lip_y0() + 1, zt - 1, 1, -1, 1, 2*cav_x());
+}
+
+// ---------- tarcza z magnesami (przed ładowarką, Ø = kieszeń) ----------
+// Kołnierz za wargą kieszeni trzyma tarczę; przód tarczy = płaszczyzna tyłu
+// telefonu. Magnesy wciskane/klejone od strony ładowarki, skórka 0.6 mm.
+function mag_pos() = [for (i = [0 : mag_n - 1]) let(a = 360/mag_n*i + 90) mag_ring_d/2*[cos(a), sin(a)]];
+module magnet_disc() {   // w układzie głowy
+  pc = pad_cz();
   difference() {
-    intersection() {
-      union() {
-        translate([-vis_w/2, slab_front + 0.3, vis_z0()]) cube([vis_w, yf - slab_front - 0.3, vis_h]);
-        translate([-vis_w/2, lip_y0(), vis_z0() - lip_h - tol]) cube([vis_w, lip_t, lip_h + tol + 1]);
-      }
-      // przód zaokrąglony jak ramka
-      rounded_front(slab_front - 1, yf - 0.2, front_r, -0.3);
+    translate([0, 0, pc]) union() {
+      cyl_y(2*disc_r(), pad_top_y(), pad_top_y() + disc_fl);
+      cyl_y(2*disc_boss_r(), pad_top_y() + disc_fl - 0.01, D_back);
     }
-    for (s = [-1, 1]) translate([s*vis_screw_x, 0, 0]) {
-      hull() for (dz = [-vis_travel, 0]) translate([0, 0, vis_screw_z() + dz]) cyl_y(m3_clear, slab_front, yf + 1);
-      hull() for (dz = [-vis_travel, 0]) translate([0, 0, vis_screw_z() + dz]) cyl_y(6.4, yf - 3, yf + 1);
-    }
+    for (p = mag_pos()) translate([p[0], 0, pc + p[1]]) cyl_y(mag_d + mag_fit, pad_top_y() - 1, pad_top_y() + mag_t + mag_depth_clear);
+    // znacznik orientacji (kreska na kołnierzu, u góry)
+    translate([-0.6, pad_top_y() - 0.01, pc + disc_r() - 3]) cube([1.2, 0.5, 3]);
   }
 }
 

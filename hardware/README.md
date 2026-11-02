@@ -9,12 +9,16 @@ wymiarów do zmierzenia przed drukiem**. Gotowe pliki: [stl/](stl/), podglądy:
 |---|---|---|
 | ![](renders/asm_front_fold8_open.png) | ![](renders/asm_34_s23.png) | ![](renders/asm_side_fold8_open_tilt-25.png) |
 
+Magnesy, biegunowość, siła trzymania i ostrzeżenia dot. ładowania: [cad/README.md – Mocowanie telefonu](cad/README.md#mocowanie-telefonu-magnesy--krótka-półka).
+
 ## Styl: „ludzik na nóżce”
 
-1. **Głowa = obły kask** wokół telefonu (ekran = twarz, cały widoczny). Przód kasku
-   to ramka z półką i regulowanym daszkiem (ładowarka Anker 313 Pad nie ma magnesów,
-   więc telefon trzyma się mechanicznie), w środku kieszeń na ładowarkę Ø 100
-   z kanałem kabla i wentylacją. Tylna skorupa chowa ładowarkę, serwo TILT,
+1. **Głowa = obły kask** wokół telefonu (ekran = twarz, cały widoczny). Telefon
+   trzyma się **magnetycznie**: przed ładowarką Anker 313 Pad (Ø 100, bez magnesów)
+   leży tarcza z **pierścieniem 12 magnesów N52 Ø 8 × 2 mm** (Ø 54, współosiowo
+   z cewką, skórka 0,6 mm), a na telefonie etui/pierścień MagSafe-compatible;
+   ciężar przejmuje **krótka półka** z zaokrągloną wargą u dołu. Kieszeń ładowarki
+   ma kanał kabla i wentylację. Tylna skorupa chowa ładowarkę, serwo TILT,
    przewody i opcjonalny wentylator 30 × 30. Na czubku czujnik dotyku TTP223
    i **antenka z diodą** WS2812.
 2. **Uszy** – okrągłe zakończenia ramion z wypukłymi nakładkami; w prawym uchu
@@ -27,7 +31,10 @@ wymiarów do zmierzenia przed drukiem**. Gotowe pliki: [stl/](stl/), podglądy:
 
 ## Wymagania (sprawdzone w projekcie)
 
-- Oś TILT w środku wysokości telefonu w etui; ładowarka przesunięta do cewki.
+- Oś TILT w środku wysokości telefonu w etui; ładowarka i pierścień magnesów
+  przesunięte do cewki telefonu.
+- Magnesy trzymają telefon z ≥ 5-krotnym zapasem (tilt −25°, ×2 dynamicznie,
+  `tools/magnet_check.py`).
 - Obrót ±80°, pochylenie −25°…+30° bez kolizji dla wszystkich profili telefonów
   (`tools/collision_check.py`), kąt przewrócenia ≥ 25° z obciążnikiem.
 - Przewody do głowy przez szyję i łuk w płycie tułowia (pętla serwisowa).
