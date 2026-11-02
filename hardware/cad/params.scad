@@ -14,16 +14,16 @@
 // =====================================================================
 
 /* [Wybór wariantu] */
-// Profil telefonu (każdy ma własną płytę głowy i zaczepy)
+// Profil telefonu (każdy ma własny przód i tył kasku oraz daszek)
 profile = "s23"; // [s23, fold8_open, fold8_closed, flip6_open]
 // Ładowarka w płycie głowy (domyślnie Anker 313 Pad – bez magnesów)
 pad = "anker313"; // [anker313, samsung_ep_p2900, esr_halolock_mini, anker_zolo_a25m2]
 // Serwo PAN (w podstawie)
 servo_pan = "MG996R"; // [MG996R, DS3218, MG90S]
-// Serwo TILT (w jarzmie)
+// Serwo TILT (w głowie; orczyk przykręcony do ucha jarzma)
 servo_tilt = "MG996R"; // [MG996R, DS3218]
 // Łożysko obrotowe "lazy susan"
-ls_shape = "square"; // [square, round]
+ls_shape = "round"; // [round, square]  (kwadratowe 75 mm wymaga szerszej szyi – liczy się samo)
 // Otwory na wentylator 30x30 pod ładowarką
 fan_on = true;
 
@@ -53,8 +53,11 @@ PHONES = [
   // Fold8 Ultra rozłożony poziomo: zawias poziomo; połowa z cewką NA GÓRZE
   ["fold8_open",   158.4, 143.2, 4.1, 215,  0.0, 35.8, 0],
   ["fold8_closed", 158.4,  72.8, 8.9, 215,  0.0,  0.0, 0],
-  // Flip6 rozłożony poziomo; dolna połowa (z cewką) po PRAWEJ stronie ekranu
-  ["flip6_open",   165.1,  71.9, 6.9, 187, 41.3,  0.0, 0],
+  // Flip6 rozłożony poziomo. Cewka jest w dolnej połowie (ok. 41 mm od
+  // środka), a Samsung zaleca ładowanie Flipa ZŁOŻONEGO – rozłożony zwykle
+  // nie ładuje się bezprzewodowo. Domyślnie telefon na środku (0) i zasilanie
+  // przewodem USB-C; wpisanie 41.3 wymaga zwiększenia head_w (patrz README).
+  ["flip6_open",   165.1,  71.9, 6.9, 187,  0.0,  0.0, 0],
 ];
 
 // --- ładowarki: 0 nazwa, 1 średnica, 2 grubość, 3 masa, 4 luz na średnicy,
@@ -72,8 +75,9 @@ PADS = [
   ["anker_zolo_a25m2",   60.0, 10.5, 68, 1.0, true,  10],
 ];
 // Kierunek gniazda/kabla ładowarki (w płaszczyźnie XZ: 0 = w prawo,
-// 90 = w górę, 270 = w dół, w stronę osi TILT) – ZMIERZ / ustaw przy montażu
-pad_port_angle = 270;
+// 90 = w górę, 180 = w lewo – do ucha z łożyskiem, gdzie przewody wychodzą
+// z głowy) – kąt ZMIERZ / ustaw przy montażu
+pad_port_angle = 180;
 
 // --- serwa: 0 nazwa, 1 dł. korpusu, 2 szer., 3 wys. od dna do spodu uszu,
 //  4 grubość uszu, 5 wys. korpusu nad uszami, 6 wypust wałka nad korpusem,
@@ -103,71 +107,90 @@ m8_head_t = 5.6;
 b608_od = 22.0; b608_id = 8.0; b608_w = 7.0;
 b608_fit = 0.1;    // naddatek średnicy gniazda (0.0–0.2 dopasuj próbką)
 
-/* [Głowa] */
-D_back = 25;       // odległość osi TILT od tyłu telefonu (Y)
+/* [Głowa – kask] */
+D_back = 28;       // odległość osi TILT od tyłu telefonu (Y)
 gap = 2.5;         // szczelina wentylacyjna telefon–płyta
 pad_proud = 0.0;   // wierzch ładowarki względem tyłu telefonu (0 = styk, bez plastiku)
 rib_h = 2.5;       // żebra pod ładowarką (kanał powietrza)
 floor_t = 3.0;     // dno kieszeni
-head_half_w = 56;  // połowa szerokości płyty (X)
+head_w = 92;       // połowa szerokości kasku (X) – wspólna dla profili
+head_r = 36;       // promień zaokrąglenia narożników kasku (widok z przodu)
+front_r = 8;       // zaokrąglenie przedniej krawędzi ramki
+fit_x = 0.8;       // luz telefonu na boki (X)
 hook_h = 6;        // grubość półki pod telefonem
-lip_h = 4.0;       // warga półki/zaczepu zachodząca na ekran
+lip_h = 4.0;       // warga półki/daszka zachodząca na ekran
 lip_t = 2.5;       // grubość wargi
 fit_t = 0.6;       // luz na grubość telefonu (pod wkładkę TPU 0.5–1 mm)
-shelf_cut_w = 40;  // wycięcie w środku półki (przyciski boczne, dostęp palcem)
-clamp_x = 45;      // położenie zaczepów górnych (±X)
-clamp_w = 12;      // szerokość stopy zaczepu
-clamp_t = 7;       // grubość stopy zaczepu (Y)
-clamp_h = 26;      // wysokość stopy zaczepu (Z)
-clamp_travel = 6;  // regulacja zaczepu ± (mm)
-chan_len = 22;     // długość kanału na wtyk/kabel poza krawędzią ładowarki
-br_x = 59.5;       // zewn. powierzchnia wspornika głowy (styk z orczykiem)
-br_t = 12.5;       // grubość płyty wspornika (X)
-br_fl_x0 = 28;     // wewnętrzny koniec kołnierza wspornika
-br_fl_t = 7;       // grubość kołnierza (Y)
-br_fl_hz = 28;     // pół-wysokość kołnierza (Z)
-br_screw = [[40, 20], [40, -20]]; // śruby kołnierza (|x|, z) względem osi
-hub_r = 15;        // promień piasty wspornika wokół osi
+shelf_cut_w = 60;  // wnęka w półce na przyciski boczne / palec
+bottom_bar = 6;    // ramka pod półką
+vis_w = 70;        // szerokość daszka (górny zaczep)
+vis_h = 16;        // wysokość daszka nad telefonem
+vis_travel = 6;    // regulacja daszka (mm w górę)
+vis_screw_x = 28;  // śruby daszka ±X
+forehead = 28;     // czoło kasku nad telefonem
+chan_len = 22;     // kanał wtyku/kabla ładowarki poza jej krawędzią
+skirt = 6;         // zakładka tylnej skorupy na przód kasku
+shell_t = 2.0;     // ścianka skorup
+dome_back = -54;   // tył skorupy głowy (Y)
+dome_flat = -16;   // do tego Y boki skorupy są płaskie (oś, serwo, wsporniki)
+dome_screw_x = 50; // śruby skorupy (góra/dół) ±X
 ttp = [15.6, 11.6, 3.0]; // kieszeń TTP223 (X, Y, głębokość)
+ttp_x = 52;
 fan_size = 30; fan_pitch = 24;
+mount_t = 6;       // płyta uchwytu serwa (X)
+tab_z = [[12, 22], [-42, -32]]; // zakresy Z łap uchwytów (przykręcane do płyty)
+tab_x = 70;        // |x| śrub łap
+hub_r = 15;        // piasta uchwytu łożyska wokół osi
+cable_exit = [0, -22];  // wyjście przewodów z głowy (y, z) – lewy bok, przy osi
 
-/* [Jarzmo i podstawa] */
+/* [Antenka] */
+ant_h = 30;        // długość pręta
+ant_d = 7;         // średnica pręta
+ant_ball = 20;     // średnica kulki
+ant_cav = 12;      // gniazdo diody (WS2812 5 mm lub moduł 8x8)
+ant_flange = 18;
+
+/* [Jarzmo – szyja, ramiona, uszy] */
 tilt_y = -15;          // położenie osi TILT względem osi PAN (Y)
-axis_above_deck = 96;  // oś TILT nad górą pokładu jarzma
-post_y = [-64, -28];   // zakres Y słupków ramion (układ osi TILT)
-clear_r = 23.5;        // ramiona: maks. odległość od osi w strefie przed osią
-arm_l_in = 66;         // wewn. ścianka ramienia łożyskowego (|x|)
+axis_above_deck = 100; // oś TILT nad górą pokładu (szyi)
+arm_gap = 4.5;         // kask – wewn. ścianka ramienia (tu siedzi tarcza orczyka)
+arm_t = 8;             // grubość ramienia serwa
 bearing_lip = 3;
-arm_r_t = 6;           // grubość ramienia serwa
-base_h = 58;           // wysokość podstawy (góra płyty górnej)
-top_t = 4;             // grubość płyty górnej podstawy
-wall = 2.4;            // ścianki podstawy
-cover_t = 3;           // pokrywa dolna
-base_x = [-92, 92];
-base_y = [-82, 78];
-base_r = 16;
-deck_t = 8;
-deck_r = 68;
-wire_r = 62;           // promień przelotu przewodów (łuk w płycie podstawy)
+ear_r = 34;            // promień "ucha" (tarcza ramienia wokół osi)
+ear_cap_r = 25;        // promień ozdobnej nakładki ucha
+arm_foot_w = 26;       // szerokość stopy ramienia (Y)
+bar_w = 30;            // szerokość "barków" (Y)
+deck_t = 12;           // grubość szyi / barków
 wire_w = 14;           // szerokość łuku/otworu na przewody
 hub_d = 30;            // piasta PAN – dolna część (w płycie podstawy)
 hub_d2 = 37;           // piasta PAN – górna część (w otworze lazy susan)
+
+/* [Tułów – jajo] */
+body_a = 104;          // półoś X przy blacie
+body_b = 100;          // półoś Y przy blacie
+body_da = 28;          // zwężenie półosi X do góry (≤ 29 → nawisy ≤ 45° przy druku do góry dnem)
+base_h = 58;           // wysokość tułowia (góra płyty)
+top_t = 4;
+wall = 2.4;
+cover_t = 3;
+// 6 nóżek na elipsie (90 % promienia) – szeroki wielokąt podparcia
+feet = [for (a = [0 : 60 : 300]) [0.9*body_a*cos(a), 0.9*body_b*sin(a)]];
 
 /* [Łożysko lazy susan] – ZMIERZ */
 ls_t = 8;              // wysokość całkowita
 ls_id = 40;            // otwór środkowy
 ls_sq = 75;            // bok wersji kwadratowej
-ls_sq_pitch = 63;      // rozstaw otworów (kwadrat)
+ls_sq_pitch = 63;
 ls_round_od = 80;
 ls_round_bot_d = 72;   // okrąg otworów pierścienia dolnego
 ls_round_top_d = 56;   // okrąg otworów pierścienia górnego
 
-/* [Elektronika w podstawie] – ZMIERZ: [dł, szer] i położenie środka */
-esp_dim = [69, 26];   esp_pos = [-37, -63];  // ESP32-S3-DevKitC-1, USB w lewo
-xl_dim  = [26, 54];   xl_pos  = [-74, -8];   // XL4015 (serwa)
-lm_dim  = [21, 43];   lm_pos  = [72, -4];    // LM2596 (ESP32 + ładowarka)
-pd_dim  = [11, 28];   pd_pos  = [44, -65.5]; // PD trigger, USB-C w tył
-ballast = [[-56, 40], [56, 73]];             // komora obciążnika (XY)
+/* [Elektronika w tułowiu] – ZMIERZ: [X, Y] i położenie środka */
+esp_dim = [26, 69];   esp_pos = [-30, -42];   // ESP32-S3-DevKitC-1, USB do tyłu
+xl_dim  = [26, 54];   xl_pos  = [-63, 16];    // XL4015 (serwa)
+lm_dim  = [21, 43];   lm_pos  = [68, 22];     // LM2596 (ESP32 + ładowarka)
+pd_dim  = [11, 28];   pd_pos  = [30, -74.4];  // PD trigger, USB-C do tyłu (przy ściance)
+ballast = [[-38, 41], [38, 71]];              // komora obciążnika (XY)
 
 // =====================================================================
 //  Funkcje pomocnicze
@@ -185,6 +208,7 @@ function ph_cz(n=profile)  = ph(n)[7] + axis_dz;
 function ph_bot(n=profile) = ph_cz(n) - ph_H(n)/2;
 function ph_top(n=profile) = ph_cz(n) + ph_H(n)/2;
 function lip_y0(n=profile) = D_back + ph_T(n) + fit_t;   // wewn. pow. wargi
+function y_front(n=profile) = lip_y0(n) + lip_t;           // przód kasku
 
 // ładowarka
 function pd()     = _row(PADS, pad);
@@ -215,11 +239,16 @@ function sv_c(n) = sv_l(n)/2 - sv_sh(n);
 function sv_holes(n) = [for (a = [-1, 1], b = (sv_hw(n) > 0 ? [-1, 1] : [0]))
                          [sv_c(n) + a*sv_hp(n)/2, b*sv_hw(n)/2]];
 
-// jarzmo (|x| w układzie osi TILT)
-function arm_r_in()  = br_x + sv_ht(servo_tilt) + sv_ft(servo_tilt);
-function arm_r_out() = arm_r_in() + arm_r_t;
-arm_l_out = arm_l_in + bearing_lip + b608_w;
-spacer_len = arm_l_in + bearing_lip - br_x;
+// głowa / jarzmo (|x| w układzie osi TILT)
+arm_in = head_w + arm_gap;                   // wewn. ścianka obu ramion
+arm_l_out = arm_in + bearing_lip + b608_w;
+arm_r_out = arm_in + arm_t;
+function ear_top_x()  = arm_in - sv_ht(servo_tilt);           // wierzch uszu serwa TILT
+function mount_x1()   = ear_top_x() - sv_ft(servo_tilt);      // płyta uchwytu: strona uszu
+function mount_x0()   = mount_x1() - mount_t;
+brg_x1 = head_w - shell_t - 0.6;             // uchwyt łożyska – strona zewn.
+brg_x0 = brg_x1 - 12;
+spacer_len = arm_in + bearing_lip - brg_x1;
 z_deck = -axis_above_deck;
 
 // wysokości globalne
@@ -229,6 +258,16 @@ z_axis     = z_deck_top + axis_above_deck;
 function z_horn_face(n=servo_pan) = base_h - 1;           // styk orczyk–piasta
 function z_ear_top(n=servo_pan)   = z_horn_face(n) - sv_ht(n);
 
+// tułów: półoś X na wysokości z (parabola – nawis ≤ 45°)
+function body_ax(z) = body_a - body_da * pow(z / base_h, 2);
+function body_ky()  = body_b / body_a;
+
+// szyja i przewody
+function ls_outer_r() = ls_shape == "square" ? ls_sq/sqrt(2) : ls_round_od/2;
+function wire_r()  = ls_outer_r() + wire_w/2 + 3;
+function collar_rin() = wire_r() + wire_w/2 + 1;
+function neck_r()  = collar_rin() + 3.5;
+
 // lazy susan – otwory (układ PAN)
 function ls_bot_holes() = ls_shape == "square"
   ? [for (sx=[-1,1], sy=[-1,1]) [sx*ls_sq_pitch/2, sy*ls_sq_pitch/2]]
@@ -236,9 +275,10 @@ function ls_bot_holes() = ls_shape == "square"
 function ls_top_holes() = ls_shape == "square"
   ? [for (sx=[-1,1], sy=[-1,1]) [sx*ls_sq_pitch/2, sy*ls_sq_pitch/2]]
   : [for (a=[0:90:270]) ls_round_top_d/2*[cos(a), sin(a)]];
-// otwory serwisowe w podstawie: pod otworami pierścienia górnego po obrocie o 45°
-function ls_access_holes() = [for (p = ls_top_holes())
-  [p[0]*cos(45) - p[1]*sin(45), p[0]*sin(45) + p[1]*cos(45)]];
+// otwory serwisowe w płycie tułowia do śrub pierścienia górnego
+// (kwadratowe: pod otworami po obrocie jarzma o 45°, okrągłe: wprost pod nimi)
+function ls_access_holes() = [for (p = ls_top_holes()) let(a = ls_shape == "square" ? 45 : 0)
+  [p[0]*cos(a) - p[1]*sin(a), p[0]*sin(a) + p[1]*cos(a)]];
 
 // =====================================================================
 //  Moduły pomocnicze

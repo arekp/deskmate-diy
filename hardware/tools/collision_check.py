@@ -10,6 +10,7 @@ Użycie:
 Wymaga: numpy, scipy.
 """
 import os
+import json
 import re
 import subprocess
 import sys
@@ -48,7 +49,10 @@ def info(profile, tmp):
         try:
             d[k] = float(v)
         except ValueError:
-            d[k] = v
+            try:
+                d[k] = json.loads(v)
+            except ValueError:
+                d[k] = v
     return d
 
 
@@ -146,6 +150,20 @@ def mass_props(tri):
     return V, (v[:, None] * c).sum(0) / V
 
 
+def support_margin(p, feet):
+    """Odległość punktu od krawędzi wielokąta podparcia (wypukła otoczka nóżek)."""
+    pts = np.array(feet, dtype=float)
+    c = pts.mean(0)
+    pts = pts[np.argsort(np.arctan2(pts[:, 1] - c[1], pts[:, 0] - c[0]))]
+    m = 1e9
+    for i in range(len(pts)):
+        a, b = pts[i], pts[(i + 1) % len(pts)]
+        n = np.array([b[1] - a[1], a[0] - b[0]])
+        n /= np.linalg.norm(n)
+        m = min(m, np.dot(a - p, n))   # >0 = wewnątrz (krawędzie CCW)
+    return m
+
+
 def fmt(v):
     return "> 10 mm" if v >= 10 else f"{v:.1f} mm"
 
@@ -162,8 +180,11 @@ def main(profiles):
     base_tri = load_stl(os.path.join(tmp, "g_base.stl"))
     yoke_tri = load_stl(os.path.join(tmp, "g_yoke.stl"))
     vb, vy = Vox(base_tri), Vox(yoke_tri)
-    base_pts, yoke_pts = sample_surface(base_tri), sample_surface(yoke_tri)
-    Vy, Cy = mass_props(load_stl(os.path.join(tmp, "g_yoke.stl")))
+    base_pts, yoke_pts = sample_surface(base_tri, 1.5), sample_surface(yoke_tri, 1.5)
+    scad(os.path.join(tmp, "gyp.stl"), {"show": '"g_yoke_plastic"'})
+    scad(os.path.join(tmp, "gbp.stl"), {"show": '"g_base_plastic"'})
+    Vy, Cy = mass_props(load_stl(os.path.join(tmp, "gyp.stl")))
+    Vb, Cb = mass_props(load_stl(os.path.join(tmp, "gbp.stl")))
 
     # jarzmo vs podstawa (pan)
     worst = 99
@@ -185,10 +206,10 @@ def main(profiles):
         scad(fhp, {"show": '"g_head_plastic"', "profile": f'"{prof}"'})
         head_tri = load_stl(fh)
         vh = Vox(head_tri)
-        head_pts = sample_surface(head_tri)
+        head_pts = sample_surface(head_tri, 1.5)
         b0 = np.array([I["cx"] - I["L"] / 2, I["D_back"], I["cz"] - I["H"] / 2])
         bs = np.array([I["L"], I["T"], I["H"]])
-        ph_pts = box_surface(b0, bs)
+        ph_pts = box_surface(b0, bs, 1.5)
 
         # głowa+telefon vs jarzmo (tilt)
         min_h, min_p, min_p_where = 99, 99, None
@@ -204,7 +225,7 @@ def main(profiles):
             min_h = min(min_h, vh.query(yl).min())
         # głowa+telefon vs podstawa i blat (pan × tilt)
         min_b, min_z = 99, 1e9
-        for pan in pans:
+        for pan in np.arange(I["pan_min"], I["pan_max"] + 0.01, 10.0):
             for t in np.arange(I["tilt_min"], I["tilt_max"] + 0.01, 5.0):
                 M = rz(pan) @ rx(t)
                 for P in (head_pts, ph_pts):
@@ -219,18 +240,17 @@ def main(profiles):
             (I["mphone"], np.array([I["cx"], I["D_back"] + I["T"] / 2, I["cz"]]), "telefon w etui"),
             (I["pad_m"], np.array([0, I["pad_top_y"] - I["pad_h"] / 2, I["pad_cz"]]), "ładowarka"),
             (10 * I["fan_on"], np.array([0, I["slab_back"] - 5, I["pad_cz"]]), "wentylator"),
-            (35, np.array([-65, 0, 0]), "śruba M8 + nakrętka + 608"),
-            (12, np.array([0, 15, 0]), "śruby M3, wkładki, TPU"),
+            (I["sv_tilt_m"], np.array([I["ear_top_x"] - 16, 0, -I["sv_tilt_c"]]), "serwo TILT (w głowie)"),
+            (30, np.array([-95, 0, 0]), "śruba M8 + nakrętka + 608"),
+            (18, np.array([0, 10, 0]), "śruby M3, wkładki, TPU, przewody"),
+            (4, np.array([0, 15, I["hd_zt"] + 30]), "dioda"),
         ]
         m_head = sum(p[0] for p in parts)
         cg_head = sum(p[0] * p[1] for p in parts) / m_head
         tau = [abs(sum(p[0] * (rx(t) @ p[1])[1] for p in parts)) / 1000 / 10 for t in tilts]  # kg*cm
         # stabilność
-        static = [  # w układzie globalnym
-            (Vy * RHO * FILL, Cy + axis_g, "jarzmo"),
-            (I["sv_tilt_m"], axis_g + np.array([I["arm_r_in"] + 10, -I["sv_tilt_c"], 0]), "serwo TILT"),
-        ]
-        base_parts = [(260 * FILL + 135 * FILL, np.array([0, 0, 25]), "podstawa+pokrywa"),
+        static = [(Vy * RHO * FILL, Cy + axis_g, "jarzmo")]
+        base_parts = [(Vb * RHO * FILL, Cb, "tułów+pokrywa+kołnierz"),
                       (I["sv_pan_m"], np.array([0, 10, 30]), "serwo PAN"),
                       (70, np.array([0, 0, 62]), "lazy susan"),
                       (90, np.array([0, -40, 12]), "elektronika"),
@@ -245,10 +265,9 @@ def main(profiles):
                     items.append((m, rz(pan) @ (rx(t) @ p + axis_g)))
                 M = sum(i[0] for i in items)
                 cg = sum(i[0] * i[1] for i in items) / M
-                mx = I["feet_x"] - abs(cg[0])
-                my = min(cg[1] - I["feet_y0"], I["feet_y1"] - cg[1])
-                if min(mx, my) < worst_margin:
-                    worst_margin, worst_pose, worst_cg, totm = min(mx, my), (pan, t), cg, M
+                m = support_margin(cg[:2], I["feet"])
+                if m < worst_margin:
+                    worst_margin, worst_pose, worst_cg, totm = m, (pan, t), cg, M
         results[prof] = dict(min_h=min_h, min_p=min_p, min_p_t=min_p_where, min_b=min_b, min_z=min_z,
                              m_head=m_head, cg=cg_head, tau=max(tau), margin=worst_margin,
                              pose=worst_pose, cgw=worst_cg, M=totm, m_plast=Vh * RHO * FILL)

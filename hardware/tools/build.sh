@@ -11,42 +11,60 @@ mkdir -p stl renders
 stl() { # plik_wyj plik_scad [parametry -D...]
   local out=$1 src=$2; shift 2
   echo ">> stl/$out"
-  "$OSC" -o "stl/$out" "$@" "cad/$src" 2>&1 | grep -E "WARNING|ERROR" || true
+  "$OSC" -o "stl/$out" "$@" "cad/$src" 2>&1 | grep -E "ERROR" || true
 }
 png() { # plik_wyj plik_scad kamera [parametry]
   local out=$1 src=$2 cam=$3; shift 3
   echo ">> renders/$out"
-  xvfb-run -a "$OSC" -o "renders/$out" --imgsize=1200,900 --viewall --autocenter \
+  xvfb-run -a "$OSC" -o "renders/$out" --imgsize=1400,1100 --viewall --autocenter \
     --colorscheme=Tomorrow --camera="$cam" "$@" "cad/$src" > /dev/null 2>&1 || true
 }
 
 if [[ $MODE == stl || $MODE == all ]]; then
-  stl base.stl            base.scad    -D 'part="base"'
-  stl cover.stl           base.scad    -D 'part="cover"'
-  stl yoke.stl            yoke.scad
-  stl pan_hub.stl         pan_hub.scad
-  stl bracket_servo.stl   bracket.scad -D 'side="servo"'
-  stl bracket_bearing.stl bracket.scad -D 'side="bearing"'
-  stl spacer.stl          spacer.scad
+  stl body.stl            base.scad    -D 'part="base"'
+  stl body_cover.stl      base.scad    -D 'part="cover"'
+  stl neck_collar.stl     base.scad    -D 'part="collar"'
+  stl neck_shoulders.stl  yoke.scad    -D 'part="neck"'
+  stl arm_servo.stl       yoke.scad    -D 'part="arm_servo"'
+  stl arm_bearing.stl     yoke.scad    -D 'part="arm_bearing"'
+  stl ear_cap_servo.stl   yoke.scad    -D 'part="cap_servo"'
+  stl ear_cap_bearing.stl yoke.scad    -D 'part="cap_bearing"'
+  stl pan_hub.stl         yoke.scad    -D 'part="hub"'
+  stl head_mount_servo.stl   bracket.scad -D 'side="servo"'
+  stl head_mount_bearing.stl bracket.scad -D 'side="bearing"'
+  stl spacers.stl         spacer.scad
+  stl antenna.stl         antenna.scad -D 'part="antenna"'
+  stl antenna_cap.stl     antenna.scad -D 'part="cap"'
   for p in $PROFILES; do
-    stl "head_plate_$p.stl" head_plate.scad -D "profile=\"$p\""
-    stl "clamp_$p.stl"      clamp.scad      -D "profile=\"$p\""
+    stl "head_front_$p.stl" head_plate.scad -D "profile=\"$p\""
+    stl "head_back_$p.stl"  head_back.scad  -D "profile=\"$p\""
+    stl "visor_$p.stl"      visor.scad      -D "profile=\"$p\""
   done
 fi
 
 if [[ $MODE == png || $MODE == all ]]; then
-  png asm_fold8_open_front.png assembly.scad 0,0,0,70,0,205,1000  -D 'profile="fold8_open"'
-  png asm_fold8_open_back.png  assembly.scad 0,0,0,70,0,330,1000 -D 'profile="fold8_open"'
-  png asm_fold8_open_side_down.png assembly.scad 0,0,0,90,0,90,1000 -D 'profile="fold8_open"' -D 'tilt=-25'
-  png asm_fold8_open_side_up.png   assembly.scad 0,0,0,90,0,90,1000 -D 'profile="fold8_open"' -D 'tilt=30'
-  png asm_fold8_open_pan80_down.png assembly.scad 0,0,0,60,0,230,1000 -D 'profile="fold8_open"' -D 'pan=80' -D 'tilt=-25'
-  png asm_s23_front.png        assembly.scad 0,0,0,70,0,205,1000  -D 'profile="s23"'
-  png asm_flip6_open_front.png assembly.scad 0,0,0,70,0,205,1000  -D 'profile="flip6_open"'
-  png part_base.png  base.scad 0,0,0,55,0,25,600 -D 'part="base"'
-  png part_cover.png base.scad 0,0,0,55,0,25,600 -D 'part="cover"'
-  png part_yoke.png  yoke.scad 0,0,0,60,0,35,600
-  png part_bracket_servo.png bracket.scad 0,0,0,50,0,30,300 -D 'side="servo"'
-  for p in $PROFILES; do
-    png "part_head_plate_$p.png" head_plate.scad 0,0,0,50,0,20,500 -D "profile=\"$p\""
+  F=0,0,0,78,0,200,1100      # przód (lekko z prawej robota)
+  S=0,0,0,85,0,270,1100      # bok
+  Q=0,0,0,70,0,225,1100      # 3/4
+  B=0,0,0,70,0,35,1100       # 3/4 z tyłu
+  png asm_front_fold8_open.png assembly.scad $F -D 'profile="fold8_open"'
+  png asm_34_fold8_open.png    assembly.scad $Q -D 'profile="fold8_open"'
+  png asm_back_fold8_open.png  assembly.scad $B -D 'profile="fold8_open"'
+  png asm_side_fold8_open_tilt-25.png assembly.scad $S -D 'profile="fold8_open"' -D 'tilt=-25'
+  png asm_side_fold8_open_tilt+30.png assembly.scad $S -D 'profile="fold8_open"' -D 'tilt=30'
+  png asm_34_fold8_open_pan80_tilt-25.png assembly.scad $Q -D 'profile="fold8_open"' -D 'pan=80' -D 'tilt=-25'
+  for p in s23 fold8_closed flip6_open; do
+    png "asm_front_$p.png" assembly.scad $F -D "profile=\"$p\""
+    png "asm_34_$p.png"    assembly.scad $Q -D "profile=\"$p\""
   done
+  png asm_side_s23.png assembly.scad $S -D 'profile="s23"'
+  png part_body.png  base.scad 0,0,0,55,0,25,700 -D 'part="base"'
+  png part_cover.png base.scad 0,0,0,50,0,25,700 -D 'part="cover"'
+  png part_neck_shoulders.png yoke.scad 0,0,0,50,0,25,600 -D 'part="neck"'
+  png part_arm_bearing.png yoke.scad 0,0,0,40,0,25,400 -D 'part="arm_bearing"'
+  png part_head_mount_servo.png bracket.scad 0,0,0,50,0,30,300 -D 'side="servo"'
+  png part_head_front_s23.png head_plate.scad 0,0,0,45,0,20,600 -D 'profile="s23"'
+  png part_head_back_s23.png  head_back.scad  0,0,0,45,0,20,600 -D 'profile="s23"'
+  png part_head_front_fold8_open.png head_plate.scad 0,0,0,45,0,20,700 -D 'profile="fold8_open"'
+  png part_antenna.png antenna.scad 0,0,0,70,0,30,150
 fi
