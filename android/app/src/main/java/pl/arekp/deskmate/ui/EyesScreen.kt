@@ -29,6 +29,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -49,6 +50,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.collectLatest
 import kotlin.random.Random
 
 /** Słowo wypowiadane właśnie przez TTS – kolejny numer i liczba sylab (do ruchu ust). */
@@ -56,9 +59,6 @@ data class SpeechBeat(val seq: Long = 0, val syllables: Int = 0)
 
 data class UiState(
     val emotion: Emotion = Emotion.NEUTRAL,
-    /** Kierunek spojrzenia -1..1. */
-    val gazeX: Float = 0f,
-    val gazeY: Float = 0f,
     val status: String = "",
     val listening: Boolean = false,
     /** Robot mówi (TTS) – usta się ruszają. */
@@ -73,7 +73,12 @@ private val Background = Color.Black
 
 /** Pełnoekranowa "twarz" robota: animowane oczy i usta. */
 @Composable
-fun EyesScreen(state: UiState, modifier: Modifier = Modifier) {
+fun EyesScreen(
+    state: UiState,
+    /** Kierunek spojrzenia −1..1 – osobny strumień, bo zmienia się z każdą klatką kamery. */
+    gaze: StateFlow<Offset>,
+    modifier: Modifier = Modifier,
+) {
     val style = FaceStyle.of(state.emotion)
 
     // Mruganie (rzadsze w zdziwieniu, wcale w śnie)
@@ -136,8 +141,12 @@ fun EyesScreen(state: UiState, modifier: Modifier = Modifier) {
         Emotion.SAD -> Offset(0f, -0.35f)
         else -> null
     }
-    val gx by animateFloatAsState((forcedGaze?.x ?: state.gazeX) + saccade.value.x, spring(stiffness = 120f), label = "gx")
-    val gy by animateFloatAsState((forcedGaze?.y ?: state.gazeY) + saccade.value.y, spring(stiffness = 120f), label = "gy")
+    // Spojrzenie animujemy poza kompozycją: wartość czyta tylko rysowanie (Canvas), więc ruch oczu
+    // za twarzą nie przebudowuje całego ekranu (pasek, napisy) przy każdej klatce kamery.
+    val look = remember { Animatable(Offset.Zero, Offset.VectorConverter) }
+    LaunchedEffect(gaze, forcedGaze) {
+        gaze.collectLatest { g -> look.animateTo(forcedGaze ?: g, spring(stiffness = 120f)) }
+    }
 
     val t = tween<Float>(280)
     val open by animateFloatAsState(style.eye.open, t, label = "open")
@@ -160,6 +169,8 @@ fun EyesScreen(state: UiState, modifier: Modifier = Modifier) {
 
     Box(modifier.fillMaxSize().background(Background)) {
         Canvas(Modifier.fillMaxSize()) {
+            val gx = look.value.x + saccade.value.x
+            val gy = look.value.y + saccade.value.y
             val face = FaceGeometry.of(size.width, size.height - reservePx, state.eyeScale)
             val eye = EyeStyle(open * blink.value, width, lidAngle, lidCover, bottomCover, roundness, leftScale, rightScale)
             val dy = bounce * bounceAmp * face.base
@@ -205,6 +216,7 @@ fun EyesScreen(state: UiState, modifier: Modifier = Modifier) {
 private val CaptionReserve = 52.dp
 
 private val TickerHeight = 34.dp
+private const val TECH_REFRESH_MS = 10_000L
 private val TickerRed = Color(0xFFD32F2F)
 private val TickerBar = Color(0xFF101820)
 
@@ -212,6 +224,22 @@ private val TickerBar = Color(0xFF101820)
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun NewsTicker(ticker: TickerState, modifier: Modifier = Modifier) {
+    // Zmiana tekstu restartuje przewijanie. Ważne zmiany (co słyszy, zdarzenia, model) pokazujemy od razu,
+    // a same dane techniczne (poziomy, czasy) odświeżamy najwyżej co [TECH_REFRESH_MS].
+    val important = remember(ticker) { ticker.copy(tech = emptyMap(), activity = Activity.IDLE) } // czynność ma własny czerwony blok
+    var shown by remember { mutableStateOf(ticker) }
+    var shownAt by remember { mutableLongStateOf(0L) }
+    LaunchedEffect(important) {
+        shown = ticker
+        shownAt = System.currentTimeMillis()
+    }
+    LaunchedEffect(ticker.tech) {
+        val wait = TECH_REFRESH_MS - (System.currentTimeMillis() - shownAt)
+        if (wait > 0) delay(wait)
+        shown = ticker
+        shownAt = System.currentTimeMillis()
+    }
+    val text = remember(shown) { shown.text() }
     Row(
         modifier.fillMaxWidth().height(TickerHeight).background(TickerBar),
         verticalAlignment = Alignment.CenterVertically,
@@ -223,7 +251,7 @@ private fun NewsTicker(ticker: TickerState, modifier: Modifier = Modifier) {
             Text(ticker.activity.label, color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold)
         }
         Text(
-            ticker.text(),
+            text,
             color = Color(0xFFE0E0E0),
             fontSize = 14.sp,
             maxLines = 1,

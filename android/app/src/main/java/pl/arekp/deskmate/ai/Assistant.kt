@@ -28,7 +28,7 @@ class Assistant(
         try {
             repeat(Config.MAX_TOOL_ROUNDS) {
                 val routed = router.complete(
-                    ChatRequest(Config.SYSTEM_PROMPT, history.toList(), tools.map { it.toSpec() }, Config.MAX_TOKENS),
+                    ChatRequest(Config.systemPrompt(), history.toList(), tools.map { it.toSpec() }, Config.MAX_TOKENS),
                 )
                 onProviderUsed(routed.provider.label)
                 val response = routed.response

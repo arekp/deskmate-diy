@@ -49,6 +49,7 @@ class MainActivity : ComponentActivity() {
             // Dotknięcie: przerwij robota / zacznij słuchać. Przytrzymanie palca: ustawienia (klucze, model…)
             EyesScreen(
                 state,
+                brain.gaze,
                 Modifier.pointerInput(Unit) { detectTapGestures(onTap = { brain.onTap() }, onLongPress = { showSettings = true }) },
             )
             if (showSettings) {

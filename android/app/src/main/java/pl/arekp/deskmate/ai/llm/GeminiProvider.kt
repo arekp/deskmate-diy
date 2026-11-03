@@ -16,16 +16,44 @@ class GeminiProvider(
     override val label: String get() = "Gemini (${model()})"
     override fun isConfigured() = apiKey().isNotBlank()
 
+    /** Modele, które odrzuciły ustawienie myślenia (400) – dla nich wysyłamy zapytanie bez niego. */
+    private val noThinkingConfig = mutableSetOf<String>()
+
     override suspend fun complete(request: ChatRequest): ChatResponse {
-        val url = "https://generativelanguage.googleapis.com/v1beta/models/${model()}:generateContent"
-        val json = HttpJson.post(url, mapOf("x-goog-api-key" to apiKey()), buildBody(request))
+        val name = model()
+        val url = "https://generativelanguage.googleapis.com/v1beta/models/$name:generateContent"
+        val headers = mapOf("x-goog-api-key" to apiKey())
+        val thinking = if (name in noThinkingConfig) null else thinkingConfigFor(name)
+        val json = try {
+            HttpJson.post(url, headers, buildBody(request, thinking))
+        } catch (e: ProviderException) {
+            if (thinking == null || e.kind != ProviderException.Kind.BAD_REQUEST) throw e
+            noThinkingConfig += name
+            HttpJson.post(url, headers, buildBody(request, null))
+        }
         return parse(json)
     }
 
     companion object {
         const val ID = "gemini"
 
-        fun buildBody(request: ChatRequest): JSONObject {
+        /**
+         * Jak mało „myśleć” przed odpowiedzią – robot ma odpowiadać szybko, a pytania są zwykle proste.
+         * Gemini 2.5: thinkingBudget (0 = bez myślenia dla Flash, Pro wymaga min. 128).
+         * Gemini 3.x i aliasy *-latest: thinkingLevel = "low".
+         * Jeśli model odrzuci ustawienie (400), provider ponawia zapytanie bez niego.
+         */
+        fun thinkingConfigFor(model: String): JSONObject? {
+            val m = model.lowercase()
+            return when {
+                "2.0" in m || "1.5" in m -> null // te modele nie myślą
+                "2.5" in m && "pro" in m -> JSONObject().put("thinkingBudget", 128)
+                "2.5" in m -> JSONObject().put("thinkingBudget", 0)
+                else -> JSONObject().put("thinkingLevel", "low")
+            }
+        }
+
+        fun buildBody(request: ChatRequest, thinking: JSONObject? = null): JSONObject {
             val contents = JSONArray()
             for (m in request.messages) {
                 val parts = JSONArray()
@@ -59,8 +87,12 @@ class GeminiProvider(
             return JSONObject()
                 .put("systemInstruction", JSONObject().put("parts", JSONArray().put(JSONObject().put("text", request.system))))
                 .put("contents", contents)
-                // Modele Gemini "myślą", a myśli liczą się do limitu – dajemy zapas, żeby nie uciąć odpowiedzi
-                .put("generationConfig", JSONObject().put("maxOutputTokens", maxOf(request.maxTokens * 4, 2048)))
+                // Myśli (jeśli są) liczą się do limitu – zostawiamy zapas, żeby nie uciąć odpowiedzi
+                .put(
+                    "generationConfig",
+                    JSONObject().put("maxOutputTokens", maxOf(request.maxTokens * 3, 1024))
+                        .apply { if (thinking != null) put("thinkingConfig", thinking) },
+                )
                 .apply {
                     if (declarations.length() > 0) {
                         put("tools", JSONArray().put(JSONObject().put("functionDeclarations", declarations)))

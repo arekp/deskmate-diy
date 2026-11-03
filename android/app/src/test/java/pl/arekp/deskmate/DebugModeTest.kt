@@ -64,3 +64,16 @@ class StopCommandTest {
         assertFalse(VoiceCommands.isStop(""))
     }
 }
+
+class LocalAnswerTest {
+    private val now = java.time.LocalDateTime.of(2026, 11, 3, 19, 5)
+
+    @Test
+    fun timeAndDateWithoutAi() {
+        assertEquals("Jest 19:05.", VoiceCommands.localAnswer("Która godzina?", now))
+        assertEquals("Jest 19:05.", VoiceCommands.localAnswer("powiedz mi która jest godzina", now))
+        assertTrue(VoiceCommands.localAnswer("jaki dziś dzień", now)!!.startsWith("Dziś jest wtorek, 3 listopada"))
+        assertNull(VoiceCommands.localAnswer("o której godzinie zaczyna się mecz w niedzielę wieczorem", now))
+        assertNull(VoiceCommands.localAnswer("opowiedz dowcip", now))
+    }
+}

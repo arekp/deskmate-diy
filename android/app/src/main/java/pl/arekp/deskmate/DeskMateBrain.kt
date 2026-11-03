@@ -2,6 +2,7 @@ package pl.arekp.deskmate
 
 import android.os.SystemClock
 import androidx.activity.ComponentActivity
+import androidx.compose.ui.geometry.Offset
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Job
@@ -19,10 +20,9 @@ import pl.arekp.deskmate.ai.llm.ClaudeProvider
 import pl.arekp.deskmate.ai.llm.GeminiProvider
 import pl.arekp.deskmate.ai.llm.LlmRouter
 import pl.arekp.deskmate.ai.llm.OpenRouterProvider
-import pl.arekp.deskmate.ai.ExpressTool
+import pl.arekp.deskmate.ai.Expression
 import pl.arekp.deskmate.ai.LookTool
 import pl.arekp.deskmate.ai.ScreenTool
-import pl.arekp.deskmate.ai.TimeTool
 import pl.arekp.deskmate.ble.RobotLink
 import pl.arekp.deskmate.ui.Activity
 import pl.arekp.deskmate.ui.Emotion
@@ -32,6 +32,7 @@ import pl.arekp.deskmate.vision.FaceObservation
 import pl.arekp.deskmate.vision.FaceTracker
 import pl.arekp.deskmate.vision.HeadController
 import pl.arekp.deskmate.voice.BargeInMic
+import pl.arekp.deskmate.voice.ListenPolicy
 import pl.arekp.deskmate.voice.Speech
 import pl.arekp.deskmate.voice.SpeechOption
 import pl.arekp.deskmate.voice.VoiceCommands
@@ -58,6 +59,10 @@ class DeskMateBrain(private val activity: ComponentActivity) {
     )
     val ui: StateFlow<UiState> = _ui.asStateFlow()
 
+    private val _gaze = MutableStateFlow(Offset.Zero)
+    /** Kierunek spojrzenia oczu (−1..1) – osobno od [ui], bo zmienia się z każdą klatką. */
+    val gaze: StateFlow<Offset> = _gaze.asStateFlow()
+
     private val scope = activity.lifecycleScope
     private val robot = RobotLink(activity, scope)
     private val head = HeadController(profile) { robot.send(it) }
@@ -72,8 +77,16 @@ class DeskMateBrain(private val activity: ComponentActivity) {
 
     /** Prośba o przerwanie bieżącej wypowiedzi (dotyk, ręka, głos) – aktywna tylko podczas mówienia. */
     @Volatile private var interruptRequest: CompletableDeferred<String>? = null
-    /** Następne słuchanie bez czekania na spojrzenie (po przerwaniu albo dotknięciu). */
-    @Volatile private var forceListen = false
+    /** Kiedy słuchać: dotyk, przerwanie, jedno dopytanie po odpowiedzi albo głos, gdy patrzysz na robota. */
+    private val policy = ListenPolicy()
+    /** Mikrofon w spoczynku – tylko pomiar głośności, żeby wiedzieć, że zaczynasz mówić. */
+    private val idleMic = BargeInMic(
+        onSpeech = {
+            policy.onVoice(SystemClock.uptimeMillis())
+            _ui.update { it.copy(listening = true) } // natychmiastowa reakcja, zanim ruszy rozpoznawanie
+        },
+        onInfo = { k, v -> tech(if (k == "Przerywanie") "Nasłuch" else k, v) },
+    )
     /** Poprzednia odpowiedź została przerwana – powiemy o tym modelowi. */
     private var answerWasCut = false
     /** Router modeli: Gemini (darmowy) → OpenRouter (darmowe) → Claude (płatny), wg trybu w ustawieniach. */
@@ -97,7 +110,6 @@ class DeskMateBrain(private val activity: ComponentActivity) {
     private var faceSince = 0L
     private var lastFaceAt = SystemClock.uptimeMillis()
     private var asleep = false
-    private var emptyListens = 0
     private var resetEmotionJob: Job? = null
     private var started = false
 
@@ -138,6 +150,7 @@ class DeskMateBrain(private val activity: ComponentActivity) {
     }
 
     fun stop() {
+        idleMic.requestStop()
         robot.stop()
         faces.stop()
         speech.shutdown()
@@ -182,15 +195,9 @@ class DeskMateBrain(private val activity: ComponentActivity) {
         refreshStatus()
     }
 
+    // Mina i gest przychodzą jako znacznik w odpowiedzi ([happy nod]), a data/godzina jest w prompcie –
+    // dzięki temu zwykła odpowiedź to jedno zapytanie do AI, bez rund narzędzi `express` / `get_current_time`.
     private fun buildTools(): List<AssistantTool> = listOfNotNull(
-        ExpressTool { emotion, gesture ->
-            setEmotion(emotion, holdMs = 4000)
-            gesture?.let {
-                gesture(it)
-                event("Gest: ${GESTURE_NAMES[it] ?: it}")
-            }
-        },
-        TimeTool(),
         LookTool({ faces.faces.value }, { faces.scene.value }, { faces.readText() }),
         ScreenTool(settings),
         // TODO: GmailTool, CalendarTool, SlackTool… – patrz docs/roadmapa.md
@@ -202,16 +209,13 @@ class DeskMateBrain(private val activity: ComponentActivity) {
         val now = SystemClock.uptimeMillis()
         if (f.present) {
             lastFaceAt = now
-            if (faceSince == 0L) {
-                faceSince = now
-                emptyListens = 0
-            }
+            if (faceSince == 0L) faceSince = now
             if (asleep) wakeUp()
             head.onFace(f)
-            _ui.update { it.copy(gazeX = f.x * 0.6f, gazeY = f.y * 0.6f) }
+            _gaze.value = Offset(f.x * 0.6f, f.y * 0.6f)
         } else {
             faceSince = 0L
-            _ui.update { it.copy(gazeX = 0f, gazeY = 0f) }
+            _gaze.value = Offset.Zero
         }
     }
 
@@ -240,67 +244,102 @@ class DeskMateBrain(private val activity: ComponentActivity) {
 
     // --- Rozmowa -------------------------------------------------------------
 
+    private fun faceEngaged(now: Long): Boolean {
+        val f = faces.faces.value
+        return f.present && f.attentive && faceSince != 0L && now - faceSince > Config.ENGAGE_AFTER_MS
+    }
+
     private suspend fun conversationLoop() {
         while (scope.isActive) {
-            val f = faces.faces.value
-            val engaged = forceListen || (!asleep && f.present && f.attentive &&
-                faceSince != 0L && SystemClock.uptimeMillis() - faceSince > Config.ENGAGE_AFTER_MS)
-            if (!engaged || !speech.canListen || speech.speaking.value) {
-                delay(300)
+            val now = SystemClock.uptimeMillis()
+            val engaged = faceEngaged(now)
+            val someoneHere = now - lastFaceAt < 3_000
+            val trigger = if (speech.canListen && !speech.speaking.value) policy.next(now, someoneHere, engaged, asleep) else null
+
+            if (trigger == null) {
+                // W spoczynku: mikrofon tylko mierzy głośność, gdy ktoś patrzy na robota
+                val wantMic = policy.wantsVoiceDetection(engaged, asleep) && !speech.speaking.value
+                if (wantMic && !idleMic.isRunning) idleMic.start()
+                if (!wantMic && idleMic.isRunning) {
+                    idleMic.stop()
+                    _ui.update { it.copy(listening = false) }
+                }
+                delay(100)
                 continue
             }
 
-            forceListen = false
-            setEmotion(Emotion.LISTENING)
-            setActivity(Activity.LISTENING)
-            _ui.update { it.copy(listening = true) }
-            val heard = speech.listenOnce()
-            _ui.update { it.copy(listening = false) }
-            setActivity(Activity.IDLE)
-
-            if (heard.isNullOrBlank()) {
-                // Cisza – nie nasłuchuj bez przerwy, wydłużaj przerwy aż twarz zniknie i wróci
-                emptyListens++
-                setEmotion(Emotion.NEUTRAL)
-                delay((1000L * emptyListens).coerceAtMost(10_000L))
-                continue
-            }
-            emptyListens = 0
-
-            _ui.update { it.copy(caption = "„$heard”", ticker = it.ticker.copy(heard = heard)) }
-
-            // Polecenia obsługiwane lokalnie, bez modelu AI
-            if (VoiceCommands.isStop(heard)) {
-                event("Zatrzymano")
-                answerWasCut = false
-                setEmotion(Emotion.NEUTRAL)
-                delay(400)
-                continue
-            }
-            val debugCmd = VoiceCommands.debugToggle(heard)
-            if (debugCmd != null) {
-                val on = debugCmd
-                setDebug(on)
-                event(if (on) "Tryb debug włączony" else "Tryb debug wyłączony")
-                setActivity(Activity.SPEAKING)
-                speech.say(if (on) "Tryb debug włączony." else "Tryb debug wyłączony.")
-                setActivity(Activity.IDLE)
-                delay(400)
-                continue
-            }
-
-            setEmotion(Emotion.THINKING)
-            setActivity(Activity.THINKING)
-            val askedAt = SystemClock.uptimeMillis()
-            val question = if (answerWasCut) "(Przerwałem Ci poprzednią odpowiedź.) $heard" else heard
-            answerWasCut = false
-            val answer = assistant.ask(question)
-            tech("LLM czas", "${SystemClock.uptimeMillis() - askedAt} ms")
-            if (_ui.value.emotion == Emotion.THINKING) setEmotion(Emotion.NEUTRAL)
-            _ui.update { it.copy(caption = answer) }
-            answerWasCut = speakInterruptible(answer)
-            if (!answerWasCut) delay(400)
+            idleMic.stop() // mikrofon musi być wolny dla rozpoznawania mowy
+            policy.onListened()
+            converse(trigger)
         }
+    }
+
+    /** Jedna wymiana: słuchanie → (polecenie lokalne | model AI) → odpowiedź. */
+    private suspend fun converse(trigger: ListenPolicy.Trigger) {
+        tech("Słucham, bo", trigger.label)
+        setEmotion(Emotion.LISTENING)
+        setActivity(Activity.LISTENING)
+        _ui.update { it.copy(listening = true) }
+        val heard = speech.listenOnce(
+            onPartial = { part -> _ui.update { it.copy(caption = "„$part…”") } },
+            onSpeechEnd = {
+                setEmotion(Emotion.THINKING)
+                setActivity(Activity.THINKING)
+            },
+        )
+        _ui.update { it.copy(listening = false) }
+        setActivity(Activity.IDLE)
+
+        if (heard.isNullOrBlank()) {
+            // Cisza – NIE słuchamy od nowa; czekamy na nowy sygnał (głos, dotyk)
+            setEmotion(Emotion.NEUTRAL)
+            if (trigger == ListenPolicy.Trigger.VOICE || trigger == ListenPolicy.Trigger.TAP) {
+                _ui.update { it.copy(caption = "") }
+            }
+            return
+        }
+
+        _ui.update { it.copy(caption = "„$heard”", ticker = it.ticker.copy(heard = heard)) }
+
+        // Polecenia i pytania obsługiwane lokalnie, bez modelu AI (od razu)
+        if (VoiceCommands.isStop(heard)) {
+            event("Zatrzymano")
+            answerWasCut = false
+            setEmotion(Emotion.NEUTRAL)
+            return
+        }
+        VoiceCommands.debugToggle(heard)?.let { on ->
+            setDebug(on)
+            event(if (on) "Tryb debug włączony" else "Tryb debug wyłączony")
+            setEmotion(Emotion.HAPPY, holdMs = 1500)
+            speakInterruptible(if (on) "Tryb debug włączony." else "Tryb debug wyłączony.")
+            return
+        }
+        VoiceCommands.localAnswer(heard)?.let { local ->
+            tech("LLM czas", "0 ms (odpowiedź lokalna)")
+            setEmotion(Emotion.HAPPY, holdMs = 2000)
+            _ui.update { it.copy(caption = local) }
+            answerWasCut = speakInterruptible(local)
+            return
+        }
+
+        setEmotion(Emotion.THINKING)
+        setActivity(Activity.THINKING)
+        val askedAt = SystemClock.uptimeMillis()
+        val question = if (answerWasCut) "(Przerwałem Ci poprzednią odpowiedź.) $heard" else heard
+        answerWasCut = false
+        val raw = assistant.ask(question)
+        tech("LLM czas", "${SystemClock.uptimeMillis() - askedAt} ms")
+        val expr = Expression.parse(raw)
+        val answer = expr.text.ifBlank { "Hmm." }
+        if (expr.emotion != null) setEmotion(expr.emotion, holdMs = 4000)
+        else if (_ui.value.emotion == Emotion.THINKING) setEmotion(Emotion.NEUTRAL)
+        expr.gesture?.let {
+            gesture(it)
+            event("Gest: ${GESTURE_NAMES[it] ?: it}")
+        }
+        _ui.update { it.copy(caption = answer) }
+        answerWasCut = speakInterruptible(answer)
     }
 
     // --- Dotyk, emocje, gesty --------------------------------------------------
@@ -329,7 +368,7 @@ class DeskMateBrain(private val activity: ComponentActivity) {
         if (requestInterrupt("dotyk")) return
         if (_ui.value.ticker.activity == Activity.IDLE || asleep) {
             if (asleep) wakeUp()
-            forceListen = true
+            policy.onTap()
             event("Dotyk – słucham")
         }
     }
@@ -362,7 +401,7 @@ class DeskMateBrain(private val activity: ComponentActivity) {
         watcher.cancel()
         setActivity(Activity.IDLE)
         val interrupted = req.isCompleted
-        if (interrupted) forceListen = true
+        if (interrupted) policy.onInterrupted() else policy.onAnswered(SystemClock.uptimeMillis())
         interrupted
     }
 

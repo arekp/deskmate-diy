@@ -8,12 +8,15 @@ import android.media.audiofx.AcousticEchoCanceler
 import android.media.audiofx.NoiseSuppressor
 import android.os.SystemClock
 import android.util.Log
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import java.util.Locale
 import kotlin.math.log10
 import kotlin.math.sqrt
 
 /**
- * Nasłuch mikrofonu w czasie, gdy robot mówi – do przerywania głosem.
+ * Lekki nasłuch mikrofonu (tylko głośność): gdy robot mówi – do przerywania głosem,
+ * a w spoczynku – żeby wiedzieć, że użytkownik zaczął mówić (wtedy dopiero startuje rozpoznawanie mowy).
  * Źródło VOICE_COMMUNICATION + systemowe wycinanie echa (AEC) i szumu, jeśli telefon je ma.
  * Dźwięk nie jest nigdzie zapisywany ani wysyłany – liczy się tylko głośność.
  *
@@ -50,7 +53,7 @@ class BargeInMic(
             val vad = BargeInVad(marginDb)
             val frame = ShortArray(rate / 50) // 20 ms
             var lastInfo = 0L
-            var fired = false
+            var lastFire = 0L
             try {
                 record.startRecording()
                 while (running) {
@@ -60,8 +63,9 @@ class BargeInMic(
                     for (i in 0 until n) sum += frame[i].toDouble() * frame[i]
                     val db = (20 * log10(sqrt(sum / n) / 32768.0 + 1e-9)).toFloat()
                     val now = SystemClock.uptimeMillis()
-                    if (!fired && vad.update(now, db)) {
-                        fired = true
+                    // Zgłoszenie najwyżej co 2 s (nasłuch w spoczynku działa dłużej niż jedna wypowiedź)
+                    if (vad.update(now, db) && now - lastFire > REARM_MS) {
+                        lastFire = now
                         onSpeech()
                     }
                     if (now - lastInfo > 500) {
@@ -72,6 +76,7 @@ class BargeInMic(
             } catch (e: Exception) {
                 Log.w(TAG, "Nasłuch przerwań", e)
             } finally {
+                running = false
                 runCatching { record.stop() }
                 aec?.release()
                 ns?.release()
@@ -80,14 +85,23 @@ class BargeInMic(
         }, "barge-in").apply { start() }
     }
 
-    /** Zatrzymuje nasłuch i zwalnia mikrofon (czeka na wątek). */
-    fun stop() {
+    val isRunning: Boolean get() = running
+
+    /** Zatrzymanie bez czekania (np. przy zamykaniu aplikacji). */
+    fun requestStop() {
         running = false
-        thread?.join(300)
+    }
+
+    /** Zatrzymuje nasłuch i zwalnia mikrofon (czeka na wątek poza wątkiem głównym). */
+    suspend fun stop() {
+        running = false
+        val t = thread ?: return
         thread = null
+        withContext(Dispatchers.IO) { t.join(400) }
     }
 
     private companion object {
         const val TAG = "BargeInMic"
+        const val REARM_MS = 2_000L
     }
 }

@@ -22,6 +22,22 @@ object VoiceCommands {
         return !off
     }
 
+    /**
+     * Pytania o godzinę i datę – odpowiedź od razu, bez modelu AI. Null, gdy to inne pytanie.
+     */
+    fun localAnswer(text: String, now: java.time.LocalDateTime = java.time.LocalDateTime.now()): String? {
+        val t = text.lowercase(Locale.forLanguageTag("pl"))
+        if (t.split(Regex("\\s+")).size > 7) return null
+        val pl = Locale.forLanguageTag("pl-PL")
+        return when {
+            Regex("któr(a|ej) (jest )?godzin|ile (jest )?czasu|jaka (jest )?godzina").containsMatchIn(t) ->
+                "Jest ${now.format(java.time.format.DateTimeFormatter.ofPattern("H:mm"))}."
+            Regex("jaki (dziś|dzisiaj|mamy|jest)( dzisiaj| dziś)? (dzień|data)|któr(y|ego) (dziś|dzisiaj|jest|mamy)|jaka (jest )?(dziś |dzisiaj )?data").containsMatchIn(t) ->
+                "Dziś jest " + now.format(java.time.format.DateTimeFormatter.ofPattern("EEEE, d MMMM", pl)) + "."
+            else -> null
+        }
+    }
+
     /** Krótkie „stop / cisza / przestań / wystarczy” – robot milknie, bez pytania modelu. */
     fun isStop(text: String): Boolean {
         val words = text.lowercase(Locale.forLanguageTag("pl")).replace(Regex("[^\\p{L}\\s]"), " ")

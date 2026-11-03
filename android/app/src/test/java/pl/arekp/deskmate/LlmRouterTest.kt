@@ -28,9 +28,19 @@ class LlmRouterTest {
         override val label: String get() = id
         val failures = ArrayDeque<ProviderException>()
         var calls = 0
+        var delayMs = 0L
+        var cancelled = false
         override fun isConfigured() = configured
         override suspend fun complete(request: ChatRequest): ChatResponse {
             calls++
+            if (delayMs > 0) {
+                try {
+                    kotlinx.coroutines.delay(delayMs)
+                } catch (e: kotlinx.coroutines.CancellationException) {
+                    cancelled = true
+                    throw e
+                }
+            }
             failures.removeFirstOrNull()?.let { throw it }
             return ChatResponse(listOf(Part.Text("odpowiedź od $id")))
         }
@@ -156,5 +166,26 @@ class LlmRouterTest {
         assertEquals(Kind.AUTH, ProviderException.fromHttp(401, "", null).kind)
         assertEquals(Kind.SERVER, ProviderException.fromHttp(529, "", null).kind)
         assertEquals(Kind.BAD_REQUEST, ProviderException.fromHttp(400, "", null).kind)
+    }
+
+    @Test
+    fun slowProvider_isHedgedWithNextFreeOne_andCancelled() {
+        val fast = LlmRouter(listOf(gemini, openrouter, claude), { mode }, { now }, { events += it }, hedgeMs = 50)
+        gemini.delayMs = 5_000
+        val started = System.currentTimeMillis()
+        val r = runBlocking { fast.complete(request) }
+        assertEquals("openrouter", r.provider.id)
+        assertTrue("trwało za długo", System.currentTimeMillis() - started < 2_000)
+        assertTrue(gemini.cancelled)
+        assertTrue(events.any { it.contains("odpowiada wolno") })
+    }
+
+    @Test
+    fun paidProviderIsNeverStartedJustInCase() {
+        val fast = LlmRouter(listOf(gemini, openrouter, claude), { mode }, { now }, { events += it }, hedgeMs = 50)
+        gemini.configured = false
+        openrouter.delayMs = 300 // wolny, ale następny w kolejce jest płatny – czekamy
+        assertEquals("openrouter", runBlocking { fast.complete(request) }.provider.id)
+        assertEquals(0, claude.calls)
     }
 }

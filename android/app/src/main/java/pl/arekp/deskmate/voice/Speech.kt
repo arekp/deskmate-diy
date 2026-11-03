@@ -17,6 +17,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.withTimeoutOrNull
 import pl.arekp.deskmate.Config
 import pl.arekp.deskmate.Settings
 import java.util.Locale
@@ -112,12 +113,20 @@ class Speech(
         return listOf(SpeechOption("", "Domyślne w telefonie")) + onDevice + services
     }
 
-    /** Słucha jednej wypowiedzi. Zwraca tekst albo null (cisza, błąd). */
-    suspend fun listenOnce(): String? {
+    /**
+     * Słucha jednej wypowiedzi. Zwraca tekst albo null (cisza, błąd, limit czasu).
+     * [onPartial] – słowa rozpoznane w trakcie mówienia (podgląd na ekranie),
+     * [onSpeechEnd] – użytkownik skończył mówić (można od razu pokazać „myślę”).
+     */
+    suspend fun listenOnce(
+        onPartial: (String) -> Unit = {},
+        onSpeechEnd: () -> Unit = {},
+    ): String? {
         val rec = recognizer ?: return null
         val started = SystemClock.uptimeMillis()
         var speechEnd = 0L
-        return suspendCancellableCoroutine { cont ->
+        var busy = false
+        val result = withTimeoutOrNull(LISTEN_TIMEOUT_MS) { suspendCancellableCoroutine<String?> { cont ->
             var finished = false
             fun finish(result: String?) {
                 if (finished) return
@@ -136,30 +145,43 @@ class Speech(
 
                 override fun onError(error: Int) {
                     onInfo("STT czas", "błąd: ${errorText(error)}")
+                    busy = error == SpeechRecognizer.ERROR_RECOGNIZER_BUSY || error == SpeechRecognizer.ERROR_CLIENT
                     finish(null)
                 }
 
                 override fun onEndOfSpeech() {
                     speechEnd = SystemClock.uptimeMillis()
+                    onSpeechEnd()
+                }
+
+                override fun onPartialResults(partialResults: Bundle?) {
+                    partialResults?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull()
+                        ?.takeIf { it.isNotBlank() }?.let(onPartial)
                 }
 
                 override fun onReadyForSpeech(params: Bundle?) {}
                 override fun onBeginningOfSpeech() {}
                 override fun onRmsChanged(rmsdB: Float) {}
                 override fun onBufferReceived(buffer: ByteArray?) {}
-                override fun onPartialResults(partialResults: Bundle?) {}
                 override fun onEvent(eventType: Int, params: Bundle?) {}
             })
 
             val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
                 putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
                 putExtra(RecognizerIntent.EXTRA_LANGUAGE, Config.SPEECH_LANG)
-                putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, false)
+                putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
                 putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS, 1200L)
             }
             rec.startListening(intent)
             cont.invokeOnCancellation { rec.cancel() }
+        } }
+        if (result == null && SystemClock.uptimeMillis() - started >= LISTEN_TIMEOUT_MS) onInfo("STT czas", "limit czasu")
+        // Zawieszona albo zajęta usługa – utwórz od nowa, zamiast utknąć
+        if (busy || (result == null && SystemClock.uptimeMillis() - started >= LISTEN_TIMEOUT_MS)) {
+            recognizer?.destroy()
+            initRecognizer()
         }
+        return result
     }
 
     // --- TTS -------------------------------------------------------------------
@@ -212,7 +234,8 @@ class Speech(
         val queued = SystemClock.uptimeMillis()
         var startedAt = 0L
         return try {
-            suspendCancellableCoroutine<Boolean> { cont ->
+            // Limit czasu na wypadek silnika, który nie zgłosi końca (ok. 150 ms na znak, min. 8 s)
+            withTimeoutOrNull(maxOf(8_000L, text.length * 150L)) { suspendCancellableCoroutine<Boolean> { cont ->
                 val id = UUID.randomUUID().toString()
                 engine.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
                     override fun onStart(utteranceId: String?) {
@@ -249,7 +272,7 @@ class Speech(
                 })
                 engine.speak(text, TextToSpeech.QUEUE_FLUSH, null, id)
                 cont.invokeOnCancellation { engine.stop() }
-            }
+            } } ?: true
         } finally {
             _speaking.value = false
         }
@@ -258,6 +281,10 @@ class Speech(
     fun shutdown() {
         recognizer?.destroy()
         tts?.shutdown()
+    }
+
+    private companion object {
+        const val LISTEN_TIMEOUT_MS = 15_000L
     }
 
     private fun errorText(code: Int): String = when (code) {

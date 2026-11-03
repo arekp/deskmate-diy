@@ -81,6 +81,10 @@ class FaceTracker(
     val waves: SharedFlow<Unit> = _waves.asSharedFlow()
 
     private val executor = Executors.newSingleThreadExecutor()
+    /** Wyniki ML Kit obsługujemy poza wątkiem głównym; po zamknięciu nic się już nie wykona (bez wyjątków). */
+    private val results = java.util.concurrent.Executor { r ->
+        if (!executor.isShutdown) runCatching { executor.execute(r) }
+    }
     private val labeler = ImageLabeling.getClient(
         ImageLabelerOptions.Builder().setConfidenceThreshold(LABEL_MIN_CONFIDENCE).build(),
     )
@@ -147,7 +151,7 @@ class FaceTracker(
         val tasks = mutableListOf<Task<*>>()
 
         tasks += detector.process(input)
-            .addOnSuccessListener { faces ->
+            .addOnSuccessListener(results) { faces ->
                 val face = faces.maxByOrNull { it.boundingBox.width() * it.boundingBox.height() }
                 _faces.value = if (face == null) {
                     FaceObservation(present = false)
@@ -166,7 +170,7 @@ class FaceTracker(
 
         if (now - lastLabelAt >= LABEL_EVERY_MS) {
             lastLabelAt = now
-            tasks += labeler.process(input).addOnSuccessListener { labels ->
+            tasks += labeler.process(input).addOnSuccessListener(results) { labels ->
                 val list = labels.sortedByDescending { it.confidence }.take(MAX_LABELS)
                     .map { SceneLabel(LabelsPl.translate(it.text), it.confidence) }
                 _scene.value = _scene.value.copy(labels = list)
@@ -175,7 +179,7 @@ class FaceTracker(
 
         if (now - lastPoseAt >= POSE_EVERY_MS) {
             lastPoseAt = now
-            tasks += poseDetector.process(input).addOnSuccessListener { pose ->
+            tasks += poseDetector.process(input).addOnSuccessListener(results) { pose ->
                 fun arm(wrist: Int, shoulder: Int): WaveDetector.Arm? {
                     val wr = pose.getPoseLandmark(wrist) ?: return null
                     val sh = pose.getPoseLandmark(shoulder) ?: return null
@@ -197,17 +201,17 @@ class FaceTracker(
         textRequest?.let { request ->
             textRequest = null
             tasks += textRecognizer.process(input)
-                .addOnSuccessListener { request.complete(it.text.trim()) }
-                .addOnFailureListener { request.complete("") }
+                .addOnSuccessListener(results) { request.complete(it.text.trim()) }
+                .addOnFailureListener(results) { request.complete("") }
         }
 
-        Tasks.whenAllComplete(tasks).addOnCompleteListener { proxy.close() }
+        Tasks.whenAllComplete(tasks).addOnCompleteListener(results) { proxy.close() }
     }
 
     private companion object {
         const val TAG = "FaceTracker"
-        const val LABEL_EVERY_MS = 1500L
-        const val POSE_EVERY_MS = 150L
+        const val LABEL_EVERY_MS = 3000L
+        const val POSE_EVERY_MS = 250L
         const val LABEL_MIN_CONFIDENCE = 0.6f
         const val POSE_MIN_LIKELIHOOD = 0.5f
         const val MAX_LABELS = 6

@@ -1,5 +1,6 @@
 package pl.arekp.deskmate.ui
 
+import androidx.compose.runtime.Immutable
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 
@@ -16,6 +17,7 @@ enum class Activity(val label: String) {
  * Pasek informacyjny na dole ekranu, w stylu wiadomości TV.
  * Niezmienny stan – każda zmiana zwraca nową kopię (łatwo testować i trzymać w StateFlow).
  */
+@Immutable
 data class TickerState(
     val activity: Activity = Activity.IDLE,
     /** Ostatnio zrozumiana wypowiedź użytkownika. */

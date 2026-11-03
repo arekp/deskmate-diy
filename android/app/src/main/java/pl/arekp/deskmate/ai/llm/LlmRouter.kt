@@ -1,6 +1,12 @@
 package pl.arekp.deskmate.ai.llm
 
 import android.util.Log
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.cancelChildren
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 
 /**
  * Router modeli: wybiera dostawcę według trybu i automatycznie przełącza się na następnego,
@@ -19,6 +25,8 @@ class LlmRouter(
     private val clock: () -> Long = { System.currentTimeMillis() },
     /** Zdarzenia do pokazania użytkownikowi (pasek informacji), np. "Gemini: limit zapytań". */
     private val onEvent: (String) -> Unit = {},
+    /** Po tylu ms bez odpowiedzi pytamy równolegle następnego darmowego dostawcę. */
+    private val hedgeMs: Long = HEDGE_MS,
 ) {
     enum class Mode(val label: String) {
         /** Najpierw darmowe (Gemini → OpenRouter), płatny Claude tylko awaryjnie. */
@@ -63,26 +71,69 @@ class LlmRouter(
 
     fun isAnyConfigured(): Boolean = order().any { it.isConfigured() }
 
+    /**
+     * Pyta dostawców po kolei. Gdy bieżący nie odpowie w [hedgeMs], równolegle pyta następnego
+     * DARMOWEGO (płatnego nie uruchamiamy „na zapas”) – wygrywa pierwsza poprawna odpowiedź,
+     * pozostałe zapytania są anulowane. Błąd od razu przechodzi do następnego dostawcy.
+     */
     suspend fun complete(request: ChatRequest): Routed {
+        val queue = candidates()
+        if (queue.isEmpty()) throw AllProvidersFailed(emptyMap())
         val errors = linkedMapOf<String, Throwable>()
-        for (p in candidates()) {
-            try {
-                val response = p.complete(request)
-                cooldownUntil.remove(p.id)
-                return Routed(p, response)
-            } catch (e: ProviderException) {
-                errors[p.id] = e
-                penalize(p, e)
-                onEvent("${p.label}: ${describe(e.kind)} – próbuję dalej")
-                logWarn("${p.label}: ${e.kind} ${e.message}")
-            } catch (e: Exception) {
-                errors[p.id] = e
-                cooldownUntil[p.id] = clock() + SERVER_COOLDOWN_MS
-                onEvent("${p.label}: błąd – próbuję dalej")
-                logWarn("${p.label}: ${e.message}")
+        val results = Channel<Pair<LlmProvider, Result<ChatResponse>>>(Channel.UNLIMITED)
+        return coroutineScope {
+            var next = 0
+            var running = 0
+            fun launchNext() {
+                val p = queue[next++]
+                running++
+                launch {
+                    val r = try {
+                        Result.success(p.complete(request))
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (e: Throwable) {
+                        Result.failure(e)
+                    }
+                    results.send(p to r)
+                }
             }
+            launchNext()
+            var winner: Routed? = null
+            while (winner == null) {
+                val canHedge = next < queue.size && queue[next].isFree
+                val r = if (canHedge) withTimeoutOrNull(hedgeMs) { results.receive() } else results.receive()
+                if (r == null) {
+                    onEvent("${queue[next - 1].label}: odpowiada wolno – pytam też ${queue[next].label}")
+                    launchNext()
+                    continue
+                }
+                running--
+                val (p, res) = r
+                val response = res.getOrNull()
+                if (response != null) {
+                    cooldownUntil.remove(p.id)
+                    winner = Routed(p, response)
+                } else {
+                    val e = res.exceptionOrNull()!!
+                    errors[p.id] = e
+                    if (e is ProviderException) {
+                        penalize(p, e)
+                        onEvent("${p.label}: ${describe(e.kind)} – próbuję dalej")
+                        logWarn("${p.label}: ${e.kind} ${e.message}")
+                    } else {
+                        cooldownUntil[p.id] = clock() + SERVER_COOLDOWN_MS
+                        onEvent("${p.label}: błąd – próbuję dalej")
+                        logWarn("${p.label}: ${e.message}")
+                    }
+                    if (running == 0) {
+                        if (next < queue.size) launchNext() else throw AllProvidersFailed(errors)
+                    }
+                }
+            }
+            coroutineContext.cancelChildren() // przerwij wolniejsze zapytania
+            winner!!
         }
-        throw AllProvidersFailed(errors)
     }
 
     private fun penalize(p: LlmProvider, e: ProviderException) {
@@ -114,5 +165,6 @@ class LlmRouter(
         const val QUOTA_COOLDOWN_MS = 60 * 60_000L
         const val AUTH_COOLDOWN_MS = 30 * 60_000L
         const val SERVER_COOLDOWN_MS = 30_000L
+        const val HEDGE_MS = 5_000L
     }
 }
