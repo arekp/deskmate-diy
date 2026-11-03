@@ -113,6 +113,12 @@ Jak w wiadomościach TV: czerwony blok z bieżącą czynnością – **CZEKAM / 
 
 Zdarzenia (5 ostatnich, z godziną): zmiana modelu, przełączenie routera i powód (limit, zły klucz, awaria), gesty, połączenie i utrata połączenia z robotem, zaśnięcie, pobudka, dotyk. Nowe zdarzenie dodajesz wywołaniem `event("…")` w `DeskMateBrain`.
 
+**Tryb debug** (ustawienia → Diagnostyka albo głosowo „tryb debug” / „wyłącz debug”, obsługiwane lokalnie bez modelu AI) dodaje do paska blok informacji technicznych:
+
+`DEBUG ▸ Wzrok: ML Kit, wykrywanie twarzy na urządzeniu · STT: Google (domyślne) · TTS: Samsung TTS (domyślny) · głos pl-pl-x-… · lokalnie · STT czas: 3120 ms (rozpoznanie 410 ms) · LLM czas: 1840 ms · TTS czas: start 120 ms, mówienie 3.4 s`
+
+Nową informację dodajesz wywołaniem `tech("KLUCZ", "wartość")` (pusta wartość usuwa). Usługę rozpoznawania mowy (domyślna, „na urządzeniu (offline)” od Androida 12 albo konkretna zainstalowana) i silnik TTS wybierasz w ustawieniach; głos zmienia się w ustawieniach telefonu.
+
 ## 4. Router modeli AI
 
 Aplikacja nie jest przywiązana do jednego modelu. `LlmRouter` wybiera dostawcę według trybu z ustawień i sam przełącza się na następnego, gdy coś pójdzie nie tak.

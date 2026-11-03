@@ -1,9 +1,14 @@
 package pl.arekp.deskmate.voice
 
+import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.os.Build
 import android.os.Bundle
+import android.os.SystemClock
+import android.provider.Settings as AndroidSettings
 import android.speech.RecognitionListener
+import android.speech.RecognitionService
 import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
 import android.speech.tts.TextToSpeech
@@ -13,15 +18,25 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.suspendCancellableCoroutine
 import pl.arekp.deskmate.Config
+import pl.arekp.deskmate.Settings
 import java.util.Locale
 import java.util.UUID
 import kotlin.coroutines.resume
 
+/** Pozycja na liście wyboru w ustawieniach: identyfikator do zapisania + czytelna nazwa. */
+data class SpeechOption(val id: String, val label: String)
+
 /**
- * Rozpoznawanie mowy (systemowe, Google) i synteza mowy (TTS).
+ * Rozpoznawanie mowy (STT) i synteza mowy (TTS) – usługi systemowe Androida.
+ * Którą usługę/silnik użyć, mówią ustawienia (puste = domyślne w telefonie).
+ * Informacje techniczne (jaki silnik, głos, czasy) idą do [onInfo] → pasek w trybie debug.
  * Metody wywoływać z wątku głównego.
  */
-class Speech(private val context: Context) {
+class Speech(
+    private val context: Context,
+    private val settings: Settings,
+    private val onInfo: (key: String, value: String) -> Unit = { _, _ -> },
+) {
 
     private var recognizer: SpeechRecognizer? = null
     private var tts: TextToSpeech? = null
@@ -31,20 +46,75 @@ class Speech(private val context: Context) {
     val speaking: StateFlow<Boolean> = _speaking.asStateFlow()
 
     fun init() {
-        if (SpeechRecognizer.isRecognitionAvailable(context)) {
-            recognizer = SpeechRecognizer.createSpeechRecognizer(context)
-        }
-        tts = TextToSpeech(context) { status ->
-            ttsReady = status == TextToSpeech.SUCCESS
-            if (ttsReady) tts?.language = Locale.forLanguageTag(Config.SPEECH_LANG)
-        }
+        initRecognizer()
+        initTts()
+    }
+
+    /** Po zmianie ustawień mowy – tworzy usługi od nowa. */
+    fun reload() {
+        recognizer?.destroy()
+        recognizer = null
+        tts?.shutdown()
+        tts = null
+        ttsReady = false
+        init()
     }
 
     val canListen: Boolean get() = recognizer != null
 
+    // --- STT -------------------------------------------------------------------
+
+    private fun initRecognizer() {
+        val choice = settings.sttService
+        recognizer = when {
+            choice == Settings.STT_ON_DEVICE && Build.VERSION.SDK_INT >= 31 &&
+                SpeechRecognizer.isOnDeviceRecognitionAvailable(context) ->
+                SpeechRecognizer.createOnDeviceSpeechRecognizer(context)
+            choice.contains('/') -> ComponentName.unflattenFromString(choice)
+                ?.let { SpeechRecognizer.createSpeechRecognizer(context, it) }
+            SpeechRecognizer.isRecognitionAvailable(context) -> SpeechRecognizer.createSpeechRecognizer(context)
+            else -> null
+        }
+        onInfo("STT", sttLabel())
+    }
+
+    private fun sttLabel(): String {
+        val choice = settings.sttService
+        if (recognizer == null) return "niedostępne"
+        if (choice == Settings.STT_ON_DEVICE) {
+            return if (Build.VERSION.SDK_INT >= 31 && SpeechRecognizer.isOnDeviceRecognitionAvailable(context))
+                "na urządzeniu (Android)" else "na urządzeniu niedostępne → domyślne"
+        }
+        val component = if (choice.contains('/')) choice
+        else AndroidSettings.Secure.getString(context.contentResolver, "voice_recognition_service").orEmpty()
+        val name = ComponentName.unflattenFromString(component)?.let { serviceLabel(it) } ?: "systemowe"
+        return if (choice.isBlank()) "$name (domyślne)" else name
+    }
+
+    private fun serviceLabel(c: ComponentName): String = runCatching {
+        val pm = context.packageManager
+        @Suppress("DEPRECATION")
+        pm.getServiceInfo(c, 0).loadLabel(pm).toString().ifBlank { c.packageName }
+    }.getOrDefault(c.packageName)
+
+    /** Usługi rozpoznawania mowy zainstalowane w telefonie (do ustawień). */
+    fun recognizers(): List<SpeechOption> {
+        val pm = context.packageManager
+        @Suppress("DEPRECATION")
+        val services = pm.queryIntentServices(Intent(RecognitionService.SERVICE_INTERFACE), 0).map {
+            val c = ComponentName(it.serviceInfo.packageName, it.serviceInfo.name)
+            SpeechOption(c.flattenToString(), it.loadLabel(pm).toString().ifBlank { c.packageName })
+        }
+        val onDevice = if (Build.VERSION.SDK_INT >= 31 && SpeechRecognizer.isOnDeviceRecognitionAvailable(context))
+            listOf(SpeechOption(Settings.STT_ON_DEVICE, "Na urządzeniu (offline)")) else emptyList()
+        return listOf(SpeechOption("", "Domyślne w telefonie")) + onDevice + services
+    }
+
     /** Słucha jednej wypowiedzi. Zwraca tekst albo null (cisza, błąd). */
     suspend fun listenOnce(): String? {
         val rec = recognizer ?: return null
+        val started = SystemClock.uptimeMillis()
+        var speechEnd = 0L
         return suspendCancellableCoroutine { cont ->
             var finished = false
             fun finish(result: String?) {
@@ -56,15 +126,25 @@ class Speech(private val context: Context) {
             rec.setRecognitionListener(object : RecognitionListener {
                 override fun onResults(results: Bundle?) {
                     val list = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
+                    val now = SystemClock.uptimeMillis()
+                    val wait = if (speechEnd > 0) " (rozpoznanie ${now - speechEnd} ms)" else ""
+                    onInfo("STT czas", "${now - started} ms$wait")
                     finish(list?.firstOrNull())
                 }
 
-                override fun onError(error: Int) = finish(null)
+                override fun onError(error: Int) {
+                    onInfo("STT czas", "błąd: ${errorText(error)}")
+                    finish(null)
+                }
+
+                override fun onEndOfSpeech() {
+                    speechEnd = SystemClock.uptimeMillis()
+                }
+
                 override fun onReadyForSpeech(params: Bundle?) {}
                 override fun onBeginningOfSpeech() {}
                 override fun onRmsChanged(rmsdB: Float) {}
                 override fun onBufferReceived(buffer: ByteArray?) {}
-                override fun onEndOfSpeech() {}
                 override fun onPartialResults(partialResults: Bundle?) {}
                 override fun onEvent(eventType: Int, params: Bundle?) {}
             })
@@ -80,23 +160,72 @@ class Speech(private val context: Context) {
         }
     }
 
+    // --- TTS -------------------------------------------------------------------
+
+    private fun initTts() {
+        val engine = settings.ttsEngine
+        val listener = TextToSpeech.OnInitListener { status ->
+            ttsReady = status == TextToSpeech.SUCCESS
+            val t = tts
+            if (!ttsReady || t == null) {
+                onInfo("TTS", "błąd uruchomienia silnika")
+                return@OnInitListener
+            }
+            val lang = Locale.forLanguageTag(Config.SPEECH_LANG)
+            val res = t.setLanguage(lang)
+            onInfo("TTS", ttsLabel(t, missingLanguage = res < TextToSpeech.LANG_AVAILABLE))
+        }
+        tts = if (engine.isBlank()) TextToSpeech(context, listener) else TextToSpeech(context, listener, engine)
+    }
+
+    private fun ttsLabel(t: TextToSpeech, missingLanguage: Boolean): String {
+        val pkg = settings.ttsEngine.ifBlank { t.defaultEngine.orEmpty() }
+        val name = t.engines.firstOrNull { it.name == pkg }?.label ?: pkg.ifBlank { "systemowy" }
+        val suffix = if (settings.ttsEngine.isBlank()) " (domyślny)" else ""
+        if (missingLanguage) return "$name$suffix · BRAK głosu pl-PL"
+        val voice = runCatching { t.voice }.getOrNull()
+        val where = when {
+            voice == null -> ""
+            voice.isNetworkConnectionRequired -> " · w chmurze"
+            else -> " · lokalnie"
+        }
+        return "$name$suffix · głos ${voice?.name ?: "?"}$where"
+    }
+
+    /** Silniki syntezy mowy zainstalowane w telefonie (do ustawień). */
+    fun ttsEngines(): List<SpeechOption> =
+        listOf(SpeechOption("", "Domyślny w telefonie")) +
+            (tts?.engines.orEmpty()).map { SpeechOption(it.name, it.label) }
+
     /** Mówi tekst i czeka na koniec wypowiedzi. */
     suspend fun say(text: String) {
         val engine = tts
         if (engine == null || !ttsReady || text.isBlank()) return
         _speaking.value = true
+        val queued = SystemClock.uptimeMillis()
+        var startedAt = 0L
         try {
             suspendCancellableCoroutine { cont ->
                 val id = UUID.randomUUID().toString()
                 engine.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
-                    override fun onStart(utteranceId: String?) {}
+                    override fun onStart(utteranceId: String?) {
+                        if (utteranceId == id) startedAt = SystemClock.uptimeMillis()
+                    }
+
                     override fun onDone(utteranceId: String?) {
-                        if (utteranceId == id && cont.isActive) cont.resume(Unit)
+                        if (utteranceId != id) return
+                        val now = SystemClock.uptimeMillis()
+                        val begin = if (startedAt > 0) startedAt else queued
+                        val first = if (startedAt > 0) "start ${startedAt - queued} ms, " else ""
+                        onInfo("TTS czas", "${first}mówienie %.1f s".format(Locale.ROOT, (now - begin) / 1000.0))
+                        if (cont.isActive) cont.resume(Unit)
                     }
 
                     @Deprecated("Deprecated in Java")
                     override fun onError(utteranceId: String?) {
-                        if (utteranceId == id && cont.isActive) cont.resume(Unit)
+                        if (utteranceId != id) return
+                        onInfo("TTS czas", "błąd syntezy")
+                        if (cont.isActive) cont.resume(Unit)
                     }
                 })
                 engine.speak(text, TextToSpeech.QUEUE_FLUSH, null, id)
@@ -110,5 +239,17 @@ class Speech(private val context: Context) {
     fun shutdown() {
         recognizer?.destroy()
         tts?.shutdown()
+    }
+
+    private fun errorText(code: Int): String = when (code) {
+        SpeechRecognizer.ERROR_NO_MATCH -> "nic nie rozpoznano"
+        SpeechRecognizer.ERROR_SPEECH_TIMEOUT -> "cisza"
+        SpeechRecognizer.ERROR_NETWORK, SpeechRecognizer.ERROR_NETWORK_TIMEOUT -> "sieć"
+        SpeechRecognizer.ERROR_AUDIO -> "mikrofon"
+        SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS -> "brak uprawnień"
+        SpeechRecognizer.ERROR_RECOGNIZER_BUSY -> "usługa zajęta"
+        SpeechRecognizer.ERROR_SERVER -> "serwer"
+        SpeechRecognizer.ERROR_CLIENT -> "klient"
+        else -> "kod $code"
     }
 }

@@ -28,6 +28,8 @@ import pl.arekp.deskmate.vision.FaceObservation
 import pl.arekp.deskmate.vision.FaceTracker
 import pl.arekp.deskmate.vision.HeadController
 import pl.arekp.deskmate.voice.Speech
+import pl.arekp.deskmate.voice.SpeechOption
+import pl.arekp.deskmate.voice.VoiceCommands
 
 /**
  * "Mózg" robota: łączy kamerę, głos, model językowy, oczy na ekranie i ruch głowy.
@@ -44,14 +46,18 @@ class DeskMateBrain(private val activity: ComponentActivity) {
     val profile: DeviceProfile = DeviceProfile.detect()
     val settings = Settings(activity)
 
-    private val _ui = MutableStateFlow(UiState(eyeScale = profile.eyeScale))
+    private val _ui = MutableStateFlow(
+        UiState(eyeScale = profile.eyeScale).let {
+            it.copy(ticker = it.ticker.copy(debug = settings.debugMode).withTech("Wzrok", "ML Kit, wykrywanie twarzy na urządzeniu"))
+        },
+    )
     val ui: StateFlow<UiState> = _ui.asStateFlow()
 
     private val scope = activity.lifecycleScope
     private val robot = RobotLink(activity, scope)
     private val head = HeadController(profile) { robot.send(it) }
     private val faces = FaceTracker(activity, activity)
-    private val speech = Speech(activity)
+    private val speech = Speech(activity, settings) { key, value -> tech(key, value) }
     /** Router modeli: Gemini (darmowy) → OpenRouter (darmowe) → Claude (płatny), wg trybu w ustawieniach. */
     val router = LlmRouter(
         providers = listOf(
@@ -125,6 +131,29 @@ class DeskMateBrain(private val activity: ComponentActivity) {
     private fun setActivity(a: Activity) = _ui.update { it.copy(ticker = it.ticker.copy(activity = a)) }
 
     private fun event(text: String) = _ui.update { it.copy(ticker = it.ticker.withEvent(text)) }
+
+    /** Informacja techniczna – widoczna w pasku tylko w trybie debug. */
+    private fun tech(key: String, value: String?) = _ui.update { it.copy(ticker = it.ticker.withTech(key, value)) }
+
+    private fun setDebug(on: Boolean) {
+        settings.debugMode = on
+        _ui.update { it.copy(ticker = it.ticker.copy(debug = on)) }
+    }
+
+    // --- Ustawienia (okno po przytrzymaniu palca) --------------------------------
+
+    fun sttOptions(): List<SpeechOption> = speech.recognizers()
+    fun ttsOptions(): List<SpeechOption> = speech.ttsEngines()
+
+    /** Wywoływane po zapisaniu ustawień: odświeża pasek i – gdy trzeba – usługi mowy. */
+    fun onSettingsSaved(speechChanged: Boolean) {
+        _ui.update { it.copy(ticker = it.ticker.copy(debug = settings.debugMode)) }
+        if (speechChanged) {
+            speech.reload()
+            event("Zmieniono ustawienia mowy")
+        }
+        refreshStatus()
+    }
 
     private fun buildTools(): List<AssistantTool> = listOfNotNull(
         ExpressTool { emotion, gesture ->
@@ -210,9 +239,25 @@ class DeskMateBrain(private val activity: ComponentActivity) {
             emptyListens = 0
 
             _ui.update { it.copy(caption = "„$heard”", ticker = it.ticker.copy(heard = heard)) }
+
+            // Polecenia obsługiwane lokalnie, bez modelu AI
+            val debugCmd = VoiceCommands.debugToggle(heard)
+            if (debugCmd != null) {
+                val on = debugCmd
+                setDebug(on)
+                event(if (on) "Tryb debug włączony" else "Tryb debug wyłączony")
+                setActivity(Activity.SPEAKING)
+                speech.say(if (on) "Tryb debug włączony." else "Tryb debug wyłączony.")
+                setActivity(Activity.IDLE)
+                delay(400)
+                continue
+            }
+
             setEmotion(Emotion.THINKING)
             setActivity(Activity.THINKING)
+            val askedAt = SystemClock.uptimeMillis()
             val answer = assistant.ask(heard)
+            tech("LLM czas", "${SystemClock.uptimeMillis() - askedAt} ms")
             if (_ui.value.emotion == Emotion.THINKING) setEmotion(Emotion.NEUTRAL)
             _ui.update { it.copy(caption = answer) }
             setActivity(Activity.SPEAKING)

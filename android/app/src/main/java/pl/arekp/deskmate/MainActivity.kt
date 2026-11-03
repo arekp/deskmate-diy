@@ -51,7 +51,15 @@ class MainActivity : ComponentActivity() {
                 state,
                 Modifier.pointerInput(Unit) { detectTapGestures(onLongPress = { showSettings = true }) },
             )
-            if (showSettings) SettingsDialog(brain.settings) { showSettings = false }
+            if (showSettings) {
+                SettingsDialog(
+                    settings = brain.settings,
+                    sttOptions = remember { brain.sttOptions() },
+                    ttsOptions = remember { brain.ttsOptions() },
+                    onSaved = { brain.onSettingsSaved(it) },
+                    onDismiss = { showSettings = false },
+                )
+            }
         }
 
         val missing = requiredPermissions().filter {

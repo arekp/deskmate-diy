@@ -51,6 +51,22 @@ class Settings(context: Context) {
         get() = read(KEY_SCREEN_TOKEN, BuildConfig.SCREEN_HELPER_TOKEN)
         set(v) = write(KEY_SCREEN_TOKEN, v)
 
+    // --- Mowa i diagnostyka ---
+    /** Usługa rozpoznawania mowy: "" = domyślna systemowa, [STT_ON_DEVICE] albo komponent "pakiet/klasa". */
+    var sttService: String
+        get() = read(KEY_STT, "")
+        set(v) = write(KEY_STT, v)
+
+    /** Silnik syntezy mowy (nazwa pakietu), "" = domyślny systemowy. */
+    var ttsEngine: String
+        get() = read(KEY_TTS, "")
+        set(v) = write(KEY_TTS, v)
+
+    /** Tryb debug: informacje techniczne w pasku na dole ekranu. */
+    var debugMode: Boolean
+        get() = prefs.getBoolean(KEY_DEBUG, false)
+        set(v) = prefs.edit().putBoolean(KEY_DEBUG, v).apply()
+
     private fun read(key: String, fallback: String): String =
         prefs.getString(key, null)?.takeIf { it.isNotBlank() } ?: fallback
 
@@ -61,6 +77,7 @@ class Settings(context: Context) {
     companion object {
         const val DEFAULT_GEMINI_MODEL = "gemini-flash-latest"
         const val DEFAULT_OPENROUTER_MODEL = "openrouter/free"
+        const val STT_ON_DEVICE = "on_device"
 
         private const val KEY_MODE = "routerMode"
         private const val KEY_GEMINI = "geminiKey"
@@ -71,5 +88,8 @@ class Settings(context: Context) {
         private const val KEY_CLAUDE_MODEL = "model"
         private const val KEY_SCREEN_URL = "screenUrl"
         private const val KEY_SCREEN_TOKEN = "screenToken"
+        private const val KEY_STT = "sttService"
+        private const val KEY_TTS = "ttsEngine"
+        private const val KEY_DEBUG = "debugMode"
     }
 }

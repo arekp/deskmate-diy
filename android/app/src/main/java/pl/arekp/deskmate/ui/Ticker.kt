@@ -28,9 +28,17 @@ data class TickerState(
     val robot: String = "",
     /** Ostatnie zdarzenia, najnowsze na początku. */
     val events: List<String> = emptyList(),
+    /** Tryb debug: pasek pokazuje też informacje techniczne z [tech]. */
+    val debug: Boolean = false,
+    /** Informacje techniczne (klucz → wartość, kolejność dodania), np. "STT" → "Google · w chmurze". */
+    val tech: Map<String, String> = emptyMap(),
 ) {
     fun withEvent(text: String, time: LocalTime = LocalTime.now()): TickerState =
         copy(events = (listOf("${time.format(TIME)} $text") + events).take(MAX_EVENTS))
+
+    /** Ustawia (albo usuwa, gdy [value] puste) jedną informację techniczną. */
+    fun withTech(key: String, value: String?): TickerState =
+        copy(tech = if (value.isNullOrBlank()) tech - key else tech + (key to value))
 
     /** Tekst przesuwającego się paska. */
     fun text(): String = buildList {
@@ -38,6 +46,7 @@ data class TickerState(
         add(if (model.isNotBlank()) "MODEL: $model" else "MODEL: jeszcze nie użyty")
         if (mode.isNotBlank()) add("TRYB: $mode")
         if (robot.isNotBlank()) add(robot.uppercase())
+        if (debug) add("DEBUG ▸ " + tech.entries.joinToString(" · ") { "${it.key}: ${it.value}" }.ifBlank { "brak danych" })
         addAll(events)
     }.joinToString(SEPARATOR)
 
