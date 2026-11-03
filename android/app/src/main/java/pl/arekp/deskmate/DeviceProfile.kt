@@ -24,7 +24,13 @@ enum class DeviceProfile(
 ) {
     GALAXY_S23(
         label = "Galaxy S23",
-        prefixes = listOf("SM-S911"),
+        prefixes = listOf("SM-S911", "SM-S916"), // S23, S23+
+        cameraHfovDeg = 72f,
+        cameraVfovDeg = 56f,
+    ),
+    GALAXY_S23_ULTRA(
+        label = "Galaxy S23 Ultra",
+        prefixes = listOf("SM-S918"),
         cameraHfovDeg = 72f,
         cameraVfovDeg = 56f,
     ),

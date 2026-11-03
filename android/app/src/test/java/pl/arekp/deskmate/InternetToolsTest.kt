@@ -54,3 +54,27 @@ class InternetToolsTest {
         assertEquals("Bad Gateway", ProviderException.fromHttp(502, "Bad Gateway", null).detail)
     }
 }
+
+class NewsSearchTest {
+    @Test
+    fun wikiQuery_dropsDatesAndFreshnessWords() {
+        assertEquals("Trybunał Konstytucyjny Polska", WebSearchTool.wikiQuery("Trybunał Konstytucyjny Polska najnowsze informacje status listopad 2026"))
+    }
+
+    @Test
+    fun parsesGoogleNewsRss() {
+        val xml = """
+            <?xml version="1.0" encoding="UTF-8"?>
+            <rss version="2.0"><channel><title>wyniki</title>
+              <item><title>Sejm przyjął ustawę o TK - Polsat News</title><pubDate>Tue, 03 Nov 2026 17:20:00 GMT</pubDate>
+                <source url="https://www.polsatnews.pl">Polsat News</source></item>
+              <item><title>Prezydent zawetował nowelizację - TVN24</title><pubDate>Tue, 03 Nov 2026 15:05:00 GMT</pubDate>
+                <source url="https://tvn24.pl">TVN24</source></item>
+            </channel></rss>
+        """.trimIndent()
+        val items = WebSearchTool.parseNewsRss(xml, 6)
+        assertEquals(2, items.size)
+        assertTrue(items[0], items[0].startsWith("Sejm przyjął ustawę o TK – Polsat News ("))
+        assertTrue(items[1], items[1].startsWith("Prezydent zawetował nowelizację – TVN24"))
+    }
+}

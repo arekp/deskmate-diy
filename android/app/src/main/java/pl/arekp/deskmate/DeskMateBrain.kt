@@ -21,6 +21,7 @@ import pl.arekp.deskmate.ai.llm.GeminiProvider
 import pl.arekp.deskmate.ai.llm.LlmRouter
 import pl.arekp.deskmate.ai.llm.OpenRouterProvider
 import pl.arekp.deskmate.ai.Expression
+import pl.arekp.deskmate.ai.ReasoningFilter
 import pl.arekp.deskmate.ai.SpeechText
 import pl.arekp.deskmate.ai.LookTool
 import pl.arekp.deskmate.ai.WeatherTool
@@ -412,7 +413,7 @@ class DeskMateBrain(private val activity: ComponentActivity) {
         val raw = assistant.ask(question)
         tech("LLM czas", "${SystemClock.uptimeMillis() - askedAt} ms")
         DiagLog.i("Rozmowa", "Odpowiedź (${SystemClock.uptimeMillis() - askedAt} ms): ${raw.take(400)}")
-        val expr = Expression.parse(raw)
+        val expr = Expression.parse(ReasoningFilter.clean(raw))
         val answer = SpeechText.completeSentences(expr.text).ifBlank { "Hmm." }
         if (expr.emotion != null) setEmotion(expr.emotion, holdMs = 4000)
         else if (_ui.value.emotion == Emotion.THINKING) setEmotion(Emotion.NEUTRAL)

@@ -13,6 +13,11 @@ class DeviceProfileTest {
     }
 
     @Test
+    fun detectsGalaxyS23Ultra() {
+        assertEquals(DeviceProfile.GALAXY_S23_ULTRA, DeviceProfile.detect("SM-S918B"))
+    }
+
+    @Test
     fun detectsGalaxyZFlip6() {
         assertEquals(DeviceProfile.GALAXY_Z_FLIP6, DeviceProfile.detect("SM-F741B"))
     }

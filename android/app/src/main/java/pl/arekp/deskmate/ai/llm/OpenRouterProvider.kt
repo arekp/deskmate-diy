@@ -87,6 +87,8 @@ class OpenRouterProvider(
                 .put("model", model)
                 // darmowe modele często „rozumują” w ramach tego samego limitu – zapas, żeby nie ucinać odpowiedzi
                 .put("max_tokens", maxOf(request.maxTokens * 3, 1200))
+                // rozumowanie modelu poza treścią odpowiedzi (inaczej bywa czytane na głos)
+                .put("reasoning", JSONObject().put("exclude", true))
                 .put("messages", messages)
             if (withTools && request.tools.isNotEmpty()) {
                 val tools = JSONArray()

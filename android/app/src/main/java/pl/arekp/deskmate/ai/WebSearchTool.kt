@@ -10,7 +10,8 @@ import java.net.URLEncoder
  * Wyszukiwanie w internecie.
  *  1. Gemini z wyszukiwarką Google (grounding) – osobne, krótkie zapytanie z kluczem Gemini użytkownika
  *     (działa niezależnie od tego, który model prowadzi rozmowę),
- *  2. gdy brak klucza Gemini albo błąd – Wikipedia (krótkie streszczenie hasła).
+ *  2. bez klucza Gemini albo przy błędzie – BEZ KLUCZA: nagłówki z Google News (RSS, aktualne wiadomości)
+ *     + streszczenie hasła z Wikipedii (wiedza ogólna).
  */
 class WebSearchTool(
     private val geminiKey: () -> String,
@@ -30,22 +31,41 @@ class WebSearchTool(
         val query = input.optString("query").trim()
         if (query.isBlank()) return ToolResult.text("Puste zapytanie.", isError = true)
 
+        var googleError: String? = null
         if (geminiKey().isNotBlank()) {
             try {
                 return ToolResult.text(googleViaGemini(query))
             } catch (e: ProviderException) {
-                // spróbuj Wikipedii niżej
-                val wiki = runCatching { wikipedia(query) }.getOrNull()
-                return ToolResult.text(
-                    (wiki ?: "Wyszukiwarka niedostępna (${e.detail.ifBlank { e.kind.name }}).") +
-                        if (wiki != null) " (Wyszukiwarka Google niedostępna: ${e.kind.name}; to dane z Wikipedii.)" else "",
-                    isError = wiki == null,
-                )
+                googleError = e.detail.ifBlank { e.kind.name }
             }
         }
+        // Bez klucza (albo gdy Google przez Gemini zawiódł): wiadomości z Google News + Wikipedia
+        val news = runCatching { googleNews(query) }.getOrNull().orEmpty()
         val wiki = runCatching { wikipedia(query) }.getOrNull()
-        return if (wiki != null) ToolResult.text("$wiki (Źródło: Wikipedia. Aktualne wiadomości wymagają klucza Gemini.)")
-        else ToolResult.text("Nic nie znalazłem. Pełne wyszukiwanie wymaga klucza Gemini w ustawieniach.", isError = true)
+        if (news.isEmpty() && wiki == null) {
+            return ToolResult.text("Nic nie znalazłem${googleError?.let { " (Google przez Gemini: $it)" } ?: ""}.", isError = true)
+        }
+        return ToolResult.text(
+            buildString {
+                if (news.isNotEmpty()) {
+                    append("Najnowsze nagłówki (Google News): ")
+                    append(news.joinToString(" | "))
+                    append(". ")
+                }
+                if (wiki != null) append(wiki)
+                append(" Streść najważniejsze fakty z nagłówków; nie wymyślaj szczegółów, których w nich nie ma.")
+            }.trim(),
+        )
+    }
+
+    /** Nagłówki z Google News RSS (bez klucza): „tytuł – źródło (data)”. */
+    private suspend fun googleNews(query: String): List<String> {
+        val q = URLEncoder.encode(query, "UTF-8")
+        val xml = HttpJson.getText(
+            "https://news.google.com/rss/search?q=$q&hl=pl&gl=PL&ceid=PL:pl",
+            mapOf("User-Agent" to "Mozilla/5.0 (Android) DeskMateDIY/1.0"),
+        )
+        return parseNewsRss(xml, MAX_NEWS)
     }
 
     private suspend fun googleViaGemini(query: String): String {
@@ -66,7 +86,7 @@ class WebSearchTool(
 
     private suspend fun wikipedia(query: String): String? {
         val headers = mapOf("User-Agent" to "DeskMateDIY/1.0 (https://github.com/arekp/deskmate-diy)")
-        val q = URLEncoder.encode(query, "UTF-8")
+        val q = URLEncoder.encode(wikiQuery(query).ifBlank { query }, "UTF-8")
         val search = HttpJson.get(
             "https://pl.wikipedia.org/w/api.php?action=query&list=search&srsearch=$q&srlimit=1&format=json&utf8=1",
             headers,
@@ -81,6 +101,49 @@ class WebSearchTool(
     }
 
     companion object {
+        private const val MAX_NEWS = 6
+
+        /**
+         * Słowa o „aktualności” i daty psują wyszukiwanie w Wikipedii (np. „TK status listopad 2026” → hasło „Polska”),
+         * więc je usuwamy – zostaje temat.
+         */
+        fun wikiQuery(query: String): String {
+            val stop = setOf(
+                "aktualny", "aktualne", "aktualna", "aktualnie", "najnowsze", "najnowszy", "najnowsza", "status", "stan",
+                "dzisiaj", "dziś", "dzisiejszy", "dzisiejsze", "wczoraj", "jutro", "teraz", "obecnie", "wiadomości", "informacje",
+                "news", "newsy", "najważniejsze", "streszczenie", "dzień", "dnia", "na", "w", "o", "z", "i",
+                "styczeń", "luty", "marzec", "kwiecień", "maj", "czerwiec", "lipiec", "sierpień", "wrzesień",
+                "październik", "listopad", "grudzień", "stycznia", "lutego", "marca", "kwietnia", "maja", "czerwca",
+                "lipca", "sierpnia", "września", "października", "listopada", "grudnia",
+            )
+            return query.split(Regex("\\s+"))
+                .filter { w -> w.lowercase() !in stop && !Regex("\\d{1,4}").matches(w) }
+                .joinToString(" ")
+        }
+
+        /** Parsuje RSS (Google News): tytuł, źródło i data każdej pozycji. */
+        fun parseNewsRss(xml: String, max: Int): List<String> {
+            val doc = javax.xml.parsers.DocumentBuilderFactory.newInstance().apply { isNamespaceAware = false }
+                .newDocumentBuilder().parse(org.xml.sax.InputSource(java.io.StringReader(xml)))
+            val items = doc.getElementsByTagName("item")
+            val out = mutableListOf<String>()
+            for (i in 0 until minOf(items.length, max)) {
+                val item = items.item(i) as? org.w3c.dom.Element ?: continue
+                fun tag(name: String) = item.getElementsByTagName(name).item(0)?.textContent?.trim().orEmpty()
+                val source = tag("source")
+                // Google News dokleja „ - źródło” do tytułu
+                val title = tag("title").removeSuffix(" - $source").trim()
+                val date = runCatching {
+                    java.time.ZonedDateTime.parse(tag("pubDate"), java.time.format.DateTimeFormatter.RFC_1123_DATE_TIME)
+                        .withZoneSameInstant(java.time.ZoneId.systemDefault())
+                        .format(java.time.format.DateTimeFormatter.ofPattern("d.MM HH:mm"))
+                }.getOrDefault("")
+                if (title.isNotBlank()) out += listOf(title, source.ifBlank { null }, date.ifBlank { null })
+                    .let { (t, s, d) -> t + (s?.let { " – $it" } ?: "") + (d?.let { " ($it)" } ?: "") }
+            }
+            return out
+        }
+
         private const val SEARCH_PROMPT =
             "Wyszukaj w Google i odpowiedz po polsku, zwięźle (do 5 zdań), konkretnymi faktami z datami. " +
                 "Jeśli wyniki są niejednoznaczne – powiedz to."

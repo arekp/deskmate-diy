@@ -62,8 +62,21 @@ object HttpJson {
     suspend fun get(url: String, headers: Map<String, String> = emptyMap()): JSONObject =
         execute(Request.Builder().url(url).apply { headers.forEach { (k, v) -> header(k, v) } }.get().build())
 
+    /** GET zwracający surowy tekst (np. RSS / XML). */
+    suspend fun getText(url: String, headers: Map<String, String> = emptyMap()): String =
+        fetchText(Request.Builder().url(url).apply { headers.forEach { (k, v) -> header(k, v) } }.get().build())
+
     private suspend fun execute(request: Request): JSONObject {
-        val text = suspendCancellableCoroutine { cont ->
+        val text = fetchText(request)
+        return try {
+            JSONObject(text)
+        } catch (e: Exception) {
+            throw ProviderException(ProviderException.Kind.SERVER, "Niepoprawny JSON: ${text.take(200)}", cause = e)
+        }
+    }
+
+    private suspend fun fetchText(request: Request): String {
+        return suspendCancellableCoroutine { cont ->
             val call = client.newCall(request)
             cont.invokeOnCancellation { call.cancel() }
             call.enqueue(object : Callback {
@@ -86,11 +99,6 @@ object HttpJson {
                     }
                 }
             })
-        }
-        return try {
-            JSONObject(text)
-        } catch (e: Exception) {
-            throw ProviderException(ProviderException.Kind.SERVER, "Niepoprawny JSON: ${text.take(200)}", cause = e)
         }
     }
 }

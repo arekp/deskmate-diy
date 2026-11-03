@@ -71,3 +71,29 @@ class SpeechTextTest {
             pl.arekp.deskmate.ai.SpeechText.completeSentences("Krótko. A potem bardzo długie zdanie bez końca"))
     }
 }
+
+class ReasoningFilterTest {
+    private val f = pl.arekp.deskmate.ai.ReasoningFilter
+
+    @Test
+    fun normalAnswerUntouched() {
+        assertEquals("[happy nod] W Pruszkowie jest 8 stopni.", f.clean("[happy nod] W Pruszkowie jest 8 stopni."))
+    }
+
+    @Test
+    fun thinkBlocksRemoved() {
+        assertEquals("[happy] Jasne!", f.clean("<think>użytkownik chce…</think>[happy] Jasne!"))
+    }
+
+    @Test
+    fun leakedReasoning_keepsAnswerAfterLastTag() {
+        val raw = "[thinking] Użytkownik pyta o pogodę. Muszę odpowiedzieć krótko. [happy nod] Jest słonecznie, 12 stopni."
+        assertEquals("[happy nod] Jest słonecznie, 12 stopni.", f.clean(raw))
+    }
+
+    @Test
+    fun onlyReasoning_fallsBackToPoliteMessage() {
+        val raw = "[thinking] Użytkownik pyta o najważniejsze wiadomości polityczne w Polsce na 3 listopada 2026. Moje poprzednie"
+        assertEquals(pl.arekp.deskmate.ai.ReasoningFilter.FALLBACK, f.clean(raw))
+    }
+}
