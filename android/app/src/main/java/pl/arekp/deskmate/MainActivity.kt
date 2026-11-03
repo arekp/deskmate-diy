@@ -46,10 +46,10 @@ class MainActivity : ComponentActivity() {
         setContent {
             val state by brain.ui.collectAsStateWithLifecycle()
             var showSettings by remember { mutableStateOf(false) }
-            // Przytrzymanie palca na oczach otwiera ustawienia (klucz API, model, pomocnik ekranu)
+            // Dotknięcie: przerwij robota / zacznij słuchać. Przytrzymanie palca: ustawienia (klucze, model…)
             EyesScreen(
                 state,
-                Modifier.pointerInput(Unit) { detectTapGestures(onLongPress = { showSettings = true }) },
+                Modifier.pointerInput(Unit) { detectTapGestures(onTap = { brain.onTap() }, onLongPress = { showSettings = true }) },
             )
             if (showSettings) {
                 SettingsDialog(

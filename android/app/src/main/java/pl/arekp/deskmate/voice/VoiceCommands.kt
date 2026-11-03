@@ -22,6 +22,16 @@ object VoiceCommands {
         return !off
     }
 
+    /** Krótkie „stop / cisza / przestań / wystarczy” – robot milknie, bez pytania modelu. */
+    fun isStop(text: String): Boolean {
+        val words = text.lowercase(Locale.forLanguageTag("pl")).replace(Regex("[^\\p{L}\\s]"), " ")
+            .split(Regex("\\s+")).filter { it.isNotBlank() }
+        if (words.isEmpty() || words.size > 3) return false
+        return words.any { w -> STOP_WORDS.any { w.startsWith(it) } } && words.none { it.startsWith("debug") }
+    }
+
+    private val STOP_WORDS = listOf("stop", "cisza", "przestań", "wystarczy", "dość", "nieważne", "zamilcz", "milcz", "starczy")
+
     private val OFF_WORDS = setOf("koniec", "stop", "zakończ", "bez", "wyłącz", "off")
 }
 

@@ -109,6 +109,15 @@ Model sam decyduje o mimice: wywołuje narzędzie `express`, np. `{"emotion":"ha
 
 Kamera jest w telefonie i obraca się razem z głową, więc to pętla sprzężenia zwrotnego. Szczegóły i strojenie: [sterowanie-mocowaniem.md](sterowanie-mocowaniem.md).
 
+### 3.4a Przerywanie robota
+
+Nie trzeba czekać, aż robot skończy mówić. Przerywasz go:
+- **dotknięciem ekranu** (krótkie; przytrzymanie dalej otwiera ustawienia) – działa zawsze, także żeby zacząć mówić bez patrzenia w kamerę,
+- **podniesieniem ręki albo machaniem** (poza z ML Kit),
+- **głosem** (ustawienia → Przerywanie robota, domyślnie włączone, eksperymentalne): podczas mówienia `voice/BargeInMic.kt` nasłuchuje mikrofonu (źródło VOICE_COMMUNICATION z systemowym wycinaniem echa), a `voice/BargeInVad.kt` uznaje mowę, gdy poziom jest ≥ 9 dB nad echem głosu robota przez większość 300 ms. Dźwięk nie jest zapisywany – liczy się tylko głośność.
+
+Po przerwaniu robot milknie i od razu słucha; model dostaje dopisek „(Przerwałem Ci poprzednią odpowiedź.)”. Słowa „stop / cisza / przestań / wystarczy” tylko uciszają robota, bez pytania modelu. W trybie debug pasek pokazuje „Przerywanie: mikrofon … dB, próg … dB, AEC tak/nie” – po tym widać, czy echo nie jest za głośne. Pierwsze sylaby przerywającego zdania mogą umknąć (mikrofon przełącza się z nasłuchu na rozpoznawanie ~0,3 s), więc najlepiej zacząć od „poczekaj…” albo powtórzyć pytanie.
+
 ### 3.5 Pasek informacji (na dole ekranu)
 
 Jak w wiadomościach TV: czerwony blok z bieżącą czynnością – **CZEKAM / SŁUCHAM / MYŚLĘ / MÓWIĘ / ŚPIĘ** – a obok przesuwający się tekst:

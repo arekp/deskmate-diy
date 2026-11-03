@@ -47,6 +47,7 @@ fun SettingsDialog(
     var stt by remember { mutableStateOf(settings.sttService) }
     var ttsEngine by remember { mutableStateOf(settings.ttsEngine) }
     var debug by remember { mutableStateOf(settings.debugMode) }
+    var bargeIn by remember { mutableStateOf(settings.bargeInVoice) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -82,6 +83,18 @@ fun SettingsDialog(
                     style = MaterialTheme.typography.bodySmall,
                 )
 
+                Section("Przerywanie robota")
+                FilterChip(
+                    selected = bargeIn,
+                    onClick = { bargeIn = !bargeIn },
+                    label = { Text(if (bargeIn) "Przerywanie głosem: włączone" else "Przerywanie głosem: wyłączone") },
+                )
+                Text(
+                    "Zawsze działa: dotknięcie ekranu albo podniesienie ręki / machanie. Głosem – eksperymentalnie: " +
+                        "zacznij mówić, gdy robot mówi. Gdy przerywa sam sobie, wyłącz tę opcję.",
+                    style = MaterialTheme.typography.bodySmall,
+                )
+
                 Section("Diagnostyka")
                 FilterChip(
                     selected = debug,
@@ -113,6 +126,7 @@ fun SettingsDialog(
                 settings.sttService = stt
                 settings.ttsEngine = ttsEngine
                 settings.debugMode = debug
+                settings.bargeInVoice = bargeIn
                 onSaved(speechChanged)
                 onDismiss()
             }) { Text("Zapisz") }

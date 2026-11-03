@@ -3,7 +3,9 @@ package pl.arekp.deskmate
 import android.os.SystemClock
 import androidx.activity.ComponentActivity
 import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -29,6 +31,7 @@ import pl.arekp.deskmate.ui.UiState
 import pl.arekp.deskmate.vision.FaceObservation
 import pl.arekp.deskmate.vision.FaceTracker
 import pl.arekp.deskmate.vision.HeadController
+import pl.arekp.deskmate.voice.BargeInMic
 import pl.arekp.deskmate.voice.Speech
 import pl.arekp.deskmate.voice.SpeechOption
 import pl.arekp.deskmate.voice.VoiceCommands
@@ -66,6 +69,13 @@ class DeskMateBrain(private val activity: ComponentActivity) {
         onWord = { syl -> _ui.update { it.copy(speechBeat = SpeechBeat(++beatSeq, syl)) } },
     )
     private var lastWaveAt = 0L
+
+    /** Prośba o przerwanie bieżącej wypowiedzi (dotyk, ręka, głos) – aktywna tylko podczas mówienia. */
+    @Volatile private var interruptRequest: CompletableDeferred<String>? = null
+    /** Następne słuchanie bez czekania na spojrzenie (po przerwaniu albo dotknięciu). */
+    @Volatile private var forceListen = false
+    /** Poprzednia odpowiedź została przerwana – powiemy o tym modelowi. */
+    private var answerWasCut = false
     /** Router modeli: Gemini (darmowy) → OpenRouter (darmowe) → Claude (płatny), wg trybu w ustawieniach. */
     val router = LlmRouter(
         providers = listOf(
@@ -105,6 +115,7 @@ class DeskMateBrain(private val activity: ComponentActivity) {
             faces.scene.collect { sc ->
                 tech("Widzę", sc.labels.joinToString(", ") { "${it.name} ${(it.confidence * 100).toInt()}%" }.ifBlank { "—" })
                 tech("Poza", if (sc.handRaised) "ręka w górze" else if (sc.personPose) "sylwetka" else "")
+                if (sc.handRaised) requestInterrupt("ręka w górze")
             }
         }
         scope.launch { robot.events.collect { if (it.startsWith("TOUCH")) onTouch() } }
@@ -232,13 +243,14 @@ class DeskMateBrain(private val activity: ComponentActivity) {
     private suspend fun conversationLoop() {
         while (scope.isActive) {
             val f = faces.faces.value
-            val engaged = !asleep && f.present && f.attentive &&
-                faceSince != 0L && SystemClock.uptimeMillis() - faceSince > Config.ENGAGE_AFTER_MS
+            val engaged = forceListen || (!asleep && f.present && f.attentive &&
+                faceSince != 0L && SystemClock.uptimeMillis() - faceSince > Config.ENGAGE_AFTER_MS)
             if (!engaged || !speech.canListen || speech.speaking.value) {
                 delay(300)
                 continue
             }
 
+            forceListen = false
             setEmotion(Emotion.LISTENING)
             setActivity(Activity.LISTENING)
             _ui.update { it.copy(listening = true) }
@@ -258,6 +270,13 @@ class DeskMateBrain(private val activity: ComponentActivity) {
             _ui.update { it.copy(caption = "„$heard”", ticker = it.ticker.copy(heard = heard)) }
 
             // Polecenia obsługiwane lokalnie, bez modelu AI
+            if (VoiceCommands.isStop(heard)) {
+                event("Zatrzymano")
+                answerWasCut = false
+                setEmotion(Emotion.NEUTRAL)
+                delay(400)
+                continue
+            }
             val debugCmd = VoiceCommands.debugToggle(heard)
             if (debugCmd != null) {
                 val on = debugCmd
@@ -273,14 +292,14 @@ class DeskMateBrain(private val activity: ComponentActivity) {
             setEmotion(Emotion.THINKING)
             setActivity(Activity.THINKING)
             val askedAt = SystemClock.uptimeMillis()
-            val answer = assistant.ask(heard)
+            val question = if (answerWasCut) "(Przerwałem Ci poprzednią odpowiedź.) $heard" else heard
+            answerWasCut = false
+            val answer = assistant.ask(question)
             tech("LLM czas", "${SystemClock.uptimeMillis() - askedAt} ms")
             if (_ui.value.emotion == Emotion.THINKING) setEmotion(Emotion.NEUTRAL)
             _ui.update { it.copy(caption = answer) }
-            setActivity(Activity.SPEAKING)
-            speech.say(answer)
-            setActivity(Activity.IDLE)
-            delay(400)
+            answerWasCut = speakInterruptible(answer)
+            if (!answerWasCut) delay(400)
         }
     }
 
@@ -288,6 +307,7 @@ class DeskMateBrain(private val activity: ComponentActivity) {
 
     /** Ktoś macha – przywitaj się (najwyżej raz na [Config.WAVE_GREET_COOLDOWN_MS]). */
     private fun onWave() {
+        if (requestInterrupt("machanie")) return
         event("Widzę machanie")
         val now = SystemClock.uptimeMillis()
         lastFaceAt = now
@@ -302,6 +322,48 @@ class DeskMateBrain(private val activity: ComponentActivity) {
             speech.say(GREETINGS.random())
             if (_ui.value.ticker.activity == Activity.SPEAKING) setActivity(Activity.IDLE)
         }
+    }
+
+    /** Dotknięcie ekranu: przerwij mówienie albo zacznij słuchać od razu. */
+    fun onTap() {
+        if (requestInterrupt("dotyk")) return
+        if (_ui.value.ticker.activity == Activity.IDLE || asleep) {
+            if (asleep) wakeUp()
+            forceListen = true
+            event("Dotyk – słucham")
+        }
+    }
+
+    /** Zgłasza przerwanie; true, jeśli robot właśnie mówił. */
+    private fun requestInterrupt(reason: String): Boolean {
+        val req = interruptRequest ?: return false
+        return req.complete(reason)
+    }
+
+    /**
+     * Mówi [text], ale da się mu przerwać (dotyk, ręka, a w ustawieniach też głos).
+     * Zwraca true, gdy przerwano – wtedy od razu słuchamy nowego pytania.
+     */
+    private suspend fun speakInterruptible(text: String): Boolean = coroutineScope {
+        val req = CompletableDeferred<String>()
+        interruptRequest = req
+        val mic = if (settings.bargeInVoice) {
+            BargeInMic(onSpeech = { requestInterrupt("głos") }, onInfo = { k, v -> tech(k, v) }).also { it.start() }
+        } else null
+        val watcher = launch {
+            val reason = req.await()
+            event("Przerwano ($reason) – słucham")
+            speech.stopSpeaking()
+        }
+        setActivity(Activity.SPEAKING)
+        speech.say(text)
+        interruptRequest = null
+        mic?.stop()
+        watcher.cancel()
+        setActivity(Activity.IDLE)
+        val interrupted = req.isCompleted
+        if (interrupted) forceListen = true
+        interrupted
     }
 
     private fun onTouch() {

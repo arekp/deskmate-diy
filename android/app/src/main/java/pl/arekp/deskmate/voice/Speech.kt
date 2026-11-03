@@ -199,15 +199,20 @@ class Speech(
         listOf(SpeechOption("", "Domyślny w telefonie")) +
             (tts?.engines.orEmpty()).map { SpeechOption(it.name, it.label) }
 
-    /** Mówi tekst i czeka na koniec wypowiedzi. */
-    suspend fun say(text: String) {
+    /** Przerywa bieżącą wypowiedź (say() zwróci wtedy false). */
+    fun stopSpeaking() {
+        tts?.stop()
+    }
+
+    /** Mówi tekst i czeka na koniec wypowiedzi. Zwraca false, gdy przerwano ([stopSpeaking]). */
+    suspend fun say(text: String): Boolean {
         val engine = tts
-        if (engine == null || !ttsReady || text.isBlank()) return
+        if (engine == null || !ttsReady || text.isBlank()) return true
         _speaking.value = true
         val queued = SystemClock.uptimeMillis()
         var startedAt = 0L
-        try {
-            suspendCancellableCoroutine { cont ->
+        return try {
+            suspendCancellableCoroutine<Boolean> { cont ->
                 val id = UUID.randomUUID().toString()
                 engine.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
                     override fun onStart(utteranceId: String?) {
@@ -226,14 +231,20 @@ class Speech(
                         val begin = if (startedAt > 0) startedAt else queued
                         val first = if (startedAt > 0) "start ${startedAt - queued} ms, " else ""
                         onInfo("TTS czas", "${first}mówienie %.1f s".format(Locale.ROOT, (now - begin) / 1000.0))
-                        if (cont.isActive) cont.resume(Unit)
+                        if (cont.isActive) cont.resume(true)
+                    }
+
+                    override fun onStop(utteranceId: String?, interrupted: Boolean) {
+                        if (utteranceId != id) return
+                        onInfo("TTS czas", "przerwano po %.1f s".format(Locale.ROOT, (SystemClock.uptimeMillis() - queued) / 1000.0))
+                        if (cont.isActive) cont.resume(false)
                     }
 
                     @Deprecated("Deprecated in Java")
                     override fun onError(utteranceId: String?) {
                         if (utteranceId != id) return
                         onInfo("TTS czas", "błąd syntezy")
-                        if (cont.isActive) cont.resume(Unit)
+                        if (cont.isActive) cont.resume(true)
                     }
                 })
                 engine.speak(text, TextToSpeech.QUEUE_FLUSH, null, id)

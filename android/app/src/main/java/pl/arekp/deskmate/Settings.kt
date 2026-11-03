@@ -62,6 +62,11 @@ class Settings(context: Context) {
         get() = read(KEY_TTS, "")
         set(v) = write(KEY_TTS, v)
 
+    /** Przerywanie robota głosem (mikrofon nasłuchuje, gdy robot mówi). */
+    var bargeInVoice: Boolean
+        get() = prefs.getBoolean(KEY_BARGE_IN, true)
+        set(v) = prefs.edit().putBoolean(KEY_BARGE_IN, v).apply()
+
     /** Tryb debug: informacje techniczne w pasku na dole ekranu. */
     var debugMode: Boolean
         get() = prefs.getBoolean(KEY_DEBUG, false)
@@ -91,5 +96,6 @@ class Settings(context: Context) {
         private const val KEY_STT = "sttService"
         private const val KEY_TTS = "ttsEngine"
         private const val KEY_DEBUG = "debugMode"
+        private const val KEY_BARGE_IN = "bargeInVoice"
     }
 }

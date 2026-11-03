@@ -51,3 +51,16 @@ class SyllablesTest {
         assertEquals(0, pl.arekp.deskmate.voice.Syllables.count("…"))
     }
 }
+
+class StopCommandTest {
+    @Test
+    fun stopWords() {
+        assertTrue(VoiceCommands.isStop("stop"))
+        assertTrue(VoiceCommands.isStop("Cisza!"))
+        assertTrue(VoiceCommands.isStop("dobra, wystarczy"))
+        assertTrue(VoiceCommands.isStop("przestań"))
+        assertFalse(VoiceCommands.isStop("przestań mówić o pogodzie i powiedz mi coś o kosmosie"))
+        assertFalse(VoiceCommands.isStop("jaka jest pogoda"))
+        assertFalse(VoiceCommands.isStop(""))
+    }
+}
