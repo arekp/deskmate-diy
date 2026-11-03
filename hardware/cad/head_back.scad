@@ -37,4 +37,4 @@ module head_back() {
   }
 }
 
-if (is_undef(ASM_ALL)) translate([0, 0, -dome_back]) rotate([-90, 0, 0]) head_back();
+if (is_undef(ASM_ALL)) translate([0, 0, -dome_back]) rotate([90, 0, 0]) head_back();  // płaski tył (kratka) na stole

@@ -138,7 +138,7 @@ tylko, jeśli etui jest wyjątkowo grube (parametry `mag_d`, `mag_t`). Bez pół
 | `ear_cap_servo.stl`, `ear_cap_bearing.stl` – nakładki uszu | 1 + 1 | Ø 50 × 8 / 13 | płaskim spodem | nie |
 | `pan_hub.stl` – piasta PAN | 1 | Ø 37 × 10,5 | szerszą częścią na stole | nie |
 | `head_front_<profil>.stl` – przód kasku | 1 na telefon | 184 × 122 × 30 (Fold8 rozł.: 184 × 187 × 27) | **płaskim tyłem na stole**, ramka do góry | nie (mostki nad komorami odchudzającymi i kieszenią TTP223) |
-| `head_back_<profil>.stl` – tylna skorupa kasku | 1 na telefon | 184 × 122 × 71 (Fold8 rozł.: 184 × 187 × 71) | **płaskim tyłem (kratką) na stole**; boki maks. 45° | nie |
+| `head_back_<profil>.stl` – tylna skorupa kasku | 1 na telefon | 184 × 116 × 71 (Fold8 rozł.: 184 × 181 × 71) | **płaskim tyłem (kratką) na stole**; boki maks. 45° | nie |
 | `magnet_disc.stl` – tarcza z magnesami | 1 (wspólna) | Ø 100 × 2,7 | kołnierzem (gniazda magnesów) na stole | nie (skórka 0,6 mm nad gniazdami Ø 8 jako mostek) |
 | `head_mount_servo.stl` – uchwyt serwa TILT | 1 | 64 × 25 × 19 | płytą na stole | nie |
 | `head_mount_bearing.stl` – uchwyt osi | 1 | 64 × 30 × 29 | płytą na stole | nie |
