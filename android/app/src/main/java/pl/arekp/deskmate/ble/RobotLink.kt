@@ -31,6 +31,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 import pl.arekp.deskmate.Config
+import pl.arekp.deskmate.DiagLog
 
 /**
  * Połączenie z "ciałem" robota (ESP32) przez Bluetooth LE.
@@ -92,7 +93,7 @@ class RobotLink(private val context: Context, private val scope: CoroutineScope)
         }
 
         override fun onScanFailed(errorCode: Int) {
-            Log.w(TAG, "Skanowanie nieudane: $errorCode")
+            DiagLog.w(TAG, "Skanowanie BLE nieudane: $errorCode")
             retryLater()
         }
     }
@@ -144,7 +145,7 @@ class RobotLink(private val context: Context, private val scope: CoroutineScope)
             val cmd = service?.getCharacteristic(Config.CMD_UUID)
             val statusChr = service?.getCharacteristic(Config.STATUS_UUID)
             if (cmd == null || statusChr == null) {
-                Log.w(TAG, "Brak usługi DeskMate na urządzeniu")
+                DiagLog.w(TAG, "Brak usługi DeskMate na urządzeniu")
                 g.disconnect()
                 return
             }

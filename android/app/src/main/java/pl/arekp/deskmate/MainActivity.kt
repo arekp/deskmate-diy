@@ -48,6 +48,7 @@ class MainActivity : ComponentActivity() {
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         hideSystemBars()
 
+        Settings(this).let { s -> DiagLog.init(filesDir) { LogShare.secretsOf(s) } }
         brain = DeskMateBrain(this)
         setContent {
             val state by brain.ui.collectAsStateWithLifecycle()
@@ -73,6 +74,9 @@ class MainActivity : ComponentActivity() {
                     onSaved = { brain.onSettingsSaved(it) },
                     onDismiss = { showSettings = false },
                     onTest = { brain.testProviders() },
+                    onShareLogs = { LogShare.share(this@MainActivity, brain.diagnosticReport()) },
+                    onSaveLogs = { LogShare.saveToDownloads(this@MainActivity, brain.diagnosticReport()) },
+                    onClearLogs = { DiagLog.clear() },
                 )
             }
         }

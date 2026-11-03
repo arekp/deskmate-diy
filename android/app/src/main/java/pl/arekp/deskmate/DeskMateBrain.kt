@@ -183,10 +183,17 @@ class DeskMateBrain(private val activity: ComponentActivity) {
 
     private fun setActivity(a: Activity) = _ui.update { it.copy(ticker = it.ticker.copy(activity = a)) }
 
-    private fun event(text: String) = _ui.update { it.copy(ticker = it.ticker.withEvent(text)) }
+    private fun event(text: String) {
+        DiagLog.i("Zdarzenie", text)
+        _ui.update { it.copy(ticker = it.ticker.withEvent(text)) }
+    }
 
     /** Informacja techniczna – widoczna w pasku tylko w trybie debug. */
-    private fun tech(key: String, value: String?) = _ui.update { it.copy(ticker = it.ticker.withTech(key, value)) }
+    private fun tech(key: String, value: String?) {
+        // do dziennika tylko rzadkie i ważne (bez poziomów mikrofonu co 0,5 s)
+        if (key in LOGGED_TECH && _ui.value.ticker.tech[key] != value) DiagLog.i("Tech", "$key: $value")
+        _ui.update { it.copy(ticker = it.ticker.withTech(key, value)) }
+    }
 
     private fun setDebug(on: Boolean) {
         settings.debugMode = on
@@ -213,6 +220,9 @@ class DeskMateBrain(private val activity: ComponentActivity) {
             }
         } + listOf("Pogoda i Wikipedia nie wymagają klucza; wyszukiwarka Google korzysta z klucza Gemini.")
     }
+
+    /** Raport do wysłania (ustawienia → Logi): wersja, telefon, ustawienia bez kluczy + dziennik. */
+    fun diagnosticReport(): String = LogShare.report(activity, settings, profile, router.order().map { it.label })
 
     fun sttOptions(): List<SpeechOption> = speech.recognizers()
     fun ttsOptions(): List<SpeechOption> = speech.ttsEngines()
@@ -324,6 +334,7 @@ class DeskMateBrain(private val activity: ComponentActivity) {
         _ui.update { it.copy(listening = false) }
         setActivity(Activity.IDLE)
 
+        DiagLog.i("Rozmowa", "Słuchanie (${trigger.label}) → ${if (heard.isNullOrBlank()) "cisza/brak" else "„$heard”"}")
         if (heard.isNullOrBlank()) {
             // Cisza – NIE słuchamy od nowa; czekamy na nowy sygnał (głos, dotyk)
             setEmotion(Emotion.NEUTRAL)
@@ -364,6 +375,7 @@ class DeskMateBrain(private val activity: ComponentActivity) {
         answerWasCut = false
         val raw = assistant.ask(question)
         tech("LLM czas", "${SystemClock.uptimeMillis() - askedAt} ms")
+        DiagLog.i("Rozmowa", "Odpowiedź (${SystemClock.uptimeMillis() - askedAt} ms): ${raw.take(400)}")
         val expr = Expression.parse(raw)
         val answer = SpeechText.completeSentences(expr.text).ifBlank { "Hmm." }
         if (expr.emotion != null) setEmotion(expr.emotion, holdMs = 4000)
@@ -467,6 +479,7 @@ class DeskMateBrain(private val activity: ComponentActivity) {
     }
 
     private companion object {
+        val LOGGED_TECH = setOf("STT", "TTS", "STT czas", "TTS czas", "LLM czas", "Słucham, bo", "Wzrok")
         val GREETINGS = listOf("Cześć!", "Hej, hej!", "O, cześć! Miło Cię widzieć.", "Witaj!")
         val GESTURE_NAMES = mapOf(
             "nod" to "kiwam głową",

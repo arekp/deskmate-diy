@@ -31,6 +31,9 @@ android {
         buildConfigField("String", "GEMINI_API_KEY", "\"${secret("gemini.apiKey")}\"")
         buildConfigField("String", "OPENROUTER_API_KEY", "\"${secret("openrouter.apiKey")}\"")
         buildConfigField("String", "SCREEN_HELPER_URL", "\"${secret("screenHelper.url")}\"")
+        // Wersja z CI (skrót commita) – trafia do nagłówka logów
+        buildConfigField("String", "GIT_SHA", "\"${System.getenv("GITHUB_SHA")?.take(7) ?: "lokalna"}\"")
+        buildConfigField("String", "BUILD_NUMBER", "\"${System.getenv("GITHUB_RUN_NUMBER") ?: "-"}\"")
         buildConfigField("String", "SCREEN_HELPER_TOKEN", "\"${secret("screenHelper.token")}\"")
     }
 

@@ -1,6 +1,6 @@
 package pl.arekp.deskmate.ai
 
-import android.util.Log
+import pl.arekp.deskmate.DiagLog
 import pl.arekp.deskmate.Config
 import pl.arekp.deskmate.ai.llm.ChatMessage
 import pl.arekp.deskmate.ai.llm.ChatRequest
@@ -44,7 +44,7 @@ class Assistant(
             trimHistory()
             return "Za dużo kroków – spróbuj zapytać prościej."
         } catch (e: LlmRouter.AllProvidersFailed) {
-            Log.w(TAG, e.message ?: "brak odpowiedzi")
+            DiagLog.w(TAG, e.message ?: "brak odpowiedzi")
             rollbackLastTurn()
             val why = e.errors.entries.joinToString("; ") { (id, err) ->
                 val name = mapOf("gemini" to "Gemini", "openrouter" to "OpenRouter", "claude" to "Claude")[id] ?: id
@@ -53,7 +53,7 @@ class Assistant(
             return if (why.isBlank()) "Żaden model teraz nie odpowiada – sprawdź internet albo limity."
             else "Żaden model nie odpowiedział. $why. Szczegóły w ustawieniach: Testuj połączenie."
         } catch (e: Exception) {
-            Log.e(TAG, "Błąd rozmowy", e)
+            DiagLog.e(TAG, "Błąd rozmowy", e)
             rollbackLastTurn()
             return "Coś poszło nie tak. Spróbuj jeszcze raz."
         }
@@ -64,8 +64,17 @@ class Assistant(
     private suspend fun runTool(call: Part.ToolCall): Part.ToolResult {
         val tool = tools.firstOrNull { it.name == call.name }
             ?: return Part.ToolResult(call.id, call.name, "Nieznane narzędzie", isError = true)
+        val t0 = System.currentTimeMillis()
         val result = runCatching { tool.run(call.args) }
-            .getOrElse { ToolResult.text("Błąd narzędzia: ${it.message}", isError = true) }
+            .getOrElse {
+                DiagLog.e(TAG, "Narzędzie ${call.name} rzuciło wyjątek", it)
+                ToolResult.text("Błąd narzędzia: ${it.message}", isError = true)
+            }
+        DiagLog.i(
+            TAG,
+            "Narzędzie ${call.name}(${call.args.toString().take(200)}) → ${if (result.isError) "BŁĄD" else "OK"} " +
+                "${System.currentTimeMillis() - t0} ms: ${result.text.take(300)}",
+        )
         return Part.ToolResult(call.id, call.name, result.text, result.images, result.isError)
     }
 

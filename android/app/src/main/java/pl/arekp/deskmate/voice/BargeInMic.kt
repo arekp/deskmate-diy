@@ -74,7 +74,7 @@ class BargeInMic(
                     }
                 }
             } catch (e: Exception) {
-                Log.w(TAG, "Nasłuch przerwań", e)
+                pl.arekp.deskmate.DiagLog.w(TAG, "Nasłuch mikrofonu", e)
             } finally {
                 running = false
                 runCatching { record.stop() }

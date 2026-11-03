@@ -138,7 +138,7 @@ class FaceTracker(
                 // Podgląd (okienko w rogu) korzysta z tej samej kamery – podłączany/odłączany przez setPreviewSurface()
                 provider.bindToLifecycle(lifecycleOwner, CameraSelector.DEFAULT_FRONT_CAMERA, preview, analysis)
             } catch (e: Exception) {
-                Log.e(TAG, "Nie udało się uruchomić kamery", e)
+                pl.arekp.deskmate.DiagLog.e(TAG, "Nie udało się uruchomić kamery", e)
             }
         }, ContextCompat.getMainExecutor(context))
     }

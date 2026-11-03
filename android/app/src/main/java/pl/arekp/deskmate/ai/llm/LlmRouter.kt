@@ -1,6 +1,6 @@
 package pl.arekp.deskmate.ai.llm
 
-import android.util.Log
+import pl.arekp.deskmate.DiagLog
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.cancelChildren
 import kotlinx.coroutines.channels.Channel
@@ -88,11 +88,18 @@ class LlmRouter(
                 val p = queue[next++]
                 running++
                 launch {
+                    val t0 = clock()
+                    DiagLog.i("LLM", "→ ${p.label}: ${request.messages.size} wiad., ${request.tools.size} narzędzi")
                     val r = try {
-                        Result.success(p.complete(request))
+                        Result.success(p.complete(request)).also {
+                            val resp = it.getOrNull()
+                            DiagLog.i("LLM", "← ${p.label} OK ${clock() - t0} ms: " +
+                                "${resp?.toolCalls?.joinToString { c -> "narzędzie ${c.name}" }?.ifBlank { null } ?: "tekst ${resp?.text?.length} zn."}")
+                        }
                     } catch (e: CancellationException) {
                         throw e
                     } catch (e: Throwable) {
+                        DiagLog.w("LLM", "← ${p.label} BŁĄD po ${clock() - t0} ms: ${e.message}")
                         Result.failure(e)
                     }
                     results.send(p to r)
@@ -161,7 +168,7 @@ class LlmRouter(
     }
 
     private fun logWarn(msg: String) {
-        runCatching { Log.w("LlmRouter", msg) }
+        DiagLog.w("LlmRouter", msg)
     }
 
     companion object {

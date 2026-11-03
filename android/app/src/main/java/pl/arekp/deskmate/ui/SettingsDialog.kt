@@ -38,7 +38,12 @@ fun SettingsDialog(
     onDismiss: () -> Unit,
     /** Test połączenia z każdym skonfigurowanym modelem – zwraca linie wyniku. */
     onTest: suspend () -> List<String> = { emptyList() },
+    onShareLogs: () -> Unit = {},
+    /** Zwraca nazwę zapisanego pliku albo null. */
+    onSaveLogs: () -> String? = { null },
+    onClearLogs: () -> Unit = {},
 ) {
+    var logInfo by remember { mutableStateOf("") }
     val scope = rememberCoroutineScope()
     var testResult by remember { mutableStateOf<List<String>?>(null) }
     var testing by remember { mutableStateOf(false) }
@@ -149,6 +154,21 @@ fun SettingsDialog(
                     "Informacje techniczne (STT, TTS, czasy, model) w pasku na dole. Głosowo: „tryb debug” / „wyłącz debug”.",
                     style = MaterialTheme.typography.bodySmall,
                 )
+
+                Section("Logi diagnostyczne")
+                Text(
+                    "Dziennik działania (zapytania do modeli z błędami serwera, narzędzia, słuchanie, awarie). " +
+                        "Klucze API są wycinane. Wyślij go do aplikacji Claude albo dołącz do rozmowy, żeby znaleźć błąd.",
+                    style = MaterialTheme.typography.bodySmall,
+                )
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    TextButton(onClick = { onShareLogs() }) { Text("Udostępnij logi") }
+                    TextButton(onClick = {
+                        logInfo = onSaveLogs()?.let { "Zapisano w Pobranych: $it" } ?: "Nie udało się zapisać"
+                    }) { Text("Zapisz w Pobranych") }
+                    TextButton(onClick = { onClearLogs(); logInfo = "Wyczyszczono" }) { Text("Wyczyść") }
+                }
+                if (logInfo.isNotBlank()) Text(logInfo, style = MaterialTheme.typography.bodySmall)
 
                 Section("Pomocnik ekranu PC (opcjonalnie)")
                 PlainField("Adres, np. http://192.168.1.50:8765", url) { url = it }

@@ -142,6 +142,12 @@ Zdarzenia (5 ostatnich, z godziną): zmiana modelu, przełączenie routera i pow
 
 Nową informację dodajesz wywołaniem `tech("KLUCZ", "wartość")` (pusta wartość usuwa). Usługę rozpoznawania mowy (domyślna, „na urządzeniu (offline)” od Androida 12 albo konkretna zainstalowana) i silnik TTS wybierasz w ustawieniach; głos zmienia się w ustawieniach telefonu.
 
+### 3.6 Logi diagnostyczne
+
+`DiagLog.kt` zapisuje dziennik do `files/logs/deskmate.log` (rotacja po 1 MB): każde zapytanie do modelu (dostawca, czas, wynik albo pełny błąd serwera), wywołania narzędzi z wynikiem, słuchanie (powód i co usłyszał), odpowiedzi, zdarzenia z paska, błędy BLE/kamery/mikrofonu i **awarie aplikacji ze śladem stosu**. Klucze API są wycinane (znane wartości z ustawień + wzorce `AIza…`, `sk-or-…`, `sk-ant-…`, `Bearer …`).
+
+Ustawienia → **Logi diagnostyczne**: „Udostępnij logi” (systemowe Udostępnij – np. do aplikacji Claude), „Zapisz w Pobranych” (plik `deskmate-log-…txt` do dołączenia w rozmowie), „Wyczyść”. Raport ma nagłówek: wersja i numer buildu z CI, model telefonu, Android, profil, tryb routera, modele i ustawienia (bez kluczy). Nowy wpis: `DiagLog.i/w/e("Tag", "…")`.
+
 ## 4. Router modeli AI
 
 Aplikacja nie jest przywiązana do jednego modelu. `LlmRouter` wybiera dostawcę według trybu z ustawień i sam przełącza się na następnego, gdy coś pójdzie nie tak.
