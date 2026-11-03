@@ -23,6 +23,11 @@ import pl.arekp.deskmate.ai.llm.OpenRouterProvider
 import pl.arekp.deskmate.ai.Expression
 import pl.arekp.deskmate.ai.SpeechText
 import pl.arekp.deskmate.ai.LookTool
+import pl.arekp.deskmate.ai.WeatherTool
+import pl.arekp.deskmate.ai.WebSearchTool
+import pl.arekp.deskmate.ai.llm.ChatMessage
+import pl.arekp.deskmate.ai.llm.ChatRequest
+import pl.arekp.deskmate.ai.llm.ProviderException
 import pl.arekp.deskmate.ai.ScreenTool
 import pl.arekp.deskmate.ble.RobotLink
 import pl.arekp.deskmate.ui.Activity
@@ -190,6 +195,25 @@ class DeskMateBrain(private val activity: ComponentActivity) {
 
     // --- Ustawienia (okno po przytrzymaniu palca) --------------------------------
 
+    /** Test połączenia z modelami (przycisk w ustawieniach) – dokładny wynik albo błąd każdego z nich. */
+    suspend fun testProviders(): List<String> {
+        val all = router.order()
+        if (all.none { it.isConfigured() }) return listOf("Brak kluczy – wpisz klucz Gemini, OpenRouter albo Claude.")
+        return all.map { p ->
+            if (!p.isConfigured()) return@map "• ${p.label}: brak klucza"
+            val started = SystemClock.uptimeMillis()
+            val req = ChatRequest("Odpowiadasz jednym słowem.", listOf(ChatMessage.user("Napisz: OK")), emptyList(), 50)
+            try {
+                val r = p.complete(req)
+                "• ${p.label}: ✅ działa (${SystemClock.uptimeMillis() - started} ms) – „${r.text.take(30)}”"
+            } catch (e: ProviderException) {
+                "• ${p.label}: ❌ ${router.describe(e)} [${e.message?.take(120)}]"
+            } catch (e: Exception) {
+                "• ${p.label}: ❌ ${e.message?.take(120)}"
+            }
+        } + listOf("Pogoda i Wikipedia nie wymagają klucza; wyszukiwarka Google korzysta z klucza Gemini.")
+    }
+
     fun sttOptions(): List<SpeechOption> = speech.recognizers()
     fun ttsOptions(): List<SpeechOption> = speech.ttsEngines()
 
@@ -207,6 +231,8 @@ class DeskMateBrain(private val activity: ComponentActivity) {
     // dzięki temu zwykła odpowiedź to jedno zapytanie do AI, bez rund narzędzi `express` / `get_current_time`.
     private fun buildTools(): List<AssistantTool> = listOfNotNull(
         LookTool({ faces.faces.value }, { faces.scene.value }, { faces.readText() }),
+        WeatherTool { settings.homeCity },
+        WebSearchTool({ settings.geminiKey }, { settings.geminiModel }),
         ScreenTool(settings),
         // TODO: GmailTool, CalendarTool, SlackTool… – patrz docs/roadmapa.md
     )

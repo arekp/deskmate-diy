@@ -5,6 +5,7 @@ import pl.arekp.deskmate.Config
 import pl.arekp.deskmate.ai.llm.ChatMessage
 import pl.arekp.deskmate.ai.llm.ChatRequest
 import pl.arekp.deskmate.ai.llm.LlmRouter
+import pl.arekp.deskmate.ai.llm.ProviderException
 import pl.arekp.deskmate.ai.llm.Part
 import pl.arekp.deskmate.ai.llm.Role
 
@@ -45,7 +46,12 @@ class Assistant(
         } catch (e: LlmRouter.AllProvidersFailed) {
             Log.w(TAG, e.message ?: "brak odpowiedzi")
             rollbackLastTurn()
-            return "Żaden model teraz nie odpowiada – sprawdź internet albo limity. Spróbuj za chwilę."
+            val why = e.errors.entries.joinToString("; ") { (id, err) ->
+                val name = mapOf("gemini" to "Gemini", "openrouter" to "OpenRouter", "claude" to "Claude")[id] ?: id
+                "$name – " + ((err as? ProviderException)?.let { router.describe(it) } ?: "błąd")
+            }
+            return if (why.isBlank()) "Żaden model teraz nie odpowiada – sprawdź internet albo limity."
+            else "Żaden model nie odpowiedział. $why. Szczegóły w ustawieniach: Testuj połączenie."
         } catch (e: Exception) {
             Log.e(TAG, "Błąd rozmowy", e)
             rollbackLastTurn()

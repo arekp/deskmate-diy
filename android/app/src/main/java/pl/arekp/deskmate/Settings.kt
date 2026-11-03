@@ -42,6 +42,11 @@ class Settings(context: Context) {
         get() = read(KEY_CLAUDE_MODEL, BuildConfig.ANTHROPIC_MODEL)
         set(v) = write(KEY_CLAUDE_MODEL, v)
 
+    /** Miasto użytkownika – domyślne dla pytań o pogodę. */
+    var homeCity: String
+        get() = read(KEY_HOME_CITY, "")
+        set(v) = write(KEY_HOME_CITY, v)
+
     // --- Pomocnik ekranu PC ---
     var screenHelperUrl: String
         get() = read(KEY_SCREEN_URL, BuildConfig.SCREEN_HELPER_URL)
@@ -98,6 +103,7 @@ class Settings(context: Context) {
         private const val KEY_CLAUDE_MODEL = "model"
         private const val KEY_SCREEN_URL = "screenUrl"
         private const val KEY_SCREEN_TOKEN = "screenToken"
+        private const val KEY_HOME_CITY = "homeCity"
         private const val KEY_STT = "sttService"
         private const val KEY_TTS = "ttsEngine"
         private const val KEY_DEBUG = "debugMode"

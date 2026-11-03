@@ -18,6 +18,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -34,7 +36,12 @@ fun SettingsDialog(
     ttsOptions: List<SpeechOption>,
     onSaved: (speechChanged: Boolean) -> Unit,
     onDismiss: () -> Unit,
+    /** Test połączenia z każdym skonfigurowanym modelem – zwraca linie wyniku. */
+    onTest: suspend () -> List<String> = { emptyList() },
 ) {
+    val scope = rememberCoroutineScope()
+    var testResult by remember { mutableStateOf<List<String>?>(null) }
+    var testing by remember { mutableStateOf(false) }
     var mode by remember { mutableStateOf(settings.routerMode) }
     var geminiKey by remember { mutableStateOf(settings.geminiKey) }
     var geminiModel by remember { mutableStateOf(settings.geminiModel) }
@@ -44,6 +51,7 @@ fun SettingsDialog(
     var claudeModel by remember { mutableStateOf(settings.claudeModel) }
     var url by remember { mutableStateOf(settings.screenHelperUrl) }
     var token by remember { mutableStateOf(settings.screenHelperToken) }
+    var city by remember { mutableStateOf(settings.homeCity) }
     var stt by remember { mutableStateOf(settings.sttService) }
     var ttsEngine by remember { mutableStateOf(settings.ttsEngine) }
     var debug by remember { mutableStateOf(settings.debugMode) }
@@ -61,6 +69,34 @@ fun SettingsDialog(
                         FilterChip(selected = mode == m, onClick = { mode = m }, label = { Text(m.label) })
                     }
                 }
+
+                TextButton(
+                    enabled = !testing,
+                    onClick = {
+                        // Zapisz wpisane klucze i sprawdź każdy model krótkim zapytaniem
+                        settings.routerMode = mode
+                        settings.geminiKey = geminiKey
+                        settings.geminiModel = geminiModel
+                        settings.openRouterKey = orKey
+                        settings.openRouterModel = orModel
+                        settings.claudeKey = claudeKey
+                        settings.claudeModel = claudeModel
+                        testing = true
+                        testResult = listOf("Sprawdzam…")
+                        scope.launch {
+                            testResult = runCatching { onTest() }.getOrElse { listOf("Błąd testu: ${it.message}") }
+                            testing = false
+                        }
+                    },
+                ) { Text(if (testing) "Sprawdzam połączenie…" else "Zapisz klucze i testuj połączenie") }
+                testResult?.forEach { line -> Text(line, style = MaterialTheme.typography.bodySmall) }
+
+                Section("Pogoda i wyszukiwanie")
+                PlainField("Twoje miasto (domyślne dla pogody)", city) { city = it }
+                Text(
+                    "Pogoda: Open-Meteo (bez klucza). Wyszukiwanie w internecie: Google przez Twój klucz Gemini, bez klucza – Wikipedia.",
+                    style = MaterialTheme.typography.bodySmall,
+                )
 
                 Section("Gemini – darmowy pakiet (aistudio.google.com)")
                 SecretField("Klucz Gemini", geminiKey) { geminiKey = it }
@@ -130,6 +166,7 @@ fun SettingsDialog(
                 settings.claudeModel = claudeModel
                 settings.screenHelperUrl = url
                 settings.screenHelperToken = token
+                settings.homeCity = city
                 val speechChanged = stt != settings.sttService || ttsEngine != settings.ttsEngine
                 settings.sttService = stt
                 settings.ttsEngine = ttsEngine

@@ -119,7 +119,7 @@ class LlmRouter(
                     errors[p.id] = e
                     if (e is ProviderException) {
                         penalize(p, e)
-                        onEvent("${p.label}: ${describe(e.kind)} – próbuję dalej")
+                        onEvent("${p.label}: ${describe(e)} – próbuję dalej")
                         logWarn("${p.label}: ${e.kind} ${e.message}")
                     } else {
                         cooldownUntil[p.id] = clock() + SERVER_COOLDOWN_MS
@@ -146,6 +146,10 @@ class LlmRouter(
         }
         if (ms > 0) cooldownUntil[p.id] = clock() + ms
     }
+
+    /** Opis błędu po polsku, z krótkim komunikatem serwera (np. „zły klucz: API key not valid”). */
+    fun describe(e: ProviderException): String =
+        describe(e.kind) + if (e.detail.isNotBlank()) " (${e.detail.take(60)})" else ""
 
     private fun describe(kind: ProviderException.Kind) = when (kind) {
         ProviderException.Kind.RATE_LIMIT -> "limit zapytań"

@@ -72,6 +72,7 @@ class MainActivity : ComponentActivity() {
                     ttsOptions = remember { brain.ttsOptions() },
                     onSaved = { brain.onSettingsSaved(it) },
                     onDismiss = { showSettings = false },
+                    onTest = { brain.testProviders() },
                 )
             }
         }

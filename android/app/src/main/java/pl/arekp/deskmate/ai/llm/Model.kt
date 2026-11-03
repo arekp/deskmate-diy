@@ -69,6 +69,8 @@ class ProviderException(
     message: String,
     val retryAfterMs: Long? = null,
     cause: Throwable? = null,
+    /** Krótki opis od serwera, np. „API key not valid”. */
+    val detail: String = "",
 ) : Exception(message, cause) {
     enum class Kind {
         /** 429 – limit zapytań; spróbuj innego, wróć po chwili. */
@@ -95,7 +97,21 @@ class ProviderException(
                 in 500..599 -> Kind.SERVER
                 else -> Kind.BAD_REQUEST
             }
-            return ProviderException(kind, "HTTP $code: ${body.take(300)}", retry)
+            return ProviderException(kind, "HTTP $code: ${body.take(300)}", retry, detail = shortDetail(body))
+        }
+
+        /** Krótki opis błędu z odpowiedzi serwera (pole error.message albo message), do pokazania użytkownikowi. */
+        fun shortDetail(body: String): String {
+            val msg = runCatching {
+                val j = org.json.JSONObject(body)
+                val e = j.opt("error")
+                when (e) {
+                    is org.json.JSONObject -> e.optString("message")
+                    is String -> e
+                    else -> j.optString("message")
+                }
+            }.getOrNull().orEmpty().ifBlank { body }
+            return msg.replace(Regex("\\s+"), " ").trim().take(90)
         }
     }
 }

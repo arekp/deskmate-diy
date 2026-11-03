@@ -47,12 +47,16 @@ object HttpJson {
         .retryOnConnectionFailure(true)
         .build()
 
-    suspend fun post(url: String, headers: Map<String, String>, body: JSONObject): JSONObject {
-        val request = Request.Builder()
-            .url(url)
-            .apply { headers.forEach { (k, v) -> header(k, v) } }
-            .post(body.toString().toRequestBody(JSON))
-            .build()
+    suspend fun post(url: String, headers: Map<String, String>, body: JSONObject): JSONObject =
+        execute(
+            Request.Builder().url(url).apply { headers.forEach { (k, v) -> header(k, v) } }
+                .post(body.toString().toRequestBody(JSON)).build(),
+        )
+
+    suspend fun get(url: String, headers: Map<String, String> = emptyMap()): JSONObject =
+        execute(Request.Builder().url(url).apply { headers.forEach { (k, v) -> header(k, v) } }.get().build())
+
+    private suspend fun execute(request: Request): JSONObject {
         val text = suspendCancellableCoroutine { cont ->
             val call = client.newCall(request)
             cont.invokeOnCancellation { call.cancel() }

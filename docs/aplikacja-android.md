@@ -54,6 +54,8 @@ Uprawnienia: `CAMERA`, `RECORD_AUDIO`, `BLUETOOTH_SCAN`, `BLUETOOTH_CONNECT` (An
 | `vision/FaceTracker.kt` | kamera przednia → ML Kit (lokalnie): `FaceObservation` (pozycja −1…1, rozmiar, uśmiech, czy patrzy w kamerę) w każdej klatce, `SceneObservation` (etykiety otoczenia co 1,5 s, poza co 150 ms), `waves` (machanie), `readText()` (OCR na żądanie) | CameraX, ML Kit |
 | `vision/WaveDetector.kt` | machanie i podniesiona ręka z punktów pozy (nadgarstek nad barkiem + ≥ 3 zmiany kierunku w 1,8 s) | – |
 | `vision/LabelsPl.kt` | polskie nazwy częstych etykiet ML Kit | – |
+| `ai/WeatherTool.kt` | `get_weather`: pogoda i prognoza z Open-Meteo (bez klucza), miasto domyślne z ustawień | OkHttp |
+| `ai/WebSearchTool.kt` | `web_search`: Google przez Gemini (grounding, klucz Gemini), bez klucza / przy błędzie – Wikipedia | OkHttp |
 | `ai/LookTool.kt` | narzędzie `look_around` dla modelu: opis kadru tekstem (twarz, etykiety, ręka, OCR) – obraz nie wychodzi z telefonu | – |
 | `vision/HeadController.kt` | pętla śledzenia: odchyłka twarzy w stopniach × wzmocnienie → komenda `L pan tilt 180`, max 10/s, strefa martwa, pauza po geście | `DeviceProfile`, `Config` |
 | `voice/Speech.kt` | `listenOnce()` – jedna wypowiedź → tekst; `say()` – mówi i czeka na koniec | SpeechRecognizer, TextToSpeech |
