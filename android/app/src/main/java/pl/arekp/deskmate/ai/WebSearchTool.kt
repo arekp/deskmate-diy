@@ -90,8 +90,10 @@ class WebSearchTool(
             )
             .put("tools", JSONArray().put(JSONObject().put("google_search", JSONObject())))
             .put("generationConfig", JSONObject().put("maxOutputTokens", 1024))
-        val url = "https://generativelanguage.googleapis.com/v1beta/models/${geminiModel()}:generateContent"
-        return parseGrounded(HttpJson.post(url, mapOf("x-goog-api-key" to geminiKey()), body))
+        return pl.arekp.deskmate.ai.llm.GeminiModels.withFallback(geminiModel()) { model ->
+            val url = "https://generativelanguage.googleapis.com/v1beta/models/$model:generateContent"
+            parseGrounded(HttpJson.post(url, mapOf("x-goog-api-key" to geminiKey()), body))
+        }.first
     }
 
     private suspend fun wikipedia(query: String): String? {

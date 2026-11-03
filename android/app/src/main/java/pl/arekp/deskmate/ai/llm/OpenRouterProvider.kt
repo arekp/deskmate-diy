@@ -24,11 +24,11 @@ class OpenRouterProvider(
             "X-Title" to "DeskMate DIY",
         )
         return try {
-            parse(HttpJson.post(URL, headers, buildBody(request, model(), withTools = true)))
+            parse(HttpJson.post(URL, headers, buildBody(request, model(), withTools = true), HttpJson.OPENROUTER_TIMEOUT_MS))
         } catch (e: ProviderException) {
             // Część darmowych modeli nie obsługuje narzędzi – wtedy rozmawiamy bez nich
             if (e.kind == ProviderException.Kind.BAD_REQUEST && request.tools.isNotEmpty()) {
-                parse(HttpJson.post(URL, headers, buildBody(request, model(), withTools = false)))
+                parse(HttpJson.post(URL, headers, buildBody(request, model(), withTools = false), HttpJson.OPENROUTER_TIMEOUT_MS))
             } else {
                 throw e
             }

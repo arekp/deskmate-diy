@@ -39,18 +39,20 @@ object HttpJson {
 
     /** Cały czas jednego zapytania (połączenie + odpowiedź). */
     const val CALL_TIMEOUT_MS = 15_000L
+    /** Darmowe modele OpenRouter bywają wolne (logi: pusta odpowiedź po 15 s) – dajemy im więcej czasu. */
+    const val OPENROUTER_TIMEOUT_MS = 35_000L
 
     val client: OkHttpClient = OkHttpClient.Builder()
         .connectTimeout(5, TimeUnit.SECONDS)
-        .readTimeout(CALL_TIMEOUT_MS, TimeUnit.MILLISECONDS)
-        .callTimeout(CALL_TIMEOUT_MS, TimeUnit.MILLISECONDS)
+        .readTimeout(OPENROUTER_TIMEOUT_MS, TimeUnit.MILLISECONDS) // całość pilnuje limit na zapytanie (call.timeout)
         .retryOnConnectionFailure(true)
         .build()
 
-    suspend fun post(url: String, headers: Map<String, String>, body: JSONObject): JSONObject =
+    suspend fun post(url: String, headers: Map<String, String>, body: JSONObject, timeoutMs: Long = CALL_TIMEOUT_MS): JSONObject =
         execute(
             Request.Builder().url(url).apply { headers.forEach { (k, v) -> header(k, v) } }
                 .post(body.toString().toRequestBody(JSON)).build(),
+            timeoutMs,
         )
 
     suspend fun put(url: String, headers: Map<String, String>, body: JSONObject): JSONObject =
@@ -66,8 +68,9 @@ object HttpJson {
     suspend fun getText(url: String, headers: Map<String, String> = emptyMap()): String =
         fetchText(Request.Builder().url(url).apply { headers.forEach { (k, v) -> header(k, v) } }.get().build())
 
-    private suspend fun execute(request: Request): JSONObject {
-        val text = fetchText(request)
+    private suspend fun execute(request: Request, timeoutMs: Long = CALL_TIMEOUT_MS): JSONObject {
+        val text = fetchText(request, timeoutMs)
+        if (text.isBlank()) throw ProviderException(ProviderException.Kind.SERVER, "Pusta odpowiedź serwera", detail = "pusta odpowiedź")
         return try {
             JSONObject(text)
         } catch (e: Exception) {
@@ -75,9 +78,10 @@ object HttpJson {
         }
     }
 
-    private suspend fun fetchText(request: Request): String {
+    private suspend fun fetchText(request: Request, timeoutMs: Long = CALL_TIMEOUT_MS): String {
         return suspendCancellableCoroutine { cont ->
             val call = client.newCall(request)
+            call.timeout().timeout(timeoutMs, TimeUnit.MILLISECONDS)
             cont.invokeOnCancellation { call.cancel() }
             call.enqueue(object : Callback {
                 override fun onFailure(call: Call, e: IOException) {

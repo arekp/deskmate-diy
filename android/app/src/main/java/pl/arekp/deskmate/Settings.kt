@@ -104,7 +104,8 @@ class Settings(context: Context) {
     }
 
     companion object {
-        const val DEFAULT_GEMINI_MODEL = "gemini-flash-latest"
+        // aliasy *-latest bywały bez darmowego pakietu (429 przy pierwszym zapytaniu); GeminiModels i tak próbuje darmowych
+        const val DEFAULT_GEMINI_MODEL = "gemini-3.8-flash"
         const val DEFAULT_OPENROUTER_MODEL = "openrouter/free"
         const val STT_ON_DEVICE = "on_device"
         const val DEFAULT_LOG_REPO = "arekp/deskmate-logs"

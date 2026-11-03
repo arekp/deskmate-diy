@@ -19,15 +19,17 @@ class GeminiProvider(
     /** Modele, które odrzuciły ustawienie myślenia (400) – dla nich wysyłamy zapytanie bez niego. */
     private val noThinkingConfig = mutableSetOf<String>()
 
-    override suspend fun complete(request: ChatRequest): ChatResponse {
-        val name = model()
+    override suspend fun complete(request: ChatRequest): ChatResponse =
+        GeminiModels.withFallback(model()) { name -> completeWith(name, request) }.first
+
+    private suspend fun completeWith(name: String, request: ChatRequest): ChatResponse {
         val url = "https://generativelanguage.googleapis.com/v1beta/models/$name:generateContent"
         val headers = mapOf("x-goog-api-key" to apiKey())
         val thinking = if (name in noThinkingConfig) null else thinkingConfigFor(name)
         val json = try {
             HttpJson.post(url, headers, buildBody(request, thinking))
         } catch (e: ProviderException) {
-            if (thinking == null || e.kind != ProviderException.Kind.BAD_REQUEST) throw e
+            if (thinking == null || e.kind != ProviderException.Kind.BAD_REQUEST || GeminiModels.isModelProblem(e)) throw e
             noThinkingConfig += name
             HttpJson.post(url, headers, buildBody(request, null))
         }
