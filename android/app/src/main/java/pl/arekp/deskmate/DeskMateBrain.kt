@@ -234,12 +234,23 @@ class DeskMateBrain(private val activity: ComponentActivity) {
 
     /** Automatyczna wysyłka: po awarii poprzedniego uruchomienia i po nowych błędach (najwyżej co 10 min). */
     private suspend fun autoUploadWatcher() {
-        if (!settings.logAutoUpload || !logUploader.isConfigured()) return
-        if (DiagLog.previousRunCrashed()) logUploader.upload(diagnosticReport(), "awaria poprzedniego uruchomienia")
+        if (settings.logAutoUpload && logUploader.isConfigured() && DiagLog.previousRunCrashed()) {
+            logUploader.upload(diagnosticReport(), "awaria poprzedniego uruchomienia")
+        }
+        var liveSize = -1
         while (scope.isActive) {
             delay(60_000)
             val now = SystemClock.uptimeMillis()
-            if (DiagLog.errorCount > errorsAtLastUpload && now - lastAutoUploadAt > 10 * 60_000L &&
+            // Tryb debug = tryb deweloperski: log na żywo co minutę (tylko gdy coś przybyło)
+            if (settings.debugMode && logUploader.isConfigured()) {
+                val report = diagnosticReport()
+                if (report.length != liveSize) {
+                    val r = logUploader.uploadLive(report)
+                    if (r is LogUploader.Result.Ok) liveSize = report.length
+                    tech("Logi", if (r is LogUploader.Result.Ok) "na żywo OK" else r.message)
+                }
+            }
+            if (!settings.debugMode && DiagLog.errorCount > errorsAtLastUpload && now - lastAutoUploadAt > 10 * 60_000L &&
                 settings.logAutoUpload && logUploader.isConfigured()
             ) {
                 lastAutoUploadAt = now

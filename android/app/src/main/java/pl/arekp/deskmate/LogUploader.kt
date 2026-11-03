@@ -25,7 +25,13 @@ class LogUploader(private val settings: Settings) {
 
     fun isConfigured() = settings.logToken.isNotBlank() && settings.logRepo.contains('/')
 
-    suspend fun upload(report: String, reason: String): Result {
+    /**
+     * Tryb deweloperski: nadpisuje jeden plik `logs/<model>/live.txt` (Claude czyta go na bieżąco).
+     * Zwraca wynik jak [upload].
+     */
+    suspend fun uploadLive(report: String): Result = upload(report, "na żywo", live = true)
+
+    suspend fun upload(report: String, reason: String, live: Boolean = false): Result {
         if (!isConfigured()) return Result.Failed("Brak tokenu GitHub albo nazwy repozytorium (ustawienia → Logi).")
         val repo = settings.logRepo.trim()
         val headers = mapOf(
@@ -41,12 +47,18 @@ class LogUploader(private val settings: Settings) {
             }
             val device = Build.MODEL.replace(Regex("[^A-Za-z0-9_-]"), "_")
             val stamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd_HH-mm-ss"))
-            val path = "logs/$device/$stamp.txt"
+            val path = if (live) "logs/$device/live.txt" else "logs/$device/$stamp.txt"
+            val url = "https://api.github.com/repos/$repo/contents/$path"
             val body = JSONObject()
                 .put("message", "Logi DeskMate ($reason) – $device $stamp")
                 .put("content", Base64.encodeToString(report.toByteArray(), Base64.NO_WRAP))
-            HttpJson.put("https://api.github.com/repos/$repo/contents/$path", headers, body)
-            DiagLog.i("Logi", "Wysłano na GitHub: $repo/$path ($reason)")
+            if (live) {
+                // nadpisanie istniejącego pliku wymaga jego „sha”
+                runCatching { HttpJson.get(url, headers).optString("sha") }.getOrNull()
+                    ?.takeIf { it.isNotBlank() }?.let { body.put("sha", it) }
+            }
+            HttpJson.put(url, headers, body)
+            if (!live) DiagLog.i("Logi", "Wysłano na GitHub: $repo/$path ($reason)")
             Result.Ok(path)
         } catch (e: ProviderException) {
             val why = when (e.kind) {
