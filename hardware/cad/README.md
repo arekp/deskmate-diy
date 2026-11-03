@@ -303,6 +303,11 @@ wyważa telefon.
   (`stl`, `png` albo `all`; PNG wymaga `xvfb-run` na serwerze bez ekranu).
 - Po zmianach: `python3 hardware/tools/stl_check.py hardware/stl/*.stl`
   i `python3 hardware/tools/collision_check.py` (numpy + scipy, ~15 min).
+- Drukowalność (ścianki ≥ 1,2 mm, nawisy < 45°, podpory, lepsza orientacja):
+  `pip install -r .claude/skills/dfam-check/requirements.txt`, potem
+  `python3 hardware/tools/dfam_report.py`. GitHub Actions robi to przy każdym
+  pushu (job `printability`, raport w podsumowaniu przebiegu). Skill
+  `dfam-check` pochodzi z [earthtojake/text-to-cad](https://github.com/earthtojake/text-to-cad) (MIT).
 - Kształt: `head_w`, `head_r`, `front_r`, `dome_back` (kask), `body_a`, `body_b`,
   `body_da` (tułów – `body_da` ≤ 29 trzyma nawisy ≤ 45°), `ear_r`, `ear_cap_r`
   (uszy), `ant_h`, `ant_ball` (antenka), `axis_above_deck` (wysokość głowy nad szyją).
