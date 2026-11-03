@@ -65,6 +65,8 @@ data class UiState(
     val speaking: Boolean = false,
     val speechBeat: SpeechBeat = SpeechBeat(),
     val caption: String = "",
+    /** Okienko z podglądem kamery w prawym górnym rogu. */
+    val showCamera: Boolean = true,
     val eyeScale: Float = 1f,
     val ticker: TickerState = TickerState(),
 )
@@ -183,7 +185,7 @@ fun EyesScreen(
             drawAccessory(face, style.accessory, color, phase, gx, gy)
         }
 
-        if (state.listening) ListeningDot(Modifier.align(Alignment.TopEnd).padding(20.dp))
+        if (state.listening) ListeningDot(Modifier.align(Alignment.TopCenter).padding(16.dp))
 
         if (state.status.isNotBlank()) {
             Text(

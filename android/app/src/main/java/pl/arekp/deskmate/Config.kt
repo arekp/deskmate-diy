@@ -35,6 +35,8 @@ object Config {
 
     /** Powitanie po machaniu – nie częściej niż co tyle. */
     const val WAVE_GREET_COOLDOWN_MS = 30_000L
+    /** Machanie przerywa robota dopiero, gdy mówi dłużej niż tyle. */
+    const val WAVE_INTERRUPT_AFTER_MS = 1_000L
 
     /** Prompt systemowy z bieżącą datą i godziną (bez osobnego narzędzia = bez dodatkowego zapytania). */
     fun systemPrompt(now: java.time.ZonedDateTime = java.time.ZonedDateTime.now()): String =

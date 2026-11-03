@@ -21,6 +21,7 @@ import pl.arekp.deskmate.ai.llm.GeminiProvider
 import pl.arekp.deskmate.ai.llm.LlmRouter
 import pl.arekp.deskmate.ai.llm.OpenRouterProvider
 import pl.arekp.deskmate.ai.Expression
+import pl.arekp.deskmate.ai.SpeechText
 import pl.arekp.deskmate.ai.LookTool
 import pl.arekp.deskmate.ai.ScreenTool
 import pl.arekp.deskmate.ble.RobotLink
@@ -28,7 +29,9 @@ import pl.arekp.deskmate.ui.Activity
 import pl.arekp.deskmate.ui.Emotion
 import pl.arekp.deskmate.ui.SpeechBeat
 import pl.arekp.deskmate.ui.UiState
+import androidx.camera.core.Preview
 import pl.arekp.deskmate.vision.FaceObservation
+import pl.arekp.deskmate.vision.SceneObservation
 import pl.arekp.deskmate.vision.FaceTracker
 import pl.arekp.deskmate.vision.HeadController
 import pl.arekp.deskmate.voice.BargeInMic
@@ -54,10 +57,15 @@ class DeskMateBrain(private val activity: ComponentActivity) {
 
     private val _ui = MutableStateFlow(
         UiState(eyeScale = profile.eyeScale).let {
-            it.copy(ticker = it.ticker.copy(debug = settings.debugMode).withTech("Wzrok", "ML Kit na urządzeniu: twarz, etykiety, poza, OCR"))
+            it.copy(showCamera = settings.showCameraPreview, ticker = it.ticker.copy(debug = settings.debugMode).withTech("Wzrok", "ML Kit na urządzeniu: twarz, etykiety, poza, OCR"))
         },
     )
     val ui: StateFlow<UiState> = _ui.asStateFlow()
+
+    /** Dla okienka podglądu kamery. */
+    val face: StateFlow<FaceObservation> get() = faces.faces
+    val scene: StateFlow<SceneObservation> get() = faces.scene
+    fun attachPreview(provider: Preview.SurfaceProvider?) = faces.setPreviewSurface(provider)
 
     private val _gaze = MutableStateFlow(Offset.Zero)
     /** Kierunek spojrzenia oczu (−1..1) – osobno od [ui], bo zmienia się z każdą klatką. */
@@ -87,6 +95,7 @@ class DeskMateBrain(private val activity: ComponentActivity) {
         },
         onInfo = { k, v -> tech(if (k == "Przerywanie") "Nasłuch" else k, v) },
     )
+    private var speakStartedAt = 0L
     /** Poprzednia odpowiedź została przerwana – powiemy o tym modelowi. */
     private var answerWasCut = false
     /** Router modeli: Gemini (darmowy) → OpenRouter (darmowe) → Claude (płatny), wg trybu w ustawieniach. */
@@ -127,7 +136,6 @@ class DeskMateBrain(private val activity: ComponentActivity) {
             faces.scene.collect { sc ->
                 tech("Widzę", sc.labels.joinToString(", ") { "${it.name} ${(it.confidence * 100).toInt()}%" }.ifBlank { "—" })
                 tech("Poza", if (sc.handRaised) "ręka w górze" else if (sc.personPose) "sylwetka" else "")
-                if (sc.handRaised) requestInterrupt("ręka w górze")
             }
         }
         scope.launch { robot.events.collect { if (it.startsWith("TOUCH")) onTouch() } }
@@ -187,7 +195,7 @@ class DeskMateBrain(private val activity: ComponentActivity) {
 
     /** Wywoływane po zapisaniu ustawień: odświeża pasek i – gdy trzeba – usługi mowy. */
     fun onSettingsSaved(speechChanged: Boolean) {
-        _ui.update { it.copy(ticker = it.ticker.copy(debug = settings.debugMode)) }
+        _ui.update { it.copy(ticker = it.ticker.copy(debug = settings.debugMode), showCamera = settings.showCameraPreview) }
         if (speechChanged) {
             speech.reload()
             event("Zmieniono ustawienia mowy")
@@ -331,7 +339,7 @@ class DeskMateBrain(private val activity: ComponentActivity) {
         val raw = assistant.ask(question)
         tech("LLM czas", "${SystemClock.uptimeMillis() - askedAt} ms")
         val expr = Expression.parse(raw)
-        val answer = expr.text.ifBlank { "Hmm." }
+        val answer = SpeechText.completeSentences(expr.text).ifBlank { "Hmm." }
         if (expr.emotion != null) setEmotion(expr.emotion, holdMs = 4000)
         else if (_ui.value.emotion == Emotion.THINKING) setEmotion(Emotion.NEUTRAL)
         expr.gesture?.let {
@@ -346,7 +354,11 @@ class DeskMateBrain(private val activity: ComponentActivity) {
 
     /** Ktoś macha – przywitaj się (najwyżej raz na [Config.WAVE_GREET_COOLDOWN_MS]). */
     private fun onWave() {
-        if (requestInterrupt("machanie")) return
+        // Podczas mówienia machanie = przerwanie, ale dopiero po 1 s (żeby gest sprzed odpowiedzi nie uciął jej na starcie)
+        if (interruptRequest != null) {
+            if (SystemClock.uptimeMillis() - speakStartedAt > Config.WAVE_INTERRUPT_AFTER_MS) requestInterrupt("machanie")
+            return
+        }
         event("Widzę machanie")
         val now = SystemClock.uptimeMillis()
         lastFaceAt = now
@@ -385,6 +397,7 @@ class DeskMateBrain(private val activity: ComponentActivity) {
      */
     private suspend fun speakInterruptible(text: String): Boolean = coroutineScope {
         val req = CompletableDeferred<String>()
+        speakStartedAt = SystemClock.uptimeMillis()
         interruptRequest = req
         val mic = if (settings.bargeInVoice) {
             BargeInMic(onSpeech = { requestInterrupt("głos") }, onInfo = { k, v -> tech(k, v) }).also { it.start() }

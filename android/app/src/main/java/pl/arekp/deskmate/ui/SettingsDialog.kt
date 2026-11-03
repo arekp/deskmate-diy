@@ -48,6 +48,7 @@ fun SettingsDialog(
     var ttsEngine by remember { mutableStateOf(settings.ttsEngine) }
     var debug by remember { mutableStateOf(settings.debugMode) }
     var bargeIn by remember { mutableStateOf(settings.bargeInVoice) }
+    var cameraPip by remember { mutableStateOf(settings.showCameraPreview) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -90,9 +91,16 @@ fun SettingsDialog(
                     label = { Text(if (bargeIn) "Przerywanie głosem: włączone" else "Przerywanie głosem: wyłączone") },
                 )
                 Text(
-                    "Zawsze działa: dotknięcie ekranu albo podniesienie ręki / machanie. Głosem – eksperymentalnie: " +
-                        "zacznij mówić, gdy robot mówi. Gdy przerywa sam sobie, wyłącz tę opcję.",
+                    "Zawsze działa: dotknięcie ekranu albo machanie. Głosem – eksperymentalnie (domyślnie wyłączone): " +
+                        "zacznij głośno mówić, gdy robot mówi. Jeśli robot ucina sam sobie odpowiedzi – wyłącz.",
                     style = MaterialTheme.typography.bodySmall,
+                )
+
+                Section("Ekran")
+                FilterChip(
+                    selected = cameraPip,
+                    onClick = { cameraPip = !cameraPip },
+                    label = { Text(if (cameraPip) "Podgląd kamery: widoczny" else "Podgląd kamery: ukryty") },
                 )
 
                 Section("Diagnostyka")
@@ -127,6 +135,7 @@ fun SettingsDialog(
                 settings.ttsEngine = ttsEngine
                 settings.debugMode = debug
                 settings.bargeInVoice = bargeIn
+                settings.showCameraPreview = cameraPip
                 onSaved(speechChanged)
                 onDismiss()
             }) { Text("Zapisz") }

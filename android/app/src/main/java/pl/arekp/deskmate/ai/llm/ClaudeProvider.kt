@@ -57,7 +57,7 @@ class ClaudeProvider(
             }
             return JSONObject()
                 .put("model", model)
-                .put("max_tokens", request.maxTokens)
+                .put("max_tokens", maxOf(request.maxTokens, 600))
                 .put("system", request.system)
                 .put("messages", messages)
                 .apply { if (tools.length() > 0) put("tools", tools) }

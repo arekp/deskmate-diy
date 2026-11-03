@@ -88,6 +88,7 @@ dependencies {
     implementation("androidx.camera:camera-core:$cameraX")
     implementation("androidx.camera:camera-camera2:$cameraX")
     implementation("androidx.camera:camera-lifecycle:$cameraX")
+    implementation("androidx.camera:camera-view:$cameraX") // podgląd kamery w rogu ekranu
     implementation("com.google.mlkit:face-detection:16.1.7")
     // Rozpoznawanie otoczenia na telefonie (modele w APK, bez internetu)
     implementation("com.google.mlkit:image-labeling:17.0.9")

@@ -50,3 +50,24 @@ class ExpressionTagTest {
         assertEquals("Dobrze. Niestety nie wiem.", e.text)
     }
 }
+
+class SpeechTextTest {
+    @Test
+    fun completeAnswerUnchanged() {
+        assertEquals("To jest pełne zdanie. I drugie!", pl.arekp.deskmate.ai.SpeechText.completeSentences("To jest pełne zdanie. I drugie!"))
+    }
+
+    @Test
+    fun cutAnswer_dropsUnfinishedLastSentence() {
+        assertEquals(
+            "Pierwsze zdanie jest całe. Drugie też.",
+            pl.arekp.deskmate.ai.SpeechText.completeSentences("Pierwsze zdanie jest całe. Drugie też. A trzecie urwało si"),
+        )
+    }
+
+    @Test
+    fun shortCutAnswer_getsEllipsis() {
+        assertEquals("Krótko. A potem bardzo długie zdanie bez końca…",
+            pl.arekp.deskmate.ai.SpeechText.completeSentences("Krótko. A potem bardzo długie zdanie bez końca"))
+    }
+}

@@ -64,8 +64,13 @@ class Settings(context: Context) {
 
     /** Przerywanie robota głosem (mikrofon nasłuchuje, gdy robot mówi). */
     var bargeInVoice: Boolean
-        get() = prefs.getBoolean(KEY_BARGE_IN, true)
-        set(v) = prefs.edit().putBoolean(KEY_BARGE_IN, v).apply()
+        get() = prefs.getBoolean(KEY_BARGE_IN2, false)
+        set(v) = prefs.edit().putBoolean(KEY_BARGE_IN2, v).apply()
+
+    /** Okienko z podglądem kamery („co widzę”) w prawym górnym rogu. */
+    var showCameraPreview: Boolean
+        get() = prefs.getBoolean(KEY_CAMERA_PIP, true)
+        set(v) = prefs.edit().putBoolean(KEY_CAMERA_PIP, v).apply()
 
     /** Tryb debug: informacje techniczne w pasku na dole ekranu. */
     var debugMode: Boolean
@@ -96,6 +101,8 @@ class Settings(context: Context) {
         private const val KEY_STT = "sttService"
         private const val KEY_TTS = "ttsEngine"
         private const val KEY_DEBUG = "debugMode"
-        private const val KEY_BARGE_IN = "bargeInVoice"
+        private const val KEY_CAMERA_PIP = "cameraPip"
+        // nowy klucz: poprzednia wersja miała domyślnie włączone i przerywała sama sobie
+        private const val KEY_BARGE_IN2 = "bargeInVoice2"
     }
 }

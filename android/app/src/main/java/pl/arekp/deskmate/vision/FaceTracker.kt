@@ -8,6 +8,7 @@ import androidx.camera.core.CameraSelector
 import androidx.camera.core.ExperimentalGetImage
 import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.ImageProxy
+import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.LifecycleOwner
@@ -47,7 +48,12 @@ data class FaceObservation(
     val smiling: Boolean = false,
     /** Patrzy mniej więcej w stronę kamery. */
     val attentive: Boolean = false,
+    /** Ramka twarzy w kadrze (0..1, obraz wyprostowany, NIE odbity lustrzanie) – do podglądu kamery. */
+    val box: NormBox? = null,
 )
+
+/** Prostokąt we współrzędnych 0..1 kadru. */
+data class NormBox(val left: Float, val top: Float, val right: Float, val bottom: Float)
 
 /** Etykieta tego, co widać w kadrze (już po polsku, jeśli znamy tłumaczenie). */
 data class SceneLabel(val name: String, val confidence: Float)
@@ -112,6 +118,13 @@ class FaceTracker(
             .build(),
     )
 
+    private val preview = Preview.Builder().build()
+
+    /** Podłącza okienko podglądu kamery (albo odłącza: null). Wołać z wątku głównego. */
+    fun setPreviewSurface(provider: Preview.SurfaceProvider?) {
+        preview.setSurfaceProvider(provider)
+    }
+
     fun start() {
         val providerFuture = ProcessCameraProvider.getInstance(context)
         providerFuture.addListener({
@@ -122,7 +135,8 @@ class FaceTracker(
             analysis.setAnalyzer(executor, ::analyze)
             try {
                 provider.unbindAll()
-                provider.bindToLifecycle(lifecycleOwner, CameraSelector.DEFAULT_FRONT_CAMERA, analysis)
+                // Podgląd (okienko w rogu) korzysta z tej samej kamery – podłączany/odłączany przez setPreviewSurface()
+                provider.bindToLifecycle(lifecycleOwner, CameraSelector.DEFAULT_FRONT_CAMERA, preview, analysis)
             } catch (e: Exception) {
                 Log.e(TAG, "Nie udało się uruchomić kamery", e)
             }
@@ -164,6 +178,7 @@ class FaceTracker(
                         size = box.width() / w,
                         smiling = (face.smilingProbability ?: 0f) > 0.7f,
                         attentive = abs(face.headEulerAngleY) < 20f && abs(face.headEulerAngleX) < 20f,
+                        box = NormBox(box.left / w, box.top / h, box.right / w, box.bottom / h),
                     )
                 }
             }

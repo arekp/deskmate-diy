@@ -29,11 +29,11 @@ class BargeInVadTest {
     }
 
     @Test
-    fun userSpeakingOverEcho_triggersWithin400ms() {
+    fun userSpeakingOverEcho_triggersWithin700ms() {
         val vad = BargeInVad()
         assertFalse(feed(vad, 0, 2000, ::echo) != null)
         val at = feed(vad, 2000, 3000) { -30f + rnd.nextFloat() * 6f }
-        assertTrue("nie wykrył mowy", at != null && at - 2000 <= 400)
+        assertTrue("nie wykrył mowy", at != null && at - 2000 <= 700)
     }
 
     @Test

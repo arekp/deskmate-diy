@@ -36,12 +36,12 @@ class BargeInVad(private val marginDb: Float = DEFAULT_MARGIN_DB) {
     }
 
     companion object {
-        const val DEFAULT_MARGIN_DB = 9f
+        const val DEFAULT_MARGIN_DB = 14f
         const val MIN_LEVEL_DB = -42f
         const val ECHO_WINDOW_MS = 1500L
-        const val TRIGGER_MS = 300L
-        const val CALIBRATION_MS = 400L
+        const val TRIGGER_MS = 450L
+        const val CALIBRATION_MS = 800L
         const val MIN_FRAMES = 8
-        const val LOUD_FRACTION = 0.6f
+        const val LOUD_FRACTION = 0.7f
     }
 }

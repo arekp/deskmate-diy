@@ -21,7 +21,13 @@ import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import pl.arekp.deskmate.ui.CameraPip
 import pl.arekp.deskmate.ui.EyesScreen
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.unit.dp
 import pl.arekp.deskmate.ui.SettingsDialog
 
 class MainActivity : ComponentActivity() {
@@ -47,11 +53,18 @@ class MainActivity : ComponentActivity() {
             val state by brain.ui.collectAsStateWithLifecycle()
             var showSettings by remember { mutableStateOf(false) }
             // Dotknięcie: przerwij robota / zacznij słuchać. Przytrzymanie palca: ustawienia (klucze, model…)
-            EyesScreen(
-                state,
-                brain.gaze,
-                Modifier.pointerInput(Unit) { detectTapGestures(onTap = { brain.onTap() }, onLongPress = { showSettings = true }) },
-            )
+            Box(Modifier.fillMaxSize()) {
+                EyesScreen(
+                    state,
+                    brain.gaze,
+                    Modifier.pointerInput(Unit) { detectTapGestures(onTap = { brain.onTap() }, onLongPress = { showSettings = true }) },
+                )
+                if (state.showCamera) {
+                    val face by brain.face.collectAsStateWithLifecycle()
+                    val scene by brain.scene.collectAsStateWithLifecycle()
+                    CameraPip(face, scene, brain::attachPreview, Modifier.align(Alignment.TopEnd).padding(12.dp))
+                }
+            }
             if (showSettings) {
                 SettingsDialog(
                     settings = brain.settings,
