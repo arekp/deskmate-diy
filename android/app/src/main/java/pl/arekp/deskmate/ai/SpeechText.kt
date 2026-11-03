@@ -5,8 +5,18 @@ object SpeechText {
     private val END = Regex("[.!?…][\"”»)]*$")
     private val SENTENCE_END = Regex("[.!?…][\"”»)]*(?=\\s)")
 
+    /** Usuwa formatowanie markdown, którego TTS nie powinien czytać („gwiazdka gwiazdka…”). */
+    fun stripMarkdown(text: String): String = text
+        .replace(Regex("\\*\\*(.+?)\\*\\*"), "$1")
+        .replace(Regex("__(.+?)__"), "$1")
+        .replace(Regex("(?<![\\w*])\\*(?!\\s)(.+?)(?<!\\s)\\*(?![\\w*])"), "$1")
+        .replace(Regex("`([^`]*)`"), "$1")
+        .replace(Regex("(?m)^\\s*#{1,6}\\s*"), "")
+        .replace(Regex("(?m)^\\s*[-*•]\\s+"), "")
+        .replace("*", "")
+
     fun completeSentences(text: String): String {
-        val t = text.trim()
+        val t = stripMarkdown(text).trim()
         if (t.isEmpty() || END.containsMatchIn(t)) return t
         val lastEnd = SENTENCE_END.findAll(t).lastOrNull()?.range?.last ?: -1
         return if (lastEnd >= t.length * 0.4) t.substring(0, lastEnd + 1) else "$t…"

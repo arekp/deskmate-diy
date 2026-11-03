@@ -97,3 +97,14 @@ class ReasoningFilterTest {
         assertEquals(pl.arekp.deskmate.ai.ReasoningFilter.FALLBACK, f.clean(raw))
     }
 }
+
+class MarkdownStripTest {
+    @Test
+    fun boldAndBulletsAreNotRead() {
+        assertEquals(
+            "Największy projekt to ESP Młoty w Sudetach.",
+            pl.arekp.deskmate.ai.SpeechText.stripMarkdown("Największy projekt to **ESP Młoty** w Sudetach."),
+        )
+        assertEquals("pierwsze\ndrugie", pl.arekp.deskmate.ai.SpeechText.stripMarkdown("- pierwsze\n* drugie"))
+    }
+}

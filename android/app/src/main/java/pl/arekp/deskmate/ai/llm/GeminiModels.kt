@@ -11,7 +11,14 @@ import pl.arekp.deskmate.DiagLog
  * Lista wg dokumentacji darmowego pakietu (październik 2026) – do aktualizacji, gdy Google zmieni modele.
  */
 object GeminiModels {
-    val FREE_TIER = listOf("gemini-3.8-flash", "gemini-3.5-flash-lite", "gemini-3.6-flash", "gemini-3.1-flash-lite", "gemini-2.5-flash")
+    // gemini-2.5-flash: „no longer available to new users” (logi 3.11.2026) – usunięty z listy
+    val FREE_TIER = listOf("gemini-3.8-flash", "gemini-3.5-flash-lite", "gemini-3.6-flash", "gemini-3.1-flash-lite")
+
+    /** Gdy ŻADEN model nie ma limitu (problem konta/klucza), nie sprawdzamy ich ponownie przez [ACCOUNT_COOLDOWN_MS]. */
+    const val ACCOUNT_COOLDOWN_MS = 10 * 60_000L
+    @Volatile private var accountBlockedUntil = 0L
+    @Volatile private var accountBlockReason = ""
+    var clock: () -> Long = { System.currentTimeMillis() }
 
     /** Model, który ostatnio zadziałał, gdy model z ustawień nie miał limitu. */
     @Volatile private var working: String? = null
@@ -34,7 +41,11 @@ object GeminiModels {
      * @return wynik i nazwa modelu, który odpowiedział
      */
     suspend fun <T> withFallback(configured: String, call: suspend (model: String) -> T): Pair<T, String> {
+        if (clock() < accountBlockedUntil) {
+            throw ProviderException(ProviderException.Kind.QUOTA, "Gemini bez limitu na tym koncie (przerwa)", detail = accountBlockReason)
+        }
         var last: ProviderException? = null
+        var allQuota = true
         for (m in candidates(configured)) {
             try {
                 val r = call(m)
@@ -47,8 +58,14 @@ object GeminiModels {
             } catch (e: ProviderException) {
                 if (!isModelProblem(e)) throw e
                 DiagLog.w("Gemini", "Model $m: ${e.kind} ${e.detail.take(80)} – próbuję następny")
+                if (e.kind != ProviderException.Kind.RATE_LIMIT && e.kind != ProviderException.Kind.QUOTA) allQuota = false
                 last = e
             }
+        }
+        if (allQuota && last != null) {
+            accountBlockedUntil = clock() + ACCOUNT_COOLDOWN_MS
+            accountBlockReason = "żaden model Gemini nie ma limitu na tym kluczu: ${last.detail.take(60)}"
+            DiagLog.w("Gemini", "Wszystkie modele bez limitu – Gemini wstrzymany na 10 min (sprawdź klucz/projekt w AI Studio)")
         }
         throw last ?: ProviderException(ProviderException.Kind.RATE_LIMIT, "Brak dostępnego modelu Gemini")
     }
