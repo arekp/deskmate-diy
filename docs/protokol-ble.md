@@ -37,6 +37,6 @@ Konwencja kierunków: **pan > 0 = w prawo robota**, **tilt > 0 = w górę**.
 
 ## Rozszerzanie
 
-- Nowy gest: dopisz gałąź w `Motion::playGesture()` (firmware) i wartość w `ExpressTool` (aplikacja).
+- Nowy gest: dopisz gałąź w `Motion::playGesture()` (firmware) i nazwę w `GESTURES` w `ai/ExpressionTag.kt` oraz w promptcie (aplikacja).
 - Nowa komenda: nowa litera w `handleCommand()`; zachowaj zasadę „komendy częste nie odpowiadają”, żeby nie zapychać łącza.
 - Zmiana UUID: trzeba ją zrobić w trzech miejscach – `firmware/include/config.h`, `android/.../Config.kt`, `tools/ble_console.py`.

@@ -62,7 +62,10 @@ Uprawnienia: `CAMERA`, `RECORD_AUDIO`, `BLUETOOTH_SCAN`, `BLUETOOTH_CONNECT` (An
 | `ai/llm/GeminiProvider.kt`, `OpenRouterProvider.kt`, `ClaudeProvider.kt` | tłumaczenie wspólnego formatu na API danego dostawcy i z powrotem | OkHttp, org.json |
 | `ai/llm/Model.kt` | wspólny format: wiadomości, tekst, obrazy, wywołania i wyniki narzędzi, klasy błędów | – |
 | `ai/AssistantTool.kt` | interfejs narzędzia + pomocniki do schematów JSON | – |
-| `ai/Tools.kt` | narzędzia: `express` (emocja + gest), `get_current_time`, `look_at_screen` | `Settings`, OkHttp |
+| `ai/Tools.kt` | narzędzie `look_at_screen` (oraz `ExpressTool`/`TimeTool` – zostawione, ale nieużywane: mina i czas idą bez dodatkowej rundy) | `Settings`, OkHttp |
+| `ai/ExpressionTag.kt` | odczyt miny i gestu ze znacznika na początku odpowiedzi, np. `[happy nod]` | – |
+| `voice/ListenPolicy.kt` | kiedy słuchać: dotyk, przerwanie, jedno dopytanie, głos przy spojrzeniu | – |
+| `voice/BargeInMic.kt`, `voice/BargeInVad.kt` | lekki nasłuch głośności: przerywanie robota i wykrycie, że zaczynasz mówić | – |
 | `ui/EyesScreen.kt` | rysowanie twarzy na Canvas: oczy (powieki, asymetria, blask, kolor), usta poruszające się w rytm sylab mówionych przez TTS, dodatki (rumieńce, serca, „Zzz”, kropki myślenia, „?”, iskierki), mruganie, sakkady, kropka „słucham”, napisy | Compose |
 | `ui/FaceStyle.kt` | parametry twarzy dla każdej emocji (same liczby – łatwo stroić i testować) | – |
 | `ui/Emotion.kt` | 12 emocji: neutral, happy, sad, curious, thinking, sleepy, surprised, listening, excited, love, confused, angry | – |
@@ -89,21 +92,26 @@ sleepWatcher()     ─► 60 s bez twarzy → G sleep + oczy SLEEPY
 ### 3.3 Rozmowa (bez słowa-klucza)
 
 ```
- [czeka] ──twarz patrzy w kamerę > 0,7 s──► [SŁUCHA] (oczy LISTENING, czerwona kropka)
-                                               │
-                         cisza ◄───────────────┤──────────► tekst
-                  (przerwa rośnie 1→10 s)       │
-                                               ▼
-                                         [MYŚLI] (oczy THINKING)
-                                               │ Assistant.ask() → LlmRouter
-                                               │   model ⇄ narzędzia (express, czas, ekran)
-                                               ▼
-                                         [MÓWI] TTS + napis + emocje/gesty
-                                               │
-                                               └──► wraca do [czeka]
+ [czeka] – oczy śledzą twarz; gdy patrzysz na robota, mikrofon mierzy TYLKO głośność (BargeInMic)
+    │  start słuchania (ListenPolicy) – jeden z sygnałów:
+    │   • zaczynasz mówić, patrząc na robota     • dotknięcie ekranu
+    │   • przerwałeś robota                      • RAZ zaraz po odpowiedzi (dopytanie, 6 s)
+    ▼
+ [SŁUCHA] – oczy LISTENING, słowa pojawiają się na ekranie na bieżąco, limit 15 s
+    │ cisza → wraca do [czeka] i NIE słucha ponownie bez nowego sygnału
+    ▼ koniec wypowiedzi → od razu oczy THINKING
+ polecenia lokalne (bez AI, od razu): stop / cisza · tryb debug · która godzina · jaki dziś dzień
+    ▼ inne pytania
+ [MYŚLI] Assistant.ask() → LlmRouter – zwykle JEDNO zapytanie:
+    │   prompt zawiera datę i godzinę; model zaczyna odpowiedź od znacznika „[mina gest]”
+    │   narzędzia tylko gdy trzeba: look_around (kamera), look_at_screen (PC)
+    ▼
+ [MÓWI] TTS + usta + mina/gest ze znacznika; da się przerwać (dotyk, ręka, głos)
 ```
 
-Model sam decyduje o mimice: wywołuje narzędzie `express`, np. `{"emotion":"happy","gesture":"nod"}`. Aplikacja zmienia wtedy oczy i wysyła do robota `G nod` (śledzenie twarzy wstrzymuje się na 1,8 s, żeby nie przerwać gestu).
+Mina i gest: model pisze np. `[happy nod] Jasne!`. `Expression.parse()` usuwa znacznik z tekstu do czytania, aplikacja zmienia oczy i wysyła do robota `G nod` (śledzenie twarzy wstrzymuje się na 1,8 s, żeby nie przerwać gestu). Wcześniej służyło do tego narzędzie `express`, co dawało drugie zapytanie do AI przy prawie każdej odpowiedzi.
+
+**Szybkość odpowiedzi (router):** Gemini z niskim poziomem myślenia (`thinkingLevel: low`, dla 2.5 `thinkingBudget: 0`; jeśli model odrzuci ustawienie, ponowienie bez niego), limit 15 s na zapytanie z prawdziwym anulowaniem, a gdy model nie odpowie w 5 s, router pyta równolegle następny **darmowy** model i bierze pierwszą odpowiedź (płatnego Claude nie uruchamia „na zapas”).
 
 ### 3.4 Śledzenie twarzy
 
@@ -192,12 +200,12 @@ Potem dopisz ją w `DeskMateBrain.buildTools()`. Model sam zdecyduje, kiedy jej 
 
 ### 4.2 Nowy gest
 1. Firmware: nowa gałąź w `Motion::playGesture()` (`firmware/src/Motion.cpp`).
-2. Aplikacja: dopisz nazwę w `ExpressTool` (`ai/Tools.kt`) – test `ToolsTest` pilnuje, żeby lista zgadzała się z firmware (zaktualizuj w nim zbiór gestów).
+2. Aplikacja: dopisz nazwę do `GESTURES` w `ai/ExpressionTag.kt` i do listy gestów w promptcie (`Config.SYSTEM_PROMPT`).
 
 ### 4.3 Nowa emocja / wygląd oczu
 1. Dodaj wartość w `ui/Emotion.kt`.
 2. Opisz jej wygląd w `FaceStyle.of()` w `ui/FaceStyle.kt` (otwarcie i nachylenie powiek, uśmiech oczu, usta, kolor, dodatek). Rysowanie w `EyesScreen.kt` korzysta z tych liczb, więc zwykle nic więcej nie trzeba.
-3. Dopisz ją do enum w `ExpressTool`.
+3. Dopisz ją do listy min w `Config.SYSTEM_PROMPT` (parser znacznika zna wszystkie emocje z `Emotion.forModel`).
 
 ### 4.4 Nowy telefon
 Dodaj wpis w `DeviceProfile.kt` (prefiks `Build.MODEL`, pole widzenia kamery) i test w `DeviceProfileTest.kt`.

@@ -9,7 +9,7 @@ flowchart LR
         MIC[Mikrofon] --> SP[Speech<br/>rozpoznawanie mowy]
         SP --> BR
         BR --> CL[ClaudeClient<br/>Messages API + narzędzia]
-        CL --> TOOLS[Narzędzia:<br/>express, czas, ekran PC,<br/>Gmail/Kalendarz…]
+        CL --> TOOLS[Narzędzia:<br/>kamera, ekran PC,<br/>Gmail/Kalendarz…]
         BR --> TTS[Synteza mowy]
         BR --> EYES[EyesScreen<br/>oczy i emocje]
         HC --> BLE[RobotLink BLE]
