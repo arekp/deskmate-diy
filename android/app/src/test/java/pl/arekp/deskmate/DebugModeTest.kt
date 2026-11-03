@@ -38,3 +38,16 @@ class DebugModeTest {
         assertNull(VoiceCommands.debugToggle("opowiedz mi długo o tym jak działa debugowanie programów w Kotlinie"))
     }
 }
+
+class SyllablesTest {
+    @Test
+    fun polishSyllables() {
+        assertEquals(1, pl.arekp.deskmate.voice.Syllables.count("nie"))
+        assertEquals(1, pl.arekp.deskmate.voice.Syllables.count("się"))
+        assertEquals(2, pl.arekp.deskmate.voice.Syllables.count("robot"))
+        assertEquals(2, pl.arekp.deskmate.voice.Syllables.count("Dzisiaj,"))
+        assertEquals(4, pl.arekp.deskmate.voice.Syllables.count("telefonem"))
+        assertEquals(1, pl.arekp.deskmate.voice.Syllables.count("w")) // samo „w” – też ruch ust
+        assertEquals(0, pl.arekp.deskmate.voice.Syllables.count("…"))
+    }
+}

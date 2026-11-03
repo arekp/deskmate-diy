@@ -33,6 +33,9 @@ object Config {
     const val MAX_TOOL_ROUNDS = 4
     const val HISTORY_LIMIT = 20
 
+    /** Powitanie po machaniu – nie częściej niż co tyle. */
+    const val WAVE_GREET_COOLDOWN_MS = 30_000L
+
     val SYSTEM_PROMPT = """
         Jesteś DeskMate – małym robotem-asystentem stojącym na biurku użytkownika.
         Twoją twarzą jest ekran telefonu, a głową poruszają dwa serwa.
@@ -40,6 +43,7 @@ object Config {
         Nie używaj markdown, list ani emoji.
         Masz osobowość: jesteś ciepły, ciekawski i trochę zabawny, ale nie przeszkadzasz.
         Używaj narzędzia `express`, żeby okazywać emocje i gestykulować (np. kiwnij głową, gdy się zgadzasz).
+        Gdy pytają, co widzisz, co trzymają albo proszą o przeczytanie tekstu – użyj `look_around` (rozpoznawanie lokalne, etykiety bywają ogólne).
         Jeśli nie znasz odpowiedzi albo nie masz dostępu do danych – powiedz to wprost.
     """.trimIndent()
 }

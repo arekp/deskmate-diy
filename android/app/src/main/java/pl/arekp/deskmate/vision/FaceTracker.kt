@@ -1,6 +1,7 @@
 package pl.arekp.deskmate.vision
 
 import android.content.Context
+import android.os.SystemClock
 import android.util.Log
 import androidx.annotation.OptIn
 import androidx.camera.core.CameraSelector
@@ -10,12 +11,26 @@ import androidx.camera.core.ImageProxy
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.LifecycleOwner
+import com.google.android.gms.tasks.Task
+import com.google.android.gms.tasks.Tasks
 import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.face.FaceDetection
 import com.google.mlkit.vision.face.FaceDetectorOptions
+import com.google.mlkit.vision.label.ImageLabeling
+import com.google.mlkit.vision.label.defaults.ImageLabelerOptions
+import com.google.mlkit.vision.pose.PoseDetection
+import com.google.mlkit.vision.pose.PoseLandmark
+import com.google.mlkit.vision.pose.defaults.PoseDetectorOptions
+import com.google.mlkit.vision.text.TextRecognition
+import com.google.mlkit.vision.text.latin.TextRecognizerOptions
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.withTimeoutOrNull
 import java.util.concurrent.Executors
 import kotlin.math.abs
 
@@ -34,8 +49,22 @@ data class FaceObservation(
     val attentive: Boolean = false,
 )
 
+/** Etykieta tego, co widać w kadrze (już po polsku, jeśli znamy tłumaczenie). */
+data class SceneLabel(val name: String, val confidence: Float)
+
+/** Otoczenie widziane przez kamerę: ogólne etykiety i poza (ręka w górze). */
+data class SceneObservation(
+    val labels: List<SceneLabel> = emptyList(),
+    val personPose: Boolean = false,
+    val handRaised: Boolean = false,
+)
+
 /**
- * Wykrywa twarz lokalnie na telefonie (ML Kit) – obraz z kamery nie opuszcza urządzenia.
+ * Wzrok robota – wszystko lokalnie na telefonie (ML Kit), obraz z kamery nie opuszcza urządzenia:
+ *  - twarz (każda klatka): kierunek, uśmiech, czy patrzy w kamerę,
+ *  - etykiety otoczenia (co [LABEL_EVERY_MS]): "kubek", "laptop", "roślina"…,
+ *  - poza ciała (co [POSE_EVERY_MS]): podniesiona ręka i machanie ([waves]),
+ *  - tekst w kadrze (OCR) tylko na żądanie: [readText].
  */
 class FaceTracker(
     private val context: Context,
@@ -44,7 +73,32 @@ class FaceTracker(
     private val _faces = MutableStateFlow(FaceObservation(present = false))
     val faces: StateFlow<FaceObservation> = _faces.asStateFlow()
 
+    private val _scene = MutableStateFlow(SceneObservation())
+    val scene: StateFlow<SceneObservation> = _scene.asStateFlow()
+
+    private val _waves = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+    /** Zdarzenie: ktoś macha do robota. */
+    val waves: SharedFlow<Unit> = _waves.asSharedFlow()
+
     private val executor = Executors.newSingleThreadExecutor()
+    private val labeler = ImageLabeling.getClient(
+        ImageLabelerOptions.Builder().setConfidenceThreshold(LABEL_MIN_CONFIDENCE).build(),
+    )
+    private val poseDetector = PoseDetection.getClient(
+        PoseDetectorOptions.Builder().setDetectorMode(PoseDetectorOptions.STREAM_MODE).build(),
+    )
+    private val textRecognizer = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS)
+    private val waveDetector = WaveDetector()
+    private var lastLabelAt = 0L
+    private var lastPoseAt = 0L
+    @Volatile private var textRequest: CompletableDeferred<String>? = null
+
+    /** Odczytuje tekst widoczny w kadrze (OCR, alfabet łaciński). Pusty napis, gdy nic nie ma. */
+    suspend fun readText(): String {
+        val request = CompletableDeferred<String>()
+        textRequest = request
+        return withTimeoutOrNull(4000) { request.await() } ?: ""
+    }
     private val detector = FaceDetection.getClient(
         FaceDetectorOptions.Builder()
             .setPerformanceMode(FaceDetectorOptions.PERFORMANCE_MODE_FAST)
@@ -74,6 +128,9 @@ class FaceTracker(
     fun stop() {
         runCatching { ProcessCameraProvider.getInstance(context).get().unbindAll() }
         detector.close()
+        labeler.close()
+        poseDetector.close()
+        textRecognizer.close()
         executor.shutdown()
     }
 
@@ -86,7 +143,10 @@ class FaceTracker(
         val w = (if (rotation % 180 == 0) proxy.width else proxy.height).toFloat()
         val h = (if (rotation % 180 == 0) proxy.height else proxy.width).toFloat()
 
-        detector.process(input)
+        val now = SystemClock.uptimeMillis()
+        val tasks = mutableListOf<Task<*>>()
+
+        tasks += detector.process(input)
             .addOnSuccessListener { faces ->
                 val face = faces.maxByOrNull { it.boundingBox.width() * it.boundingBox.height() }
                 _faces.value = if (face == null) {
@@ -103,10 +163,53 @@ class FaceTracker(
                     )
                 }
             }
-            .addOnCompleteListener { proxy.close() }
+
+        if (now - lastLabelAt >= LABEL_EVERY_MS) {
+            lastLabelAt = now
+            tasks += labeler.process(input).addOnSuccessListener { labels ->
+                val list = labels.sortedByDescending { it.confidence }.take(MAX_LABELS)
+                    .map { SceneLabel(LabelsPl.translate(it.text), it.confidence) }
+                _scene.value = _scene.value.copy(labels = list)
+            }
+        }
+
+        if (now - lastPoseAt >= POSE_EVERY_MS) {
+            lastPoseAt = now
+            tasks += poseDetector.process(input).addOnSuccessListener { pose ->
+                fun arm(wrist: Int, shoulder: Int): WaveDetector.Arm? {
+                    val wr = pose.getPoseLandmark(wrist) ?: return null
+                    val sh = pose.getPoseLandmark(shoulder) ?: return null
+                    val visible = wr.inFrameLikelihood > POSE_MIN_LIKELIHOOD && sh.inFrameLikelihood > POSE_MIN_LIKELIHOOD
+                    return WaveDetector.Arm(wr.position.x / w, wr.position.y / h, sh.position.y / h, visible)
+                }
+                val arms = listOfNotNull(
+                    arm(PoseLandmark.LEFT_WRIST, PoseLandmark.LEFT_SHOULDER),
+                    arm(PoseLandmark.RIGHT_WRIST, PoseLandmark.RIGHT_SHOULDER),
+                )
+                if (waveDetector.update(now, arms) == WaveDetector.Event.WAVE) _waves.tryEmit(Unit)
+                _scene.value = _scene.value.copy(
+                    personPose = pose.allPoseLandmarks.isNotEmpty(),
+                    handRaised = waveDetector.handRaised,
+                )
+            }
+        }
+
+        textRequest?.let { request ->
+            textRequest = null
+            tasks += textRecognizer.process(input)
+                .addOnSuccessListener { request.complete(it.text.trim()) }
+                .addOnFailureListener { request.complete("") }
+        }
+
+        Tasks.whenAllComplete(tasks).addOnCompleteListener { proxy.close() }
     }
 
     private companion object {
         const val TAG = "FaceTracker"
+        const val LABEL_EVERY_MS = 1500L
+        const val POSE_EVERY_MS = 150L
+        const val LABEL_MIN_CONFIDENCE = 0.6f
+        const val POSE_MIN_LIKELIHOOD = 0.5f
+        const val MAX_LABELS = 6
     }
 }

@@ -89,6 +89,10 @@ dependencies {
     implementation("androidx.camera:camera-camera2:$cameraX")
     implementation("androidx.camera:camera-lifecycle:$cameraX")
     implementation("com.google.mlkit:face-detection:16.1.7")
+    // Rozpoznawanie otoczenia na telefonie (modele w APK, bez internetu)
+    implementation("com.google.mlkit:image-labeling:17.0.9")
+    implementation("com.google.mlkit:pose-detection:18.0.0-beta5")
+    implementation("com.google.mlkit:text-recognition:16.0.1")
 
     // HTTP do API modelu językowego i pomocnika ekranu
     implementation("com.squareup.okhttp3:okhttp:4.12.0")

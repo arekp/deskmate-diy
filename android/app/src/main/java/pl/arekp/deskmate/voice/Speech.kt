@@ -36,6 +36,8 @@ class Speech(
     private val context: Context,
     private val settings: Settings,
     private val onInfo: (key: String, value: String) -> Unit = { _, _ -> },
+    /** TTS zaczyna kolejne słowo – liczba sylab (do ruchu ust). Nie każdy silnik to zgłasza. */
+    private val onWord: (syllables: Int) -> Unit = {},
 ) {
 
     private var recognizer: SpeechRecognizer? = null
@@ -210,6 +212,12 @@ class Speech(
                 engine.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
                     override fun onStart(utteranceId: String?) {
                         if (utteranceId == id) startedAt = SystemClock.uptimeMillis()
+                    }
+
+                    override fun onRangeStart(utteranceId: String?, start: Int, end: Int, frame: Int) {
+                        if (utteranceId != id || start < 0 || end > text.length || start >= end) return
+                        val syllables = Syllables.count(text.substring(start, end))
+                        if (syllables > 0) onWord(syllables)
                     }
 
                     override fun onDone(utteranceId: String?) {

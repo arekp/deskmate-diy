@@ -19,11 +19,12 @@ class ExpressTool(private val onExpress: (Emotion, String?) -> Unit) : Assistant
     override val name = "express"
     override val description =
         "Pokaż emocję na twarzy robota i opcjonalnie wykonaj gest głową. " +
-            "Używaj naturalnie, np. kiwnij przy zgodzie, pokaż radość przy dobrej wiadomości."
+            "Używaj naturalnie, np. kiwnij przy zgodzie, pokaż radość przy dobrej wiadomości, " +
+            "excited przy entuzjazmie, love przy czułych słowach, confused gdy nie rozumiesz, angry tylko żartobliwie."
     override val inputSchema = objectSchema(
         "emotion" to enumProp(
             "Emocja widoczna w oczach",
-            listOf("neutral", "happy", "sad", "curious", "thinking", "sleepy", "surprised"),
+            Emotion.forModel.map { it.name.lowercase() },
         ),
         "gesture" to enumProp(
             "Gest głową",

@@ -24,3 +24,22 @@ object VoiceCommands {
 
     private val OFF_WORDS = setOf("koniec", "stop", "zakończ", "bez", "wyłącz", "off")
 }
+
+/**
+ * Przybliżona liczba sylab w polskim słowie = liczba grup samogłosek
+ * ("nie", "się" → 1, "robot" → 2, "dzień dobry" liczone osobno dla słów). Do ruchu ust.
+ */
+object Syllables {
+    private const val VOWELS = "aeiouyąęó"
+
+    fun count(word: String): Int {
+        var groups = 0
+        var inVowel = false
+        for (c in word.lowercase(Locale.forLanguageTag("pl"))) {
+            val v = c in VOWELS
+            if (v && !inVowel) groups++
+            inVowel = v
+        }
+        return if (groups == 0 && word.any { it.isLetterOrDigit() }) 1 else groups
+    }
+}

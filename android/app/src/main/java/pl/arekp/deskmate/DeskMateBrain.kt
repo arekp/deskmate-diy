@@ -18,11 +18,13 @@ import pl.arekp.deskmate.ai.llm.GeminiProvider
 import pl.arekp.deskmate.ai.llm.LlmRouter
 import pl.arekp.deskmate.ai.llm.OpenRouterProvider
 import pl.arekp.deskmate.ai.ExpressTool
+import pl.arekp.deskmate.ai.LookTool
 import pl.arekp.deskmate.ai.ScreenTool
 import pl.arekp.deskmate.ai.TimeTool
 import pl.arekp.deskmate.ble.RobotLink
 import pl.arekp.deskmate.ui.Activity
 import pl.arekp.deskmate.ui.Emotion
+import pl.arekp.deskmate.ui.SpeechBeat
 import pl.arekp.deskmate.ui.UiState
 import pl.arekp.deskmate.vision.FaceObservation
 import pl.arekp.deskmate.vision.FaceTracker
@@ -48,7 +50,7 @@ class DeskMateBrain(private val activity: ComponentActivity) {
 
     private val _ui = MutableStateFlow(
         UiState(eyeScale = profile.eyeScale).let {
-            it.copy(ticker = it.ticker.copy(debug = settings.debugMode).withTech("Wzrok", "ML Kit, wykrywanie twarzy na urządzeniu"))
+            it.copy(ticker = it.ticker.copy(debug = settings.debugMode).withTech("Wzrok", "ML Kit na urządzeniu: twarz, etykiety, poza, OCR"))
         },
     )
     val ui: StateFlow<UiState> = _ui.asStateFlow()
@@ -57,7 +59,13 @@ class DeskMateBrain(private val activity: ComponentActivity) {
     private val robot = RobotLink(activity, scope)
     private val head = HeadController(profile) { robot.send(it) }
     private val faces = FaceTracker(activity, activity)
-    private val speech = Speech(activity, settings) { key, value -> tech(key, value) }
+    private var beatSeq = 0L
+    private val speech = Speech(
+        activity, settings,
+        onInfo = { key, value -> tech(key, value) },
+        onWord = { syl -> _ui.update { it.copy(speechBeat = SpeechBeat(++beatSeq, syl)) } },
+    )
+    private var lastWaveAt = 0L
     /** Router modeli: Gemini (darmowy) → OpenRouter (darmowe) → Claude (płatny), wg trybu w ustawieniach. */
     val router = LlmRouter(
         providers = listOf(
@@ -91,6 +99,14 @@ class DeskMateBrain(private val activity: ComponentActivity) {
         faces.start()
 
         scope.launch { faces.faces.collect { onFace(it) } }
+        scope.launch { faces.waves.collect { onWave() } }
+        scope.launch { speech.speaking.collect { s -> _ui.update { it.copy(speaking = s) } } }
+        scope.launch {
+            faces.scene.collect { sc ->
+                tech("Widzę", sc.labels.joinToString(", ") { "${it.name} ${(it.confidence * 100).toInt()}%" }.ifBlank { "—" })
+                tech("Poza", if (sc.handRaised) "ręka w górze" else if (sc.personPose) "sylwetka" else "")
+            }
+        }
         scope.launch { robot.events.collect { if (it.startsWith("TOUCH")) onTouch() } }
         scope.launch {
             var wasConnected = false
@@ -164,6 +180,7 @@ class DeskMateBrain(private val activity: ComponentActivity) {
             }
         },
         TimeTool(),
+        LookTool({ faces.faces.value }, { faces.scene.value }, { faces.readText() }),
         ScreenTool(settings),
         // TODO: GmailTool, CalendarTool, SlackTool… – patrz docs/roadmapa.md
     )
@@ -269,6 +286,24 @@ class DeskMateBrain(private val activity: ComponentActivity) {
 
     // --- Dotyk, emocje, gesty --------------------------------------------------
 
+    /** Ktoś macha – przywitaj się (najwyżej raz na [Config.WAVE_GREET_COOLDOWN_MS]). */
+    private fun onWave() {
+        event("Widzę machanie")
+        val now = SystemClock.uptimeMillis()
+        lastFaceAt = now
+        if (asleep) wakeUp()
+        val act = _ui.value.ticker.activity
+        if (act != Activity.IDLE || now - lastWaveAt < Config.WAVE_GREET_COOLDOWN_MS) return
+        lastWaveAt = now
+        setEmotion(Emotion.EXCITED, holdMs = 2500)
+        gesture("happy")
+        scope.launch {
+            setActivity(Activity.SPEAKING)
+            speech.say(GREETINGS.random())
+            if (_ui.value.ticker.activity == Activity.SPEAKING) setActivity(Activity.IDLE)
+        }
+    }
+
     private fun onTouch() {
         event("Ktoś mnie pogłaskał")
         if (asleep) wakeUp()
@@ -292,6 +327,7 @@ class DeskMateBrain(private val activity: ComponentActivity) {
     }
 
     private companion object {
+        val GREETINGS = listOf("Cześć!", "Hej, hej!", "O, cześć! Miło Cię widzieć.", "Witaj!")
         val GESTURE_NAMES = mapOf(
             "nod" to "kiwam głową",
             "shake" to "kręcę głową",

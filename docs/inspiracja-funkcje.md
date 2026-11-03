@@ -20,7 +20,7 @@ Legenda statusu w DeskMate DIY: ✅ jest w szkielecie v0.1 · 🟡 częściowo �
 | Funkcja oryginału | Jak to robimy | Status |
 |---|---|---|
 | Ruchoma, zmotoryzowana „głowa” (3 stopnie swobody, ciche bezszczotkowe serwa) | 2 osie (obrót + pochylenie) na serwach; 3. oś (przechył) opcjonalnie | 🟡 |
-| Animowane, duże oczy na ekranie – „osobowość” | Oczy rysowane w Compose, mruganie, 8 emocji | ✅ |
+| Animowane, duże oczy na ekranie – „osobowość” | Oczy i usta w Compose: 12 emocji, powieki, kolory, dodatki (serca, „Zzz”), usta w rytm mowy | ✅ |
 | Płynne, „żywe” ruchy | Wygładzanie (easing), kolejka klatek, mikro-ruchy w spoczynku | ✅ |
 | Rozpoznawanie emocji / stanu użytkownika i dopasowanie reakcji | Uśmiech i kierunek patrzenia z ML Kit; analiza nastroju przez model | 🟡 |
 

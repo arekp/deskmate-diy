@@ -51,7 +51,10 @@ Uprawnienia: `CAMERA`, `RECORD_AUDIO`, `BLUETOOTH_SCAN`, `BLUETOOTH_CONNECT` (An
 | `Config.kt` | stałe: UUID BLE, limity ruchu, czułość śledzenia, czasy, prompt systemowy | – |
 | `DeviceProfile.kt` | profile telefonów: S23, Fold8 Ultra, Flip6, GENERIC (pole widzenia kamery, odwrócenie osi, wielkość oczu) | `Build.MODEL` |
 | `ble/RobotLink.kt` | skanowanie po UUID, połączenie GATT, kolejka zapisów (jeden naraz), powiadomienia, auto-reconnect co 3 s | Android Bluetooth LE |
-| `vision/FaceTracker.kt` | kamera przednia → ML Kit → `FaceObservation` (pozycja −1…1, rozmiar, uśmiech, czy patrzy w kamerę) | CameraX, ML Kit |
+| `vision/FaceTracker.kt` | kamera przednia → ML Kit (lokalnie): `FaceObservation` (pozycja −1…1, rozmiar, uśmiech, czy patrzy w kamerę) w każdej klatce, `SceneObservation` (etykiety otoczenia co 1,5 s, poza co 150 ms), `waves` (machanie), `readText()` (OCR na żądanie) | CameraX, ML Kit |
+| `vision/WaveDetector.kt` | machanie i podniesiona ręka z punktów pozy (nadgarstek nad barkiem + ≥ 3 zmiany kierunku w 1,8 s) | – |
+| `vision/LabelsPl.kt` | polskie nazwy częstych etykiet ML Kit | – |
+| `ai/LookTool.kt` | narzędzie `look_around` dla modelu: opis kadru tekstem (twarz, etykiety, ręka, OCR) – obraz nie wychodzi z telefonu | – |
 | `vision/HeadController.kt` | pętla śledzenia: odchyłka twarzy w stopniach × wzmocnienie → komenda `L pan tilt 180`, max 10/s, strefa martwa, pauza po geście | `DeviceProfile`, `Config` |
 | `voice/Speech.kt` | `listenOnce()` – jedna wypowiedź → tekst; `say()` – mówi i czeka na koniec | SpeechRecognizer, TextToSpeech |
 | `ai/Assistant.kt` | rozmowa: historia (20 wiadomości) we wspólnym formacie, **pętla narzędzi** (do 4 rund), wycofanie tury po błędzie | `LlmRouter` |
@@ -60,8 +63,9 @@ Uprawnienia: `CAMERA`, `RECORD_AUDIO`, `BLUETOOTH_SCAN`, `BLUETOOTH_CONNECT` (An
 | `ai/llm/Model.kt` | wspólny format: wiadomości, tekst, obrazy, wywołania i wyniki narzędzi, klasy błędów | – |
 | `ai/AssistantTool.kt` | interfejs narzędzia + pomocniki do schematów JSON | – |
 | `ai/Tools.kt` | narzędzia: `express` (emocja + gest), `get_current_time`, `look_at_screen` | `Settings`, OkHttp |
-| `ui/EyesScreen.kt` | rysowanie oczu na Canvas: mruganie, kierunek spojrzenia, 8 emocji, kropka „słucham”, napisy | Compose |
-| `ui/Emotion.kt` | lista emocji | – |
+| `ui/EyesScreen.kt` | rysowanie twarzy na Canvas: oczy (powieki, asymetria, blask, kolor), usta poruszające się w rytm sylab mówionych przez TTS, dodatki (rumieńce, serca, „Zzz”, kropki myślenia, „?”, iskierki), mruganie, sakkady, kropka „słucham”, napisy | Compose |
+| `ui/FaceStyle.kt` | parametry twarzy dla każdej emocji (same liczby – łatwo stroić i testować) | – |
+| `ui/Emotion.kt` | 12 emocji: neutral, happy, sad, curious, thinking, sleepy, surprised, listening, excited, love, confused, angry | – |
 | `ui/Ticker.kt` | **pasek informacji** na dole ekranu (styl wiadomości TV): czynność, co zrozumiał, model, tryb, zdarzenia | – |
 | `ui/SettingsDialog.kt` | okno ustawień | Compose Material 3 |
 
@@ -183,7 +187,7 @@ Potem dopisz ją w `DeskMateBrain.buildTools()`. Model sam zdecyduje, kiedy jej 
 
 ### 4.3 Nowa emocja / wygląd oczu
 1. Dodaj wartość w `ui/Emotion.kt`.
-2. Narysuj ją w `drawEyes()` w `ui/EyesScreen.kt` (kształt, otwarcie, wymuszony kierunek spojrzenia).
+2. Opisz jej wygląd w `FaceStyle.of()` w `ui/FaceStyle.kt` (otwarcie i nachylenie powiek, uśmiech oczu, usta, kolor, dodatek). Rysowanie w `EyesScreen.kt` korzysta z tych liczb, więc zwykle nic więcej nie trzeba.
 3. Dopisz ją do enum w `ExpressTool`.
 
 ### 4.4 Nowy telefon
