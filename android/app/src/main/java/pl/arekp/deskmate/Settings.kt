@@ -47,6 +47,20 @@ class Settings(context: Context) {
         get() = read(KEY_HOME_CITY, "")
         set(v) = write(KEY_HOME_CITY, v)
 
+    // --- Logi na GitHub (prywatne repozytorium – czyta je Claude, żeby poprawiać błędy) ---
+    var logRepo: String
+        get() = read(KEY_LOG_REPO, DEFAULT_LOG_REPO)
+        set(v) = write(KEY_LOG_REPO, v)
+
+    var logToken: String
+        get() = read(KEY_LOG_TOKEN, "")
+        set(v) = write(KEY_LOG_TOKEN, v)
+
+    /** Wysyłaj logi automatycznie: po błędach (najwyżej co 10 min) i przy starcie po awarii. */
+    var logAutoUpload: Boolean
+        get() = prefs.getBoolean(KEY_LOG_AUTO, true)
+        set(v) = prefs.edit().putBoolean(KEY_LOG_AUTO, v).apply()
+
     // --- Pomocnik ekranu PC ---
     var screenHelperUrl: String
         get() = read(KEY_SCREEN_URL, BuildConfig.SCREEN_HELPER_URL)
@@ -93,6 +107,7 @@ class Settings(context: Context) {
         const val DEFAULT_GEMINI_MODEL = "gemini-flash-latest"
         const val DEFAULT_OPENROUTER_MODEL = "openrouter/free"
         const val STT_ON_DEVICE = "on_device"
+        const val DEFAULT_LOG_REPO = "arekp/deskmate-logs"
 
         private const val KEY_MODE = "routerMode"
         private const val KEY_GEMINI = "geminiKey"
@@ -104,6 +119,9 @@ class Settings(context: Context) {
         private const val KEY_SCREEN_URL = "screenUrl"
         private const val KEY_SCREEN_TOKEN = "screenToken"
         private const val KEY_HOME_CITY = "homeCity"
+        private const val KEY_LOG_REPO = "logRepo"
+        private const val KEY_LOG_TOKEN = "logToken"
+        private const val KEY_LOG_AUTO = "logAuto"
         private const val KEY_STT = "sttService"
         private const val KEY_TTS = "ttsEngine"
         private const val KEY_DEBUG = "debugMode"

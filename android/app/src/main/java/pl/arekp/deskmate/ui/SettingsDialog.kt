@@ -42,7 +42,11 @@ fun SettingsDialog(
     /** Zwraca nazwę zapisanego pliku albo null. */
     onSaveLogs: () -> String? = { null },
     onClearLogs: () -> Unit = {},
+    onUploadLogs: suspend () -> String = { "" },
 ) {
+    var logRepo by remember { mutableStateOf(settings.logRepo) }
+    var logToken by remember { mutableStateOf(settings.logToken) }
+    var logAuto by remember { mutableStateOf(settings.logAutoUpload) }
     var logInfo by remember { mutableStateOf("") }
     val scope = rememberCoroutineScope()
     var testResult by remember { mutableStateOf<List<String>?>(null) }
@@ -168,6 +172,27 @@ fun SettingsDialog(
                     }) { Text("Zapisz w Pobranych") }
                     TextButton(onClick = { onClearLogs(); logInfo = "Wyczyszczono" }) { Text("Wyczyść") }
                 }
+                Text(
+                    "Automatycznie do Claude: prywatne repozytorium GitHub + token fine-grained tylko do niego " +
+                        "(Contents: Read and write). Claude odczyta logi sam.",
+                    style = MaterialTheme.typography.bodySmall,
+                )
+                PlainField("Repozytorium (prywatne), np. arekp/deskmate-logs", logRepo) { logRepo = it }
+                SecretField("Token GitHub (github_pat_…)", logToken) { logToken = it }
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    FilterChip(
+                        selected = logAuto,
+                        onClick = { logAuto = !logAuto },
+                        label = { Text(if (logAuto) "Wysyłaj automatycznie po błędach" else "Tylko ręcznie") },
+                    )
+                    TextButton(onClick = {
+                        settings.logRepo = logRepo
+                        settings.logToken = logToken
+                        settings.logAutoUpload = logAuto
+                        logInfo = "Wysyłam…"
+                        scope.launch { logInfo = runCatching { onUploadLogs() }.getOrElse { "Błąd: ${it.message}" } }
+                    }) { Text("Wyślij logi na GitHub") }
+                }
                 if (logInfo.isNotBlank()) Text(logInfo, style = MaterialTheme.typography.bodySmall)
 
                 Section("Pomocnik ekranu PC (opcjonalnie)")
@@ -187,6 +212,9 @@ fun SettingsDialog(
                 settings.screenHelperUrl = url
                 settings.screenHelperToken = token
                 settings.homeCity = city
+                settings.logRepo = logRepo
+                settings.logToken = logToken
+                settings.logAutoUpload = logAuto
                 val speechChanged = stt != settings.sttService || ttsEngine != settings.ttsEngine
                 settings.sttService = stt
                 settings.ttsEngine = ttsEngine

@@ -148,6 +148,8 @@ Nową informację dodajesz wywołaniem `tech("KLUCZ", "wartość")` (pusta warto
 
 Ustawienia → **Logi diagnostyczne**: „Udostępnij logi” (systemowe Udostępnij – np. do aplikacji Claude), „Zapisz w Pobranych” (plik `deskmate-log-…txt` do dołączenia w rozmowie), „Wyczyść”. Raport ma nagłówek: wersja i numer buildu z CI, model telefonu, Android, profil, tryb routera, modele i ustawienia (bez kluczy). Nowy wpis: `DiagLog.i/w/e("Tag", "…")`.
 
+**Automatyczna wysyłka do Claude (GitHub):** `LogUploader.kt` zapisuje raport w prywatnym repozytorium (domyślnie `arekp/deskmate-logs`, plik `logs/<model>/<data_godzina>.txt`) przez GitHub Contents API – przyciskiem „Wyślij logi na GitHub”, a przy włączonej opcji automatycznie: przy starcie po awarii poprzedniego uruchomienia i po nowych błędach (najwyżej co 10 min). Wymaga tokenu fine-grained z dostępem tylko do tego repozytorium (Contents: Read and write). Do repozytorium publicznego aplikacja nie wysyła.
+
 ## 4. Router modeli AI
 
 Aplikacja nie jest przywiązana do jednego modelu. `LlmRouter` wybiera dostawcę według trybu z ustawień i sam przełącza się na następnego, gdy coś pójdzie nie tak.

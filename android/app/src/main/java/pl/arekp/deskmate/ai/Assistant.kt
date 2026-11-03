@@ -44,7 +44,7 @@ class Assistant(
             trimHistory()
             return "Za dużo kroków – spróbuj zapytać prościej."
         } catch (e: LlmRouter.AllProvidersFailed) {
-            DiagLog.w(TAG, e.message ?: "brak odpowiedzi")
+            DiagLog.e(TAG, e.message ?: "brak odpowiedzi")
             rollbackLastTurn()
             val why = e.errors.entries.joinToString("; ") { (id, err) ->
                 val name = mapOf("gemini" to "Gemini", "openrouter" to "OpenRouter", "claude" to "Claude")[id] ?: id

@@ -77,6 +77,7 @@ class MainActivity : ComponentActivity() {
                     onShareLogs = { LogShare.share(this@MainActivity, brain.diagnosticReport()) },
                     onSaveLogs = { LogShare.saveToDownloads(this@MainActivity, brain.diagnosticReport()) },
                     onClearLogs = { DiagLog.clear() },
+                    onUploadLogs = { brain.uploadLogs() },
                 )
             }
         }

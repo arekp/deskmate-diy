@@ -39,7 +39,7 @@ object LogShare {
     }
 
     fun secretsOf(settings: Settings): List<String> =
-        listOf(settings.geminiKey, settings.openRouterKey, settings.claudeKey, settings.screenHelperToken)
+        listOf(settings.geminiKey, settings.openRouterKey, settings.claudeKey, settings.screenHelperToken, settings.logToken)
 
     /** Otwiera systemowe „Udostępnij” z plikiem .txt (np. do aplikacji Claude, Gmaila, Dysku). */
     fun share(context: Context, text: String) {

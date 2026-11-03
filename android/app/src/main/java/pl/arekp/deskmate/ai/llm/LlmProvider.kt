@@ -53,6 +53,12 @@ object HttpJson {
                 .post(body.toString().toRequestBody(JSON)).build(),
         )
 
+    suspend fun put(url: String, headers: Map<String, String>, body: JSONObject): JSONObject =
+        execute(
+            Request.Builder().url(url).apply { headers.forEach { (k, v) -> header(k, v) } }
+                .put(body.toString().toRequestBody(JSON)).build(),
+        )
+
     suspend fun get(url: String, headers: Map<String, String> = emptyMap()): JSONObject =
         execute(Request.Builder().url(url).apply { headers.forEach { (k, v) -> header(k, v) } }.get().build())
 

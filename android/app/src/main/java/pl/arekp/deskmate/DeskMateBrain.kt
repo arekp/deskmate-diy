@@ -160,6 +160,7 @@ class DeskMateBrain(private val activity: ComponentActivity) {
         }
         scope.launch { conversationLoop() }
         scope.launch { sleepWatcher() }
+        scope.launch { autoUploadWatcher() }
     }
 
     fun stop() {
@@ -223,6 +224,30 @@ class DeskMateBrain(private val activity: ComponentActivity) {
 
     /** Raport do wysłania (ustawienia → Logi): wersja, telefon, ustawienia bez kluczy + dziennik. */
     fun diagnosticReport(): String = LogShare.report(activity, settings, profile, router.order().map { it.label })
+
+    private val logUploader = LogUploader(settings)
+    private var lastAutoUploadAt = 0L
+    private var errorsAtLastUpload = 0
+
+    /** Przycisk „Wyślij logi na GitHub” w ustawieniach. */
+    suspend fun uploadLogs(): String = logUploader.upload(diagnosticReport(), "ręcznie").message
+
+    /** Automatyczna wysyłka: po awarii poprzedniego uruchomienia i po nowych błędach (najwyżej co 10 min). */
+    private suspend fun autoUploadWatcher() {
+        if (!settings.logAutoUpload || !logUploader.isConfigured()) return
+        if (DiagLog.previousRunCrashed()) logUploader.upload(diagnosticReport(), "awaria poprzedniego uruchomienia")
+        while (scope.isActive) {
+            delay(60_000)
+            val now = SystemClock.uptimeMillis()
+            if (DiagLog.errorCount > errorsAtLastUpload && now - lastAutoUploadAt > 10 * 60_000L &&
+                settings.logAutoUpload && logUploader.isConfigured()
+            ) {
+                lastAutoUploadAt = now
+                errorsAtLastUpload = DiagLog.errorCount
+                logUploader.upload(diagnosticReport(), "automatycznie po błędach")
+            }
+        }
+    }
 
     fun sttOptions(): List<SpeechOption> = speech.recognizers()
     fun ttsOptions(): List<SpeechOption> = speech.ttsEngines()

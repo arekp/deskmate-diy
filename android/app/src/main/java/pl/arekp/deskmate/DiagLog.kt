@@ -38,8 +38,23 @@ object DiagLog {
 
     fun i(tag: String, msg: String) = log("I", tag, msg)
     fun w(tag: String, msg: String, e: Throwable? = null) = log("W", tag, msg + (e?.let { " | $it" } ?: ""))
-    fun e(tag: String, msg: String, e: Throwable? = null) =
+    fun e(tag: String, msg: String, e: Throwable? = null) {
+        errorCount++
         log("E", tag, msg + (e?.let { " | $it\n${stackTrace(it)}" } ?: ""))
+    }
+
+    /** Liczba błędów (E) od startu – do automatycznej wysyłki logów. */
+    @Volatile var errorCount = 0
+        private set
+
+    /** Czy poprzednie uruchomienie zakończyło się awarią (wpis CRASH po ostatnim starcie). */
+    fun previousRunCrashed(): Boolean {
+        val text = contents()
+        val lastStart = text.lastIndexOf("=== start aplikacji ===")
+        val beforeThisStart = if (lastStart > 0) text.substring(0, lastStart) else ""
+        val prevStart = beforeThisStart.lastIndexOf("=== start aplikacji ===")
+        return beforeThisStart.substring(maxOf(prevStart, 0)).contains("E/CRASH")
+    }
 
     private fun log(level: String, tag: String, msg: String) {
         runCatching {
@@ -88,6 +103,7 @@ object DiagLog {
         Regex("AIza[0-9A-Za-z_\\-]{20,}"),         // Google / Gemini
         Regex("sk-or-[0-9A-Za-z_\\-]{10,}"),       // OpenRouter
         Regex("sk-ant-[0-9A-Za-z_\\-]{10,}"),      // Anthropic
+        Regex("(github_pat_|ghp_|gho_)[0-9A-Za-z_]{20,}"), // GitHub
         Regex("(?i)(bearer\\s+)[^\\s\"']+"),         // nagłówki
         Regex("(?i)(x-goog-api-key|x-api-key|x-token)([\"'=:\\s]+)[^\\s\"',}]+"),
     )
@@ -98,8 +114,8 @@ object DiagLog {
         known.filter { it.length >= 8 }.forEach { out = out.replace(it, "***") }
         KEY_PATTERNS.forEachIndexed { i, re ->
             out = when (i) {
-                3 -> re.replace(out) { it.groupValues[1] + "***" }
-                4 -> re.replace(out) { it.groupValues[1] + it.groupValues[2] + "***" }
+                4 -> re.replace(out) { it.groupValues[1] + "***" }
+                5 -> re.replace(out) { it.groupValues[1] + it.groupValues[2] + "***" }
                 else -> re.replace(out, "***")
             }
         }
