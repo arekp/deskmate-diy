@@ -37,6 +37,7 @@ class WebSearchTool(
                 return ToolResult.text(googleViaGemini(query))
             } catch (e: ProviderException) {
                 googleError = e.detail.ifBlank { e.kind.name }
+                pl.arekp.deskmate.DiagLog.w("WebSearch", "Google przez Gemini (${geminiModel()}) nie zadziałał: ${e.message}")
             }
         }
         // Bez klucza (albo gdy Google przez Gemini zawiódł): wiadomości z Google News + Wikipedia
@@ -66,6 +67,15 @@ class WebSearchTool(
             mapOf("User-Agent" to "Mozilla/5.0 (Android) DeskMateDIY/1.0"),
         )
         return parseNewsRss(xml, MAX_NEWS)
+    }
+
+    /** Test wyszukiwarki Google przez Gemini (przycisk w ustawieniach). */
+    suspend fun testGoogle(): String = try {
+        val t0 = System.currentTimeMillis()
+        val r = googleViaGemini("Jaka jest dzisiejsza data? Odpowiedz krótko.")
+        "✅ działa (${System.currentTimeMillis() - t0} ms) – „${r.take(60)}”"
+    } catch (e: ProviderException) {
+        "❌ ${e.detail.ifBlank { e.kind.name }} [${e.message?.take(120)}]"
     }
 
     private suspend fun googleViaGemini(query: String): String {

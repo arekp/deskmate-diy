@@ -220,7 +220,11 @@ class DeskMateBrain(private val activity: ComponentActivity) {
             } catch (e: Exception) {
                 "• ${p.label}: ❌ ${e.message?.take(120)}"
             }
-        } + listOf("Pogoda i Wikipedia nie wymagają klucza; wyszukiwarka Google korzysta z klucza Gemini.")
+        } + listOf(
+            if (settings.geminiKey.isBlank()) "• Wyszukiwarka Google: brak klucza Gemini (zapas: Google News + Wikipedia)"
+            else "• Wyszukiwarka Google (przez Gemini): " + WebSearchTool({ settings.geminiKey }, { settings.geminiModel }).testGoogle(),
+            "Pogoda, Google News i Wikipedia nie wymagają klucza.",
+        )
     }
 
     /** Raport do wysłania (ustawienia → Logi): wersja, telefon, ustawienia bez kluczy + dziennik. */
