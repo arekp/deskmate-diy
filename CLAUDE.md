@@ -5,6 +5,7 @@ Biurkowy robot-asystent: telefon z Androidem = mózg i twarz, ESP32 + 2 serwa = 
 ## Decyzje (nie zmieniaj bez pytania)
 
 - **Telefony docelowe:** Samsung Galaxy S23, Galaxy Z Fold8 Ultra, Galaxy Z Flip6 (profile w `android/.../DeviceProfile.kt`). Kod modelu Fold8 Ultra (`SM-F976*`) – niepotwierdzony.
+  - **Telefon właściciela do testów (potwierdzone z logów 3.11.2026): Galaxy S23 Ultra, SM-S918B, Android 17 / API 37** – to jest „S23” właściciela. Aplikacja ma profil `GALAXY_S23_ULTRA`. **Do zrobienia:** profil S23 Ultra w CAD (`hardware/cad/params.scad`) – wymiary ok. 163,4 × 78,1 × 8,9 mm, 234 g (sprawdzić w docs/telefony.md i zmierzyć w etui); obecny kask `s23` jest pod zwykłego S23 i Ultra się w nim nie zmieści.
 - **Ładowarka (kupiona 1.11.2026):** Anker 313 Wireless Charger (Pad) A2503 – Qi 10 W, **bez magnesów**, micro-USB, zasilacz QC 3.0 osobno. Wymiary z dokumentacji: Ø 100 × 11,2 mm, 67 g, gniazdo micro-USB z boku, cewka na środku.
   - ⇒ telefon trzymany **magnetycznie** (decyzja właściciela 2.11.2026): pierścień magnesów neodymowych w przedniej ściance kasku wokół cewki + krótka półka u dołu jako podparcie; na telefonie etui/pierścień magnetyczny typu MagSafe. Realnie ~5 W ładowania. Ryzyko: Anker ostrzega, że metal/magnesy mogą blokować ładowanie – do sprawdzenia przed drukiem; plan B: EP-P2900.
   - Alternatywa magnetyczna, gdyby zmienić decyzję: Samsung EP-P2900 (Qi2 25 W).
