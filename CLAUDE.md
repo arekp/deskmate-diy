@@ -16,7 +16,8 @@ Biurkowy robot-asystent: telefon z Androidem = mózg i twarz, ESP32 + 2 serwa = 
 ## Budowanie i wydania
 
 - Lokalne środowisko Claude nie ma Android SDK ani PlatformIO – kompilacja i testy działają w GitHub Actions (`.github/workflows/build.yml`).
-- Każdy push do `main` publikuje APK: https://github.com/arekp/deskmate-diy/releases/latest/download/deskmate-diy.apk
+- Każdy push do `main` publikuje APK: https://github.com/arekp/deskmate-diy/releases/latest/download/deskmate-diy.apk (wersja R8, ~14 MB; zapas: `deskmate-diy-debug.apk`, ~25 MB).
+- Rozmiar APK: tylko `arm64-v8a`, ML Kit twarze/etykiety/OCR z Usług Google Play (`play-services-mlkit-*`), poza wbudowana (~11 MB z 14 MB). Nie dodawaj innych ABI ani wbudowanych modeli bez potrzeby (było 221 MB).
 - Wspólny klucz testowy `android/app/debug.keystore` – dzięki niemu kolejne wersje instalują się jako aktualizacja.
 
 ## Mapa dokumentów

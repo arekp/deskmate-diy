@@ -232,7 +232,7 @@ Większość „charakteru” jest w dwóch miejscach:
 | Lokalnie | otwórz `android/` w Android Studio, uruchom na telefonie (debugowanie USB) |
 | Testy jednostkowe | `gradle -p android testDebugUnitTest` – `HeadControllerTest`, `DeviceProfileTest`, `ToolsTest`, `LlmRouterTest`, `ProviderFormatTest` |
 | CI | każdy push: testy + APK ([build.yml](../.github/workflows/build.yml)) |
-| Instalacja | push do `main` → APK w Releases: https://github.com/arekp/deskmate-diy/releases/latest/download/deskmate-diy.apk |
+| Instalacja | push do `main` → APK w Releases: https://github.com/arekp/deskmate-diy/releases/latest/download/deskmate-diy.apk (R8, ~14 MB, tylko arm64); zapas bez optymalizacji: `deskmate-diy-debug.apk` |
 | Test robota bez telefonu | `python tools/ble_console.py` → `demo`, `track` |
 
 ## 7. Znane ograniczenia i kolejne kroki
