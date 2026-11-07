@@ -17,7 +17,12 @@ class OpenRouterProvider(
     override val isFree: Boolean get() = model().endsWith(":free") || model() == "openrouter/free"
     override fun isConfigured() = apiKey().isNotBlank()
 
+    /** Ostatnie zapytanie poszło BEZ narzędzi (model ich nie obsłużył) – do testu i logów. */
+    @Volatile var lastDroppedTools: String? = null
+        private set
+
     override suspend fun complete(request: ChatRequest): ChatResponse {
+        lastDroppedTools = null
         val headers = mapOf(
             "Authorization" to "Bearer ${apiKey()}",
             "HTTP-Referer" to "https://github.com/arekp/deskmate-diy",
@@ -28,6 +33,11 @@ class OpenRouterProvider(
         } catch (e: ProviderException) {
             // Część darmowych modeli nie obsługuje narzędzi – wtedy rozmawiamy bez nich
             if (e.kind == ProviderException.Kind.BAD_REQUEST && request.tools.isNotEmpty()) {
+                lastDroppedTools = e.detail.ifBlank { e.message.orEmpty() }.take(160)
+                pl.arekp.deskmate.DiagLog.w(
+                    "OpenRouter",
+                    "Model ${model()} odrzucił narzędzia (${request.tools.size}) – odpowiadam BEZ narzędzi (MCP niedostępne): ${e.message}",
+                )
                 parse(HttpJson.post(URL, headers, buildBody(request, model(), withTools = false), HttpJson.OPENROUTER_TIMEOUT_MS))
             } else {
                 throw e
@@ -101,6 +111,9 @@ class OpenRouterProvider(
                     )
                 }
                 body.put("tools", tools)
+                // Kieruj tylko do modeli/dostawców, które naprawdę obsługują narzędzia (inaczej openrouter/free
+                // potrafi wybrać model bez narzędzi → 404/400 → odpowiedź bez MCP)
+                body.put("provider", JSONObject().put("require_parameters", true))
             }
             return body
         }

@@ -243,25 +243,44 @@ class DeskMateBrain(private val activity: ComponentActivity) {
 
     /** Test połączenia z modelami (przycisk w ustawieniach) – dokładny wynik albo błąd każdego z nich. */
     suspend fun testProviders(): List<String> {
-        val all = router.order()
+        val all = router.all()
         if (all.none { it.isConfigured() }) return listOf("Brak kluczy – wpisz klucz Gemini, OpenRouter albo Claude.")
-        return all.map { p ->
-            if (!p.isConfigured()) return@map "• ${p.label}: brak klucza"
-            val started = SystemClock.uptimeMillis()
-            val req = ChatRequest("Odpowiadasz jednym słowem.", listOf(ChatMessage.user("Napisz: OK")), emptyList(), 50)
-            try {
-                val r = p.complete(req)
-                "• ${p.label}: ✅ działa (${SystemClock.uptimeMillis() - started} ms) – „${r.text.take(30)}”"
-            } catch (e: ProviderException) {
-                "• ${p.label}: ❌ ${router.describe(e)} [${e.message?.take(120)}]"
-            } catch (e: Exception) {
-                "• ${p.label}: ❌ ${e.message?.take(120)}"
-            }
-        } + listOf(
-            if (settings.geminiKey.isBlank()) "• Wyszukiwarka Google: brak klucza Gemini (zapas: Google News + Wikipedia)"
-            else "• Wyszukiwarka Google (przez Gemini): " + WebSearchTool({ settings.geminiKey }, { settings.geminiModel }).testGoogle(),
-            "Pogoda, Google News i Wikipedia nie wymagają klucza.",
-        )
+        val inMode = router.order().map { it.id }.toSet()
+        val tools = builtInTools + mcp.tools()
+        val toolSpecs = tools.map { it.toSpec() }
+        val mcpCount = mcp.tools().size
+        val lines = mutableListOf<String>()
+        lines += "Tryb: ${settings.routerMode.label} → w rozmowie: ${router.order().joinToString(" → ") { it.label }.ifBlank { "nic" }}"
+        if (settings.routerMode != LlmRouter.Mode.AUTO) lines += "⚠️ Tryb inny niż Automatycznie – część modeli nie jest używana w rozmowie."
+        lines += "Narzędzia: ${tools.size} (w tym MCP: $mcpCount). " + mcp.statuses.joinToString("; ") { (if (it.ok) "✅ " else "❌ ") + it.text }.ifBlank { "Brak serwerów MCP (dodaj i Zapisz)." }
+        for (p in all) {
+            if (!p.isConfigured()) { lines += "• ${p.label}: brak klucza"; continue }
+            val used = if (p.id in inMode) "" else " (nieużywany w tym trybie)"
+            fun fail(e: Exception) = if (e is ProviderException) "❌ ${router.describe(e)} [${e.message?.take(140)}]" else "❌ ${e.message?.take(140)}"
+            val t0 = SystemClock.uptimeMillis()
+            val basic = try {
+                val r = p.complete(ChatRequest("Odpowiadasz jednym słowem.", listOf(ChatMessage.user("Napisz: OK")), emptyList(), 50))
+                "✅ ${SystemClock.uptimeMillis() - t0} ms „${r.text.take(20)}”"
+            } catch (e: Exception) { fail(e) }
+            lines += "• ${p.label}$used: $basic"
+            if (!basic.startsWith("✅")) continue
+            // Drugi test: z pełną listą narzędzi (wbudowane + MCP) – czy model je przyjmuje
+            val t1 = SystemClock.uptimeMillis()
+            val withTools = try {
+                val r = p.complete(
+                    ChatRequest("Odpowiadasz jednym słowem. Nie używaj narzędzi.", listOf(ChatMessage.user("Napisz: OK")), toolSpecs, 50),
+                )
+                val dropped = (p as? OpenRouterProvider)?.lastDroppedTools
+                if (dropped != null) "⚠️ model NIE przyjął narzędzi – odpowiada bez nich (MCP nie zadziała): $dropped"
+                else "✅ przyjmuje ${toolSpecs.size} narzędzi (${SystemClock.uptimeMillis() - t1} ms)" + if (r.toolCalls.isNotEmpty()) " – od razu wywołał ${r.toolCalls.first().name}" else ""
+            } catch (e: Exception) { fail(e) }
+            lines += "   z narzędziami: $withTools"
+        }
+        lines += if (settings.geminiKey.isBlank()) "• Wyszukiwarka Google: brak klucza Gemini (zapas: Google News + Wikipedia)"
+        else "• Wyszukiwarka Google (przez Gemini): " + WebSearchTool({ settings.geminiKey }, { settings.geminiModel }).testGoogle()
+        lines += "Pogoda, Google News i Wikipedia nie wymagają klucza."
+        DiagLog.i("Test", lines.joinToString("\n"))
+        return lines
     }
 
     /** Raport do wysłania (ustawienia → Logi): wersja, telefon, ustawienia bez kluczy + dziennik. */

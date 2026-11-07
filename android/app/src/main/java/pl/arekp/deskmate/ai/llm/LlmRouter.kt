@@ -48,6 +48,9 @@ class LlmRouter(
     private val cooldownUntil = mutableMapOf<String, Long>()
 
     /** Kolejność dostawców dla bieżącego trybu (bez filtrowania). */
+    /** Wszyscy dostawcy niezależnie od trybu (do testu połączenia). */
+    fun all(): List<LlmProvider> = providers
+
     fun order(): List<LlmProvider> {
         fun byId(vararg ids: String) = ids.mapNotNull { id -> providers.firstOrNull { it.id == id } }
         return when (mode()) {

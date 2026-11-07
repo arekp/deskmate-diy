@@ -140,15 +140,28 @@ class McpManager(
 ) {
     data class Status(val server: String, val ok: Boolean, val text: String)
 
+    companion object {
+        const val RETRY_MS = 60_000L
+    }
+
     private val mutex = Mutex()
     @Volatile private var connected: List<McpTool> = emptyList()
     @Volatile var statuses: List<Status> = emptyList()
         private set
 
-    fun tools(): List<AssistantTool> = connected
+    @Volatile private var lastRefreshAt = 0L
+
+    /** Narzędzia dla agenta. Gdy któryś serwer był niedostępny (np. Wi-Fi przy starcie), co minutę próbuje ponownie. */
+    fun tools(): List<AssistantTool> {
+        val now = System.currentTimeMillis()
+        val missing = configs().any { it.enabled } && (statuses.isEmpty() || statuses.any { !it.ok })
+        if (missing && now - lastRefreshAt > RETRY_MS && !mutex.isLocked) refresh()
+        return connected
+    }
 
     /** Łączy (ponownie) wszystkie włączone serwery – przy starcie i po zmianie ustawień. */
     fun refresh() {
+        lastRefreshAt = System.currentTimeMillis()
         scope.launch {
             mutex.withLock {
                 val all = mutableListOf<McpTool>()
