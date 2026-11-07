@@ -22,7 +22,8 @@ class GeminiProvider(
     override suspend fun complete(request: ChatRequest): ChatResponse =
         GeminiModels.withFallback(model()) { name -> completeWith(name, request) }.first
 
-    private suspend fun completeWith(name: String, request: ChatRequest): ChatResponse {
+    /** Zapytanie do jednego, wskazanego modelu – bez przechodzenia na zapasowe (test w ustawieniach). */
+    suspend fun completeWith(name: String, request: ChatRequest): ChatResponse {
         val url = "https://generativelanguage.googleapis.com/v1beta/models/$name:generateContent"
         val headers = mapOf("x-goog-api-key" to apiKey())
         val thinking = if (name in noThinkingConfig) null else thinkingConfigFor(name)

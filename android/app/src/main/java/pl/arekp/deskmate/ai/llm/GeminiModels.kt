@@ -13,7 +13,8 @@ import pl.arekp.deskmate.DiagLog
 object GeminiModels {
     // gemini-2.5-flash: „no longer available to new users” (logi 3.11.2026) – usunięty z listy
     // stabilne kody wg dokumentacji Google (listopad 2026); 3.8-flash zalecany, *-lite lżejsze i rzadziej przeciążone
-    val FREE_TIER = listOf("gemini-3.8-flash", "gemini-3.5-flash-lite", "gemini-3.6-flash", "gemini-3.1-flash-lite", "gemini-2.5-flash-lite")
+    // gemini-2.5-flash-lite: „no longer available to new users” (test 7.11.2026) – usunięty
+    val FREE_TIER = listOf("gemini-3.8-flash", "gemini-3.5-flash-lite", "gemini-3.6-flash", "gemini-3.1-flash-lite")
 
     /** Gdy ŻADEN model nie ma limitu (problem konta/klucza), nie sprawdzamy ich ponownie przez [ACCOUNT_COOLDOWN_MS]. */
     const val ACCOUNT_COOLDOWN_MS = 10 * 60_000L
@@ -36,7 +37,8 @@ object GeminiModels {
         e.kind == ProviderException.Kind.RATE_LIMIT || e.kind == ProviderException.Kind.QUOTA ||
             // 503 „This model is currently experiencing high demand” – inny model zwykle odpowiada od razu
             (e.kind == ProviderException.Kind.SERVER && (e.message?.contains("HTTP 503") == true ||
-                e.detail.contains("high demand", ignoreCase = true) || e.detail.contains("overloaded", ignoreCase = true))) ||
+                e.detail.contains("high demand", ignoreCase = true) || e.detail.contains("overloaded", ignoreCase = true) ||
+                e.message?.contains("timeout", ignoreCase = true) == true)) ||
             (e.kind == ProviderException.Kind.BAD_REQUEST && (e.message?.contains("HTTP 404") == true ||
                 e.detail.contains("not found", ignoreCase = true)))
 

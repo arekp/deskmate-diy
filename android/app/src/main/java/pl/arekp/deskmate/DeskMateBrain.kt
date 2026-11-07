@@ -18,6 +18,7 @@ import pl.arekp.deskmate.ai.AssistantTool
 import pl.arekp.deskmate.ai.Assistant
 import pl.arekp.deskmate.ai.llm.ClaudeProvider
 import pl.arekp.deskmate.ai.llm.GeminiProvider
+import pl.arekp.deskmate.ai.llm.GeminiModels
 import pl.arekp.deskmate.ai.llm.LlmRouter
 import pl.arekp.deskmate.ai.llm.OpenRouterProvider
 import pl.arekp.deskmate.ai.Expression
@@ -264,6 +265,17 @@ class DeskMateBrain(private val activity: ComponentActivity) {
                 "✅ ${SystemClock.uptimeMillis() - t0} ms „${r.text.take(20)}”"
             } catch (e: Exception) { fail(e) }
             lines += "• ${p.label}$used: $basic"
+            if (p is GeminiProvider) {
+                // Każdy model Gemini osobno – żeby było widać, który ma limit, który jest przeciążony, a który wycofany
+                for (m in GeminiModels.candidates(settings.geminiModel)) {
+                    val tm = SystemClock.uptimeMillis()
+                    val r = try {
+                        p.completeWith(m, ChatRequest("Odpowiadasz jednym słowem.", listOf(ChatMessage.user("Napisz: OK")), emptyList(), 50))
+                        "✅ ${SystemClock.uptimeMillis() - tm} ms"
+                    } catch (e: Exception) { fail(e) }
+                    lines += "   model $m: $r"
+                }
+            }
             if (!basic.startsWith("✅")) continue
             // Drugi test: z pełną listą narzędzi (wbudowane + MCP) – czy model je przyjmuje
             val t1 = SystemClock.uptimeMillis()
