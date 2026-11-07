@@ -74,7 +74,8 @@ Uprawnienia: `CAMERA`, `RECORD_AUDIO`, `BLUETOOTH_SCAN`, `BLUETOOTH_CONNECT` (An
 | `ui/FaceStyle.kt` | parametry twarzy dla każdej emocji (same liczby – łatwo stroić i testować) | – |
 | `ui/Emotion.kt` | 12 emocji: neutral, happy, sad, curious, thinking, sleepy, surprised, listening, excited, love, confused, angry | – |
 | `ui/Ticker.kt` | **pasek informacji** na dole ekranu (styl wiadomości TV): czynność, co zrozumiał, model, tryb, zdarzenia | – |
-| `ui/SettingsDialog.kt` | okno ustawień | Compose Material 3 |
+| `ui/SettingsScreen.kt` | pełnoekranowe ustawienia (przytrzymanie palca na oczach): sekcje w kartach, skróty, szkic z „Zapisz” i pytaniem o niezapisane zmiany; na czas ustawień robot wstrzymany (`DeskMateBrain.pause/resume`) | Compose |
+| `ConfigBackup.kt` | kopia całej konfiguracji do pliku JSON i odczyt (eksport/import w ustawieniach); `Settings.CONFIG_VERSION` + `migrate()` – zasady zgodności dla kolejnych wersji | – |
 
 ## 3. Jak działa – przepływ
 

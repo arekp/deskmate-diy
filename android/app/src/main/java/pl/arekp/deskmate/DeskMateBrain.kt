@@ -164,10 +164,41 @@ class DeskMateBrain(private val activity: ComponentActivity) {
         if (!router.isAnyConfigured()) {
             _ui.update { it.copy(caption = "Przytrzymaj palec na ekranie, żeby wpisać klucz Gemini / OpenRouter / Claude") }
         }
-        scope.launch { conversationLoop() }
+        conversationJob = scope.launch { conversationLoop() }
         scope.launch { sleepWatcher() }
         mcp.refresh()
         scope.launch { autoUploadWatcher() }
+    }
+
+    private var conversationJob: Job? = null
+    /** Robot wstrzymany (ustawienia otwarte): nie słucha, nie mówi, kamera wyłączona. */
+    @Volatile var paused = false
+        private set
+
+    /** Wejście w ustawienia: oczy zamknięte, koniec słuchania i mówienia, kamera wyłączona, głowa w pozycji wyjściowej. */
+    fun pause() {
+        if (paused || !started) return
+        paused = true
+        conversationJob?.cancel() // przerywa słuchanie i mówienie w toku
+        conversationJob = null
+        speech.stopSpeaking()
+        idleMic.requestStop()
+        faces.pause()
+        robot.send("H")
+        _ui.update { it.copy(listening = false, caption = "") }
+        setActivity(Activity.SLEEPING)
+        DiagLog.i("App", "Ustawienia otwarte – robot wstrzymany")
+    }
+
+    /** Wyjście z ustawień: kamera i rozmowa wracają. */
+    fun resume() {
+        if (!paused) return
+        paused = false
+        faces.start()
+        setActivity(Activity.IDLE)
+        setEmotion(Emotion.NEUTRAL)
+        conversationJob = scope.launch { conversationLoop() }
+        DiagLog.i("App", "Ustawienia zamknięte – robot wznowiony")
     }
 
     fun stop() {

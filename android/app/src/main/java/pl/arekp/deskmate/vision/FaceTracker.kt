@@ -143,6 +143,12 @@ class FaceTracker(
         }, ContextCompat.getMainExecutor(context))
     }
 
+    /** Wstrzymanie (np. na czas ustawień): kamera wyłączona, ML Kit gotowy do [start] ponownie. */
+    fun pause() {
+        runCatching { ProcessCameraProvider.getInstance(context).get().unbindAll() }
+        _faces.value = FaceObservation(present = false)
+    }
+
     fun stop() {
         runCatching { ProcessCameraProvider.getInstance(context).get().unbindAll() }
         detector.close()

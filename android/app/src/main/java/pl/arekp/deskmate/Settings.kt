@@ -101,6 +101,44 @@ class Settings(context: Context) {
         get() = prefs.getBoolean(KEY_DEBUG, false)
         set(v) = prefs.edit().putBoolean(KEY_DEBUG, v).apply()
 
+    // --- Trwałość konfiguracji między wersjami ---
+    // Ustawienia są w SharedPreferences „deskmate” – aktualizacja aplikacji (ten sam klucz podpisu) ich NIE usuwa.
+    // Zasada dla kolejnych wersji: nie zmieniamy nazw istniejących kluczy; gdy trzeba, dopisujemy krok w migrate().
+
+    init {
+        migrate()
+    }
+
+    private fun migrate() {
+        val from = prefs.getInt(KEY_CONFIG_VERSION, 0)
+        if (from >= CONFIG_VERSION) return
+        // v0 → v1: brak zmian w kluczach – tylko oznaczenie wersji. Kolejne migracje dopisuj tu (when (from) …).
+        prefs.edit().putInt(KEY_CONFIG_VERSION, CONFIG_VERSION).apply()
+    }
+
+    /** Wszystkie ustawienia (do kopii w pliku). */
+    fun exportAll(): Map<String, Any?> = prefs.all.toMap()
+
+    /** Wczytuje ustawienia z kopii (nadpisuje te same klucze, pozostałe zostawia) i uruchamia migrację. */
+    fun importAll(values: Map<String, Any?>) {
+        val e = prefs.edit()
+        values.forEach { (k, v) ->
+            when (v) {
+                is Boolean -> e.putBoolean(k, v)
+                is Int -> e.putInt(k, v)
+                is Long -> e.putLong(k, v)
+                is Float -> e.putFloat(k, v)
+                is Double -> e.putFloat(k, v.toFloat())
+                is String -> e.putString(k, v)
+                null -> e.remove(k)
+            }
+        }
+        // kopia ze starszej wersji → migracja od jej numeru
+        e.putInt(KEY_CONFIG_VERSION, (values[KEY_CONFIG_VERSION] as? Number)?.toInt() ?: 0)
+        e.commit()
+        migrate()
+    }
+
     private fun read(key: String, fallback: String): String =
         prefs.getString(key, null)?.takeIf { it.isNotBlank() } ?: fallback
 
@@ -126,6 +164,9 @@ class Settings(context: Context) {
         private const val KEY_SCREEN_TOKEN = "screenToken"
         private const val KEY_HOME_CITY = "homeCity"
         private const val KEY_MCP = "mcpServers"
+        const val KEY_CONFIG_VERSION = "configVersion"
+        /** Wersja formatu ustawień – zwiększ przy zmianie kluczy i dopisz migrację. */
+        const val CONFIG_VERSION = 1
         private const val KEY_LOG_REPO = "logRepo"
         private const val KEY_LOG_TOKEN = "logToken"
         private const val KEY_LOG_AUTO = "logAuto"
