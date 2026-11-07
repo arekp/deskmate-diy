@@ -190,7 +190,7 @@ class McpManager(
         client.connect()
         val tools = client.listTools().map { McpTool(client, it, c.prefix, client.serverName.ifBlank { c.name }) }
         DiagLog.i("MCP", "${c.name} (${c.url}): połączono z ${client.serverName}, narzędzia: ${tools.joinToString { it.name }}")
-        Status(c.name, true, "${c.name} – ${tools.size} narzędzi") to tools
+        Status(c.name, true, "${c.name} – ${tools.size} narzędzi, ${client.transport}") to tools
     } catch (e: Exception) {
         DiagLog.w("MCP", "${c.name} (${c.url}): ${e.message}")
         Status(c.name, false, "${c.name} – ${e.message?.take(120)}") to emptyList()

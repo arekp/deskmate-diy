@@ -220,3 +220,117 @@ class McpClientIntegrationTest {
         assertTrue(e?.message.orEmpty(), e?.message.orEmpty().contains("zły token"))
     }
 }
+
+/**
+ * Udawany Home Assistant ze starszym transportem SSE: POST /api/mcp → 405,
+ * GET /mcp_server/sse → strumień (endpoint + odpowiedzi), POST /mcp_server/messages/abc → 202.
+ */
+class LegacySseServer {
+    private val socket = java.net.ServerSocket(0, 50, java.net.InetAddress.getByName("127.0.0.1"))
+    val port: Int get() = socket.localPort
+    @Volatile private var stream: java.io.OutputStream? = null
+    private val streamReady = java.util.concurrent.CountDownLatch(1)
+    val methods = java.util.Collections.synchronizedList(mutableListOf<String>())
+
+    fun start() {
+        Thread {
+            while (true) {
+                val c = runCatching { socket.accept() }.getOrNull() ?: break
+                Thread { serve(c) }.apply { isDaemon = true }.start()
+            }
+        }.apply { isDaemon = true }.start()
+    }
+
+    private fun readLine(input: java.io.InputStream): String? {
+        val sb = StringBuilder()
+        while (true) {
+            val b = input.read()
+            if (b < 0) return if (sb.isEmpty()) null else sb.toString()
+            if (b == '\n'.code) return sb.toString().trimEnd('\r')
+            sb.append(b.toChar())
+        }
+    }
+
+    private fun serve(c: java.net.Socket) {
+        val input = java.io.BufferedInputStream(c.getInputStream())
+        val out = c.getOutputStream()
+        while (true) {
+            val requestLine = readLine(input) ?: return
+            if (requestLine.isBlank()) return
+            val (method, path) = requestLine.split(" ").let { it[0] to it[1] }
+            val headers = mutableMapOf<String, String>()
+            while (true) {
+                val l = readLine(input) ?: return
+                if (l.isEmpty()) break
+                headers[l.substringBefore(":").trim().lowercase()] = l.substringAfter(":").trim()
+            }
+            val len = headers["content-length"]?.toIntOrNull() ?: 0
+            val buf = ByteArray(len)
+            var read = 0
+            while (read < len) { val n = input.read(buf, read, len - read); if (n < 0) return; read += n }
+            fun reply(code: Int) {
+                out.write("HTTP/1.1 $code X\r\nContent-Length: 0\r\n\r\n".toByteArray()); out.flush()
+            }
+            if (headers["authorization"] != "Bearer sekret") { reply(401); continue }
+            when {
+                method == "POST" && path == "/api/mcp" -> reply(405)
+                method == "GET" && path == "/mcp_server/sse" -> {
+                    out.write("HTTP/1.1 200 OK\r\nContent-Type: text/event-stream\r\nCache-Control: no-cache\r\n\r\n".toByteArray())
+                    out.write("event: endpoint\ndata: /mcp_server/messages/abc\n\n".toByteArray())
+                    out.flush()
+                    stream = out
+                    streamReady.countDown()
+                    // strumień zostaje otwarty – wątek czeka, aż test się skończy
+                    runCatching { Thread.sleep(60_000) }
+                    return
+                }
+                method == "POST" && path == "/mcp_server/messages/abc" -> {
+                    val body = JSONObject(String(buf))
+                    methods += body.optString("method")
+                    reply(202)
+                    if (body.has("id")) {
+                        val result = when (body.optString("method")) {
+                            "initialize" -> JSONObject().put("protocolVersion", "2024-11-05").put("serverInfo", JSONObject().put("name", "home-assistant"))
+                            "tools/list" -> JSONObject().put("tools", JSONArray().put(JSONObject().put("name", "HassTurnOff").put("description", "Wyłącza")
+                                .put("inputSchema", JSONObject().put("type", "object"))))
+                            "tools/call" -> JSONObject().put("content", JSONArray().put(JSONObject().put("type", "text").put("text", "Wyłączono")))
+                            else -> JSONObject()
+                        }
+                        val msg = JSONObject().put("jsonrpc", "2.0").put("id", body.get("id")).put("result", result)
+                        streamReady.await()
+                        synchronized(this) {
+                            stream!!.write("event: message\ndata: $msg\n\n".toByteArray()); stream!!.flush()
+                        }
+                    }
+                }
+                else -> reply(404)
+            }
+        }
+    }
+
+    fun stop() = socket.close()
+}
+
+class McpLegacySseTest {
+    @Test
+    fun method405_switchesToSseTransport_andWorks() = runBlocking {
+        val server = LegacySseServer().apply { start() }
+        try {
+            val client = McpClient("http://127.0.0.1:${server.port}/api/mcp", "sekret", timeoutMs = 5_000)
+            client.connect()
+            assertEquals("SSE (starszy)", client.transport)
+            assertEquals("home-assistant", client.serverName)
+            assertEquals(listOf("HassTurnOff"), client.listTools().map { it.name })
+            assertEquals("Wyłączono", client.callTool("HassTurnOff", JSONObject().put("name", "lampa")).text)
+            assertEquals(listOf("initialize", "notifications/initialized", "tools/list", "tools/call"), server.methods.toList())
+        } finally {
+            server.stop()
+        }
+    }
+
+    @Test
+    fun legacyUrl_isDerivedForHomeAssistant() {
+        assertEquals("http://192.168.1.5:8123/mcp_server/sse", McpClient.legacySseUrl("http://192.168.1.5:8123/api/mcp"))
+        assertEquals("https://ha.example/mcp_server/sse", McpClient.legacySseUrl("https://ha.example/mcp_server/sse/"))
+    }
+}

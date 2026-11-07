@@ -112,8 +112,13 @@ class Settings(context: Context) {
     private fun migrate() {
         val from = prefs.getInt(KEY_CONFIG_VERSION, 0)
         if (from >= CONFIG_VERSION) return
-        // v0 → v1: brak zmian w kluczach – tylko oznaczenie wersji. Kolejne migracje dopisuj tu (when (from) …).
-        prefs.edit().putInt(KEY_CONFIG_VERSION, CONFIG_VERSION).apply()
+        val e = prefs.edit()
+        // v0 → v1: brak zmian w kluczach – tylko oznaczenie wersji.
+        // v1 → v2: alias gemini-flash-latest (bywał bez darmowego pakietu / przeciążony) → stabilny gemini-3.8-flash
+        if (from < 2 && prefs.getString(KEY_GEMINI_MODEL, null)?.trim() == "gemini-flash-latest") {
+            e.putString(KEY_GEMINI_MODEL, DEFAULT_GEMINI_MODEL)
+        }
+        e.putInt(KEY_CONFIG_VERSION, CONFIG_VERSION).apply()
     }
 
     /** Wszystkie ustawienia (do kopii w pliku). */
@@ -166,7 +171,7 @@ class Settings(context: Context) {
         private const val KEY_MCP = "mcpServers"
         const val KEY_CONFIG_VERSION = "configVersion"
         /** Wersja formatu ustawień – zwiększ przy zmianie kluczy i dopisz migrację. */
-        const val CONFIG_VERSION = 1
+        const val CONFIG_VERSION = 2
         private const val KEY_LOG_REPO = "logRepo"
         private const val KEY_LOG_TOKEN = "logToken"
         private const val KEY_LOG_AUTO = "logAuto"
