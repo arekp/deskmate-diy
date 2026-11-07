@@ -29,7 +29,14 @@ class OpenRouterProvider(
             "X-Title" to "DeskMate DIY",
         )
         return try {
-            parse(HttpJson.post(URL, headers, buildBody(request, model(), withTools = true), HttpJson.OPENROUTER_TIMEOUT_MS))
+            try {
+                parse(HttpJson.post(URL, headers, buildBody(request, model(), withTools = true), HttpJson.OPENROUTER_TIMEOUT_MS))
+            } catch (e: ProviderException) {
+                // pusta odpowiedź = przeciążony darmowy model; openrouter/free przy ponowieniu zwykle wybiera inny
+                if (e.detail != "pusta odpowiedź") throw e
+                pl.arekp.deskmate.DiagLog.w("OpenRouter", "Pusta odpowiedź – ponawiam raz")
+                parse(HttpJson.post(URL, headers, buildBody(request, model(), withTools = true), HttpJson.OPENROUTER_TIMEOUT_MS))
+            }
         } catch (e: ProviderException) {
             // Część darmowych modeli nie obsługuje narzędzi – wtedy rozmawiamy bez nich
             if (e.kind == ProviderException.Kind.BAD_REQUEST && request.tools.isNotEmpty()) {

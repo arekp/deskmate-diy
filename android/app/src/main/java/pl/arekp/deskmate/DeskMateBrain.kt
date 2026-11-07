@@ -42,6 +42,7 @@ import pl.arekp.deskmate.vision.FaceObservation
 import pl.arekp.deskmate.vision.SceneObservation
 import pl.arekp.deskmate.vision.FaceTracker
 import pl.arekp.deskmate.vision.HeadController
+import pl.arekp.deskmate.mcp.HomeIntent
 import pl.arekp.deskmate.mcp.McpManager
 import pl.arekp.deskmate.mcp.McpServerConfig
 import pl.arekp.deskmate.voice.BargeInMic
@@ -123,7 +124,13 @@ class DeskMateBrain(private val activity: ComponentActivity) {
     /** Serwery MCP użytkownika (np. Home Assistant) – narzędzia dołączane do agenta. */
     val mcp = McpManager(scope, { McpServerConfig.listFromJson(settings.mcpServersJson) }, onEvent = { event(it) })
     private val builtInTools = buildTools()
-    private val assistant = Assistant(router, { builtInTools + mcp.tools() }) { label ->
+    /** Bieżąca wypowiedź i „pamięć” rozmowy o domu – narzędzia MCP tylko wtedy (mniej tokenów i limitów). */
+    @Volatile private var currentQuestion = ""
+    @Volatile private var homeTurnsLeft = 0
+    private fun mcpToolsNow(): List<pl.arekp.deskmate.ai.AssistantTool> =
+        if (HomeIntent.matches(currentQuestion) || homeTurnsLeft > 0) mcp.tools() else emptyList()
+
+    private val assistant = Assistant(router, { builtInTools + mcpToolsNow() }) { label ->
         if (label != aiStatus && aiStatus.isNotBlank()) event("Model zmieniony na $label")
         aiStatus = label
         refreshStatus()
@@ -265,7 +272,8 @@ class DeskMateBrain(private val activity: ComponentActivity) {
                 "✅ ${SystemClock.uptimeMillis() - t0} ms „${r.text.take(20)}”"
             } catch (e: Exception) { fail(e) }
             lines += "• ${p.label}$used: $basic"
-            if (p is GeminiProvider) {
+            // każdy model osobno tylko przy problemie – test nie powinien sam wyczerpywać limitu na minutę
+            if (p is GeminiProvider && (!basic.startsWith("✅") || SystemClock.uptimeMillis() - t0 > 4_000)) {
                 // Każdy model Gemini osobno – żeby było widać, który ma limit, który jest przeciążony, a który wycofany
                 for (m in GeminiModels.candidates(settings.geminiModel)) {
                     val tm = SystemClock.uptimeMillis()
@@ -484,7 +492,11 @@ class DeskMateBrain(private val activity: ComponentActivity) {
         val askedAt = SystemClock.uptimeMillis()
         val question = if (answerWasCut) "(Przerwałem Ci poprzednią odpowiedź.) $heard" else heard
         answerWasCut = false
+        currentQuestion = heard
+        val mcpCallsBefore = pl.arekp.deskmate.mcp.calls.get()
         val raw = assistant.ask(question)
+        // użył narzędzi domu → kolejne 2 wypowiedzi też z nimi („a teraz w kuchni”)
+        homeTurnsLeft = if (pl.arekp.deskmate.mcp.calls.get() > mcpCallsBefore) 2 else (homeTurnsLeft - 1).coerceAtLeast(0)
         tech("LLM czas", "${SystemClock.uptimeMillis() - askedAt} ms")
         DiagLog.i("Rozmowa", "Odpowiedź (${SystemClock.uptimeMillis() - askedAt} ms): ${raw.take(400)}")
         val expr = Expression.parse(ReasoningFilter.clean(raw))

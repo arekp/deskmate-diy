@@ -71,6 +71,8 @@ class ProviderException(
     cause: Throwable? = null,
     /** Krótki opis od serwera, np. „API key not valid”. */
     val detail: String = "",
+    /** Rodzaj przekroczonego limitu (Google QuotaFailure.quotaId), np. …PerMinute… / …PerDay…. */
+    val quotaId: String? = null,
 ) : Exception(message, cause) {
     enum class Kind {
         /** 429 – limit zapytań; spróbuj innego, wróć po chwili. */
@@ -97,8 +99,35 @@ class ProviderException(
                 in 500..599 -> Kind.SERVER
                 else -> Kind.BAD_REQUEST
             }
-            return ProviderException(kind, "HTTP $code: ${body.take(300)}", retry, detail = shortDetail(body))
+            val (googleRetry, quotaId) = googleQuotaInfo(body)
+            val detail = shortDetail(body) + (quotaId?.let { " [$it]" } ?: "")
+            return ProviderException(kind, "HTTP $code: ${body.take(300)}", retry ?: googleRetry, detail = detail, quotaId = quotaId)
         }
+
+        /**
+         * Google (Gemini) w 429 podaje szczegóły: RetryInfo.retryDelay („37s”) i QuotaFailure.quotaId
+         * (np. „GenerateRequestsPerMinutePerProjectPerModel-FreeTier” albo „…PerDay…”). Zwraca (czekaj ms, quotaId).
+         */
+        fun googleQuotaInfo(body: String): Pair<Long?, String?> = runCatching {
+            val details = org.json.JSONObject(body).optJSONObject("error")?.optJSONArray("details") ?: return@runCatching null to null
+            var retry: Long? = null
+            var quota: String? = null
+            for (i in 0 until details.length()) {
+                val d = details.optJSONObject(i) ?: continue
+                val type = d.optString("@type")
+                if (type.endsWith("RetryInfo")) {
+                    retry = d.optString("retryDelay").removeSuffix("s").toDoubleOrNull()?.let { (it * 1000).toLong() }
+                }
+                if (type.endsWith("QuotaFailure")) {
+                    quota = d.optJSONArray("violations")?.optJSONObject(0)?.optString("quotaId")?.ifBlank { null }
+                }
+            }
+            retry to quota
+        }.getOrDefault(null to null)
+
+        /** Limit dzienny (albo zerowy) – wtedy dłuższa przerwa; minutowy mija po kilkudziesięciu sekundach. */
+        fun isDailyQuota(e: ProviderException): Boolean =
+            e.quotaId?.contains("PerDay", ignoreCase = true) == true || e.message?.contains("limit: 0") == true
 
         /** Krótki opis błędu z odpowiedzi serwera (pole error.message albo message), do pokazania użytkownikowi. */
         fun shortDetail(body: String): String {

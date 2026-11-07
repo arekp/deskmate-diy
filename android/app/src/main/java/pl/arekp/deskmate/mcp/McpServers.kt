@@ -108,6 +108,9 @@ object McpSchema {
     }
 }
 
+/** Licznik wywołań narzędzi MCP (agent sprawdza, czy rozmowa dotyczy domu). */
+val calls = java.util.concurrent.atomic.AtomicLong()
+
 /** Narzędzie z serwera MCP widziane przez agenta jak każde inne. */
 class McpTool(
     private val client: McpClient,
@@ -122,6 +125,7 @@ class McpTool(
     }
 
     override suspend fun run(input: JSONObject): ToolResult = try {
+        calls.incrementAndGet()
         val r = client.callTool(remote.name, input)
         ToolResult.text(r.text, isError = r.isError)
     } catch (e: Exception) {

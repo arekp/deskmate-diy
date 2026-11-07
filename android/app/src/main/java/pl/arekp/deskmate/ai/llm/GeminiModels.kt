@@ -18,6 +18,7 @@ object GeminiModels {
 
     /** Gdy ŻADEN model nie ma limitu (problem konta/klucza), nie sprawdzamy ich ponownie przez [ACCOUNT_COOLDOWN_MS]. */
     const val ACCOUNT_COOLDOWN_MS = 10 * 60_000L
+    const val MINUTE_COOLDOWN_MS = 60_000L
     @Volatile private var accountBlockedUntil = 0L
     @Volatile private var accountBlockReason = ""
     var clock: () -> Long = { System.currentTimeMillis() }
@@ -52,6 +53,8 @@ object GeminiModels {
         }
         var last: ProviderException? = null
         var allQuota = true
+        var allDaily = true
+        var maxRetryMs = 0L
         for (m in candidates(configured)) {
             try {
                 val r = call(m)
@@ -65,13 +68,23 @@ object GeminiModels {
                 if (!isModelProblem(e)) throw e
                 DiagLog.w("Gemini", "Model $m: ${e.kind} ${e.detail.take(80)} – próbuję następny")
                 if (e.kind != ProviderException.Kind.RATE_LIMIT && e.kind != ProviderException.Kind.QUOTA) allQuota = false
+                if (!ProviderException.isDailyQuota(e)) allDaily = false
+                maxRetryMs = maxOf(maxRetryMs, e.retryAfterMs ?: 0L)
                 last = e
             }
         }
         if (allQuota && last != null) {
-            accountBlockedUntil = clock() + ACCOUNT_COOLDOWN_MS
-            accountBlockReason = "żaden model Gemini nie ma limitu na tym kluczu: ${last.detail.take(60)}"
-            DiagLog.w("Gemini", "Wszystkie modele bez limitu – Gemini wstrzymany na 10 min (sprawdź klucz/projekt w AI Studio)")
+            if (allDaily) {
+                accountBlockedUntil = clock() + ACCOUNT_COOLDOWN_MS
+                accountBlockReason = "dzienny limit Gemini wyczerpany: ${last.detail.take(60)}"
+                DiagLog.w("Gemini", "Limit dzienny na wszystkich modelach – Gemini wstrzymany na 10 min")
+            } else {
+                // limit na minutę – Google mówi, ile czekać (zwykle kilkadziesiąt sekund)
+                val wait = maxRetryMs.takeIf { it > 0 }?.coerceAtMost(120_000L) ?: MINUTE_COOLDOWN_MS
+                accountBlockedUntil = clock() + wait
+                accountBlockReason = "limit zapytań na minutę – spróbuj za ${wait / 1000} s"
+                DiagLog.w("Gemini", "Limit minutowy na wszystkich modelach – przerwa ${wait / 1000} s")
+            }
         }
         throw last ?: ProviderException(ProviderException.Kind.RATE_LIMIT, "Brak dostępnego modelu Gemini")
     }
