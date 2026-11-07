@@ -1,6 +1,6 @@
 # Mózg robota jako agent LLM – koncept architektury
 
-> Status: **koncept do akceptacji** (7.11.2026). Bez zmian w STT, TTS i rozpoznawaniu twarzy – działają i zostają jak są.
+> Status: **wdrażany** – MCP gotowe (7.11.2026), skille i pamięć w kolejnych etapach. Bez zmian w STT, TTS i rozpoznawaniu twarzy – działają i zostają jak są.
 
 ## 1. Idea w jednym zdaniu
 
@@ -138,7 +138,7 @@ tools: [calendar__list_events, get_weather, web_search]
 | Logi diagnostyczne | ✅ jest |
 | Rejestr narzędzi z wieloma źródłami (`ToolProvider`) | ➕ etap 1 |
 | Skille: format, `load_skill`, wbudowane + z repozytorium | ➕ etap 1–3 |
-| Klient MCP (Streamable HTTP), konfiguracja i test w ustawieniach | ➕ etap 2 |
+| Klient MCP (Streamable HTTP), konfiguracja i test w ustawieniach | ✅ jest (7.11.2026, `mcp/`) – własny lekki klient (OkHttp), bez Kotlin SDK; pierwszy serwer: Home Assistant |
 | Kolejka zdarzeń + skille wyzwalane zdarzeniem (proaktywność) | ➕ etap 3 |
 | Pamięć długa (`remember` / `recall`) | ➕ etap 3 |
 | Potwierdzanie akcji, limity kosztu | ➕ etap 2–3 |
