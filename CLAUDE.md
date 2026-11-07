@@ -22,4 +22,4 @@ Biurkowy robot-asystent: telefon z Androidem = mózg i twarz, ESP32 + 2 serwa = 
 
 ## Mapa dokumentów
 
-`docs/aplikacja-android.md` (moduły aplikacji, połączenia, jak rozwijać), `docs/inspiracja-funkcje.md` (funkcje oryginału + status), `docs/telefony.md` (telefony, ładowarka), `docs/sterowanie-mocowaniem.md`, `docs/bom.md`, `docs/montaz.md`, `docs/roadmapa.md`, `hardware/` (CAD OpenSCAD w `hardware/cad/`, gotowe STL w `hardware/stl/`, instrukcja druku `hardware/cad/README.md`; regeneracja: `hardware/tools/build.sh` – wymaga OpenSCAD).
+`docs/aplikacja-android.md` (moduły aplikacji, połączenia, jak rozwijać), `docs/agent-architektura.md` (koncept mózgu jako agenta LLM: MCP, skille, pamięć – do akceptacji), `docs/inspiracja-funkcje.md` (funkcje oryginału + status), `docs/telefony.md` (telefony, ładowarka), `docs/sterowanie-mocowaniem.md`, `docs/bom.md`, `docs/montaz.md`, `docs/roadmapa.md`, `hardware/` (CAD OpenSCAD w `hardware/cad/`, gotowe STL w `hardware/stl/`, instrukcja druku `hardware/cad/README.md`; regeneracja: `hardware/tools/build.sh` – wymaga OpenSCAD).
