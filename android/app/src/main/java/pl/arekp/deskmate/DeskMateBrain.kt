@@ -24,6 +24,7 @@ import pl.arekp.deskmate.ai.Expression
 import pl.arekp.deskmate.ai.ReasoningFilter
 import pl.arekp.deskmate.ai.SpeechText
 import pl.arekp.deskmate.ai.LookTool
+import pl.arekp.deskmate.ai.toSpec
 import pl.arekp.deskmate.ai.WeatherTool
 import pl.arekp.deskmate.ai.WebSearchTool
 import pl.arekp.deskmate.ai.llm.ChatMessage
