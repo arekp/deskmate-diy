@@ -1,6 +1,5 @@
 package pl.arekp.deskmate
 
-import com.sun.net.httpserver.HttpServer
 import kotlinx.coroutines.runBlocking
 import org.json.JSONArray
 import org.json.JSONObject
@@ -14,7 +13,6 @@ import pl.arekp.deskmate.mcp.McpClient
 import pl.arekp.deskmate.mcp.McpSchema
 import pl.arekp.deskmate.mcp.McpServerConfig
 import pl.arekp.deskmate.mcp.McpTool
-import java.net.InetSocketAddress
 
 class McpParsingTest {
 
@@ -77,30 +75,81 @@ class McpParsingTest {
     }
 }
 
+/** Minimalny serwer HTTP na gniazdach (pakiet com.sun.net.httpserver nie jest dostępny w testach Androida). */
+class TinyHttpServer(private val handler: (method: String, headers: Map<String, String>, body: String) -> Triple<Int, Map<String, String>, String>) {
+    private val socket = java.net.ServerSocket(0, 50, java.net.InetAddress.getByName("127.0.0.1"))
+    val port: Int get() = socket.localPort
+    @Volatile private var running = true
+
+    fun start() {
+        Thread {
+            while (running) {
+                val c = runCatching { socket.accept() }.getOrNull() ?: break
+                Thread { serve(c) }.apply { isDaemon = true }.start()
+            }
+        }.apply { isDaemon = true }.start()
+    }
+
+    private fun serve(c: java.net.Socket) = c.use {
+        val input = java.io.BufferedInputStream(c.getInputStream())
+        val out = c.getOutputStream()
+        while (running) {
+            val requestLine = readLine(input) ?: return
+            if (requestLine.isBlank()) return
+            val headers = mutableMapOf<String, String>()
+            while (true) {
+                val l = readLine(input) ?: return
+                if (l.isEmpty()) break
+                val k = l.substringBefore(":").trim().lowercase()
+                headers[k] = l.substringAfter(":").trim()
+            }
+            val len = headers["content-length"]?.toIntOrNull() ?: 0
+            val buf = ByteArray(len)
+            var read = 0
+            while (read < len) { val n = input.read(buf, read, len - read); if (n < 0) return; read += n }
+            val (code, respHeaders, body) = handler(requestLine.substringBefore(" "), headers, String(buf))
+            val bytes = body.toByteArray()
+            val sb = StringBuilder("HTTP/1.1 $code X\r\nContent-Length: ${bytes.size}\r\n")
+            respHeaders.forEach { (k, v) -> sb.append("$k: $v\r\n") }
+            sb.append("\r\n")
+            out.write(sb.toString().toByteArray()); out.write(bytes); out.flush()
+        }
+    }
+
+    private fun readLine(input: java.io.InputStream): String? {
+        val sb = StringBuilder()
+        while (true) {
+            val b = input.read()
+            if (b < 0) return if (sb.isEmpty()) null else sb.toString()
+            if (b == '\n'.code) return sb.toString().trimEnd('\r')
+            sb.append(b.toChar())
+        }
+    }
+
+    fun stop() { running = false; socket.close() }
+}
+
 /** Klient MCP przeciw udawanemu serwerowi (jak Home Assistant: SSE, sesja, token). */
 class McpClientIntegrationTest {
-    private lateinit var server: HttpServer
+    private lateinit var server: TinyHttpServer
     private val calls = mutableListOf<String>()
     private var expireSessionOnce = false
 
     @Before
     fun start() {
-        server = HttpServer.create(InetSocketAddress("127.0.0.1", 0), 0)
-        server.createContext("/api/mcp") { ex ->
-            val body = JSONObject(ex.requestBody.bufferedReader().readText())
+        server = TinyHttpServer { _, headers, raw ->
+            val body = JSONObject(raw)
             val method = body.optString("method")
-            calls += method
-            fun reply(code: Int, text: String, sse: Boolean = false, session: String? = null) {
-                ex.responseHeaders.add("Content-Type", if (sse) "text/event-stream" else "application/json")
-                session?.let { ex.responseHeaders.add("Mcp-Session-Id", it) }
-                val bytes = text.toByteArray()
-                ex.sendResponseHeaders(code, if (bytes.isEmpty()) -1 else bytes.size.toLong())
-                if (bytes.isNotEmpty()) ex.responseBody.use { it.write(bytes) } else ex.close()
-            }
-            if (ex.requestHeaders.getFirst("Authorization") != "Bearer sekret") return@createContext reply(401, "{}")
+            synchronized(calls) { calls += method }
+            fun json(code: Int, text: String, sse: Boolean = false, session: String? = null): Triple<Int, Map<String, String>, String> =
+                Triple(code, buildMap {
+                    put("Content-Type", if (sse) "text/event-stream" else "application/json")
+                    session?.let { put("Mcp-Session-Id", it) }
+                }, text)
+            if (headers["authorization"] != "Bearer sekret") return@TinyHttpServer json(401, "{}")
             val id = body.opt("id")
             when (method) {
-                "initialize" -> reply(
+                "initialize" -> json(
                     200,
                     "event: message\ndata: " + JSONObject().put("jsonrpc", "2.0").put("id", id).put(
                         "result",
@@ -108,12 +157,12 @@ class McpClientIntegrationTest {
                     ) + "\n\n",
                     sse = true, session = "sesja-1",
                 )
-                "notifications/initialized" -> reply(202, "")
+                "notifications/initialized" -> json(202, "")
                 else -> {
-                    if (ex.requestHeaders.getFirst("Mcp-Session-Id") != "sesja-1") return@createContext reply(400, "{}")
+                    if (headers["mcp-session-id"] != "sesja-1") return@TinyHttpServer json(400, "{}")
                     if (expireSessionOnce && method == "tools/call") {
                         expireSessionOnce = false
-                        return@createContext reply(404, "{}")
+                        return@TinyHttpServer json(404, "{}")
                     }
                     val result = when (method) {
                         "tools/list" -> JSONObject().put(
@@ -129,7 +178,7 @@ class McpClientIntegrationTest {
                         )
                         else -> JSONObject()
                     }
-                    reply(200, JSONObject().put("jsonrpc", "2.0").put("id", id).put("result", result).toString())
+                    json(200, JSONObject().put("jsonrpc", "2.0").put("id", id).put("result", result).toString())
                 }
             }
         }
@@ -137,9 +186,9 @@ class McpClientIntegrationTest {
     }
 
     @After
-    fun stop() = server.stop(0)
+    fun stop() = server.stop()
 
-    private fun url() = "http://127.0.0.1:${server.address.port}/api/mcp"
+    private fun url() = "http://127.0.0.1:${server.port}/api/mcp"
 
     @Test
     fun fullFlow_initListCall() = runBlocking {
