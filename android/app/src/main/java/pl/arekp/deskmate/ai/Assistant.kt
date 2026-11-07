@@ -15,7 +15,8 @@ import pl.arekp.deskmate.ai.llm.Role
  */
 class Assistant(
     private val router: LlmRouter,
-    private val tools: List<AssistantTool>,
+    /** Narzędzia pobierane przy każdym pytaniu: wbudowane + z serwerów MCP (mogą dojść w trakcie działania). */
+    private val tools: () -> List<AssistantTool>,
     private val onProviderUsed: (String) -> Unit = {},
 ) {
     private val history = mutableListOf<ChatMessage>()
@@ -29,7 +30,7 @@ class Assistant(
         try {
             repeat(Config.MAX_TOOL_ROUNDS) {
                 val routed = router.complete(
-                    ChatRequest(Config.systemPrompt(), history.toList(), tools.map { it.toSpec() }, Config.MAX_TOKENS),
+                    ChatRequest(Config.systemPrompt(), history.toList(), tools().map { it.toSpec() }, Config.MAX_TOKENS),
                 )
                 onProviderUsed(routed.provider.label)
                 val response = routed.response
@@ -62,7 +63,7 @@ class Assistant(
     fun reset() = history.clear()
 
     private suspend fun runTool(call: Part.ToolCall): Part.ToolResult {
-        val tool = tools.firstOrNull { it.name == call.name }
+        val tool = tools().firstOrNull { it.name == call.name }
             ?: return Part.ToolResult(call.id, call.name, "Nieznane narzędzie", isError = true)
         val t0 = System.currentTimeMillis()
         val result = runCatching { tool.run(call.args) }

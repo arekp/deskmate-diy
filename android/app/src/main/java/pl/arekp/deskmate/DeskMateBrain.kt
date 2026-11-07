@@ -40,6 +40,8 @@ import pl.arekp.deskmate.vision.FaceObservation
 import pl.arekp.deskmate.vision.SceneObservation
 import pl.arekp.deskmate.vision.FaceTracker
 import pl.arekp.deskmate.vision.HeadController
+import pl.arekp.deskmate.mcp.McpManager
+import pl.arekp.deskmate.mcp.McpServerConfig
 import pl.arekp.deskmate.voice.BargeInMic
 import pl.arekp.deskmate.voice.ListenPolicy
 import pl.arekp.deskmate.voice.Speech
@@ -116,7 +118,10 @@ class DeskMateBrain(private val activity: ComponentActivity) {
     )
     private var robotStatus = ""
     private var aiStatus = ""
-    private val assistant = Assistant(router, buildTools()) { label ->
+    /** Serwery MCP użytkownika (np. Home Assistant) – narzędzia dołączane do agenta. */
+    val mcp = McpManager(scope, { McpServerConfig.listFromJson(settings.mcpServersJson) }, onEvent = { event(it) })
+    private val builtInTools = buildTools()
+    private val assistant = Assistant(router, { builtInTools + mcp.tools() }) { label ->
         if (label != aiStatus && aiStatus.isNotBlank()) event("Model zmieniony na $label")
         aiStatus = label
         refreshStatus()
@@ -161,6 +166,7 @@ class DeskMateBrain(private val activity: ComponentActivity) {
         }
         scope.launch { conversationLoop() }
         scope.launch { sleepWatcher() }
+        mcp.refresh()
         scope.launch { autoUploadWatcher() }
     }
 
@@ -271,6 +277,7 @@ class DeskMateBrain(private val activity: ComponentActivity) {
     /** Wywoływane po zapisaniu ustawień: odświeża pasek i – gdy trzeba – usługi mowy. */
     fun onSettingsSaved(speechChanged: Boolean) {
         _ui.update { it.copy(ticker = it.ticker.copy(debug = settings.debugMode), showCamera = settings.showCameraPreview) }
+        mcp.refresh()
         if (speechChanged) {
             speech.reload()
             event("Zmieniono ustawienia mowy")

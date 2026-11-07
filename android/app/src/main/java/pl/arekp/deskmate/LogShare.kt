@@ -39,7 +39,8 @@ object LogShare {
     }
 
     fun secretsOf(settings: Settings): List<String> =
-        listOf(settings.geminiKey, settings.openRouterKey, settings.claudeKey, settings.screenHelperToken, settings.logToken)
+        listOf(settings.geminiKey, settings.openRouterKey, settings.claudeKey, settings.screenHelperToken, settings.logToken) +
+            pl.arekp.deskmate.mcp.McpServerConfig.listFromJson(settings.mcpServersJson).map { it.token }
 
     /** Otwiera systemowe „Udostępnij” z plikiem .txt (np. do aplikacji Claude, Gmaila, Dysku). */
     fun share(context: Context, text: String) {

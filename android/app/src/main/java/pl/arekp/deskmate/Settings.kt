@@ -42,6 +42,11 @@ class Settings(context: Context) {
         get() = read(KEY_CLAUDE_MODEL, BuildConfig.ANTHROPIC_MODEL)
         set(v) = write(KEY_CLAUDE_MODEL, v)
 
+    /** Serwery MCP (JSON: lista {name, url, token, enabled}) – np. Home Assistant. Tokeny tylko na telefonie. */
+    var mcpServersJson: String
+        get() = read(KEY_MCP, "[]")
+        set(v) = write(KEY_MCP, v)
+
     /** Miasto użytkownika – domyślne dla pytań o pogodę. */
     var homeCity: String
         get() = read(KEY_HOME_CITY, "")
@@ -120,6 +125,7 @@ class Settings(context: Context) {
         private const val KEY_SCREEN_URL = "screenUrl"
         private const val KEY_SCREEN_TOKEN = "screenToken"
         private const val KEY_HOME_CITY = "homeCity"
+        private const val KEY_MCP = "mcpServers"
         private const val KEY_LOG_REPO = "logRepo"
         private const val KEY_LOG_TOKEN = "logToken"
         private const val KEY_LOG_AUTO = "logAuto"

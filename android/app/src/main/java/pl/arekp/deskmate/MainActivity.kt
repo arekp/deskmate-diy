@@ -78,6 +78,8 @@ class MainActivity : ComponentActivity() {
                     onSaveLogs = { LogShare.saveToDownloads(this@MainActivity, brain.diagnosticReport()) },
                     onClearLogs = { DiagLog.clear() },
                     onUploadLogs = { brain.uploadLogs() },
+                    onMcpTest = { brain.mcp.test(it) },
+                    mcpStatus = { brain.mcp.statuses.map { (if (it.ok) "✅ " else "❌ ") + it.text } },
                 )
             }
         }

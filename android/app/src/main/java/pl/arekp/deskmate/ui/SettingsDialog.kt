@@ -20,6 +20,9 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import kotlinx.coroutines.launch
+import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateMapOf
+import pl.arekp.deskmate.mcp.McpServerConfig
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -43,7 +46,18 @@ fun SettingsDialog(
     onSaveLogs: () -> String? = { null },
     onClearLogs: () -> Unit = {},
     onUploadLogs: suspend () -> String = { "" },
+    /** Test jednego serwera MCP – zwraca „✅ … narzędzia” albo „❌ błąd”. */
+    onMcpTest: suspend (McpServerConfig) -> String = { "" },
+    /** Bieżący stan połączeń MCP (po zapisaniu ustawień). */
+    mcpStatus: () -> List<String> = { emptyList() },
 ) {
+    val mcpServers = remember { mutableStateListOf(*McpServerConfig.listFromJson(settings.mcpServersJson).toTypedArray()) }
+    val mcpResults = remember { mutableStateMapOf<String, String>() }
+    var mcpName by remember { mutableStateOf(if (mcpServers.isEmpty()) "ha" else "") }
+    var mcpUrl by remember { mutableStateOf(if (mcpServers.isEmpty()) McpServerConfig.HOME_ASSISTANT_URL_HINT else "") }
+    var mcpToken by remember { mutableStateOf("") }
+    var mcpImport by remember { mutableStateOf("") }
+    var mcpInfo by remember { mutableStateOf("") }
     var logRepo by remember { mutableStateOf(settings.logRepo) }
     var logToken by remember { mutableStateOf(settings.logToken) }
     var logAuto by remember { mutableStateOf(settings.logAutoUpload) }
@@ -99,6 +113,56 @@ fun SettingsDialog(
                     },
                 ) { Text(if (testing) "Sprawdzam połączenie…" else "Zapisz klucze i testuj połączenie") }
                 testResult?.forEach { line -> Text(line, style = MaterialTheme.typography.bodySmall) }
+
+                Section("Serwery MCP (narzędzia dla agenta)")
+                Text(
+                    "Agent korzysta z narzędzi z tych serwerów (przedrostek nazwy, np. ha__). Home Assistant: dodaj integrację " +
+                        "„Model Context Protocol Server”, adres http://<IP>:8123/api/mcp, token: profil → Bezpieczeństwo → " +
+                        "token długoterminowy. Robot steruje tylko urządzeniami udostępnionymi dla Assist.",
+                    style = MaterialTheme.typography.bodySmall,
+                )
+                mcpStatus().forEach { Text("• $it", style = MaterialTheme.typography.bodySmall) }
+                mcpServers.forEachIndexed { i, s ->
+                    Text("${s.name} · ${s.url}", style = MaterialTheme.typography.bodyMedium)
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        FilterChip(
+                            selected = s.enabled,
+                            onClick = { mcpServers[i] = s.copy(enabled = !s.enabled) },
+                            label = { Text(if (s.enabled) "włączony" else "wyłączony") },
+                        )
+                        TextButton(onClick = {
+                            mcpResults[s.name] = "Sprawdzam…"
+                            scope.launch { mcpResults[s.name] = runCatching { onMcpTest(s) }.getOrElse { "❌ ${it.message}" } }
+                        }) { Text("Testuj") }
+                        TextButton(onClick = { mcpServers.removeAt(i); mcpResults.remove(s.name) }) { Text("Usuń") }
+                    }
+                    mcpResults[s.name]?.let { Text(it, style = MaterialTheme.typography.bodySmall) }
+                }
+                PlainField("Nazwa (przedrostek), np. ha", mcpName) { mcpName = it }
+                PlainField("Adres URL serwera MCP", mcpUrl) { mcpUrl = it }
+                SecretField("Token (Bearer)", mcpToken) { mcpToken = it }
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    TextButton(onClick = {
+                        if (mcpName.isBlank() || mcpUrl.isBlank()) {
+                            mcpInfo = "Podaj nazwę i adres"
+                        } else {
+                            mcpServers.removeAll { it.name == mcpName.trim() }
+                            mcpServers += McpServerConfig(mcpName.trim(), mcpUrl.trim(), mcpToken.trim())
+                            mcpInfo = "Dodano ${mcpName.trim()} – naciśnij Testuj, a potem Zapisz"
+                            mcpName = ""; mcpUrl = ""; mcpToken = ""
+                        }
+                    }) { Text("Dodaj serwer") }
+                }
+                PlainField("Import JSON {\"mcpServers\": …} (opcjonalnie)", mcpImport) { mcpImport = it }
+                TextButton(onClick = {
+                    mcpInfo = runCatching {
+                        val imported = McpServerConfig.importMcpServers(mcpImport)
+                        imported.forEach { n -> mcpServers.removeAll { it.name == n.name }; mcpServers += n }
+                        mcpImport = ""
+                        "Zaimportowano: ${imported.joinToString { it.name }.ifBlank { "nic" }}"
+                    }.getOrElse { "Niepoprawny JSON: ${it.message}" }
+                }) { Text("Importuj") }
+                if (mcpInfo.isNotBlank()) Text(mcpInfo, style = MaterialTheme.typography.bodySmall)
 
                 Section("Pogoda i wyszukiwanie")
                 PlainField("Twoje miasto (domyślne dla pogody)", city) { city = it }
@@ -212,6 +276,7 @@ fun SettingsDialog(
                 settings.screenHelperUrl = url
                 settings.screenHelperToken = token
                 settings.homeCity = city
+                settings.mcpServersJson = McpServerConfig.listToJson(mcpServers)
                 settings.logRepo = logRepo
                 settings.logToken = logToken
                 settings.logAutoUpload = logAuto
