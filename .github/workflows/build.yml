@@ -37,14 +37,18 @@ jobs:
           gradle-version: "8.9"
       - name: Testy jednostkowe
         run: gradle -p android testDebugUnitTest --no-daemon
-      - name: Budowanie APK
+      - name: Budowanie APK (zoptymalizowany + zapasowy debug)
         run: |
-          gradle -p android assembleDebug --no-daemon
-          cp android/app/build/outputs/apk/debug/app-debug.apk deskmate-diy.apk
+          gradle -p android assembleRelease assembleDebug --no-daemon
+          cp android/app/build/outputs/apk/release/app-release.apk deskmate-diy.apk
+          cp android/app/build/outputs/apk/debug/app-debug.apk deskmate-diy-debug.apk
+          ls -la deskmate-diy*.apk
+          echo "### Rozmiar APK" >> "$GITHUB_STEP_SUMMARY"
+          ls -la deskmate-diy*.apk | awk '{printf "- %s: %.1f MB\n", $9, $5/1048576}' >> "$GITHUB_STEP_SUMMARY"
       - uses: actions/upload-artifact@v4
         with:
           name: deskmate-diy-apk
-          path: deskmate-diy.apk
+          path: deskmate-diy*.apk
       - name: Raport testów
         if: always()
         uses: actions/upload-artifact@v4
@@ -69,10 +73,13 @@ jobs:
           name: DeskMate DIY – build ${{ github.run_number }}
           target_commitish: ${{ github.sha }}
           make_latest: true
-          files: deskmate-diy.apk
+          files: |
+            deskmate-diy.apk
+            deskmate-diy-debug.apk
           body: |
             Automatyczna kompilacja z commita ${{ github.sha }}.
-            Wersja testowa (debug). Instalacja: pobierz deskmate-diy.apk na telefonie i zezwól na instalację z nieznanych źródeł.
+            deskmate-diy.apk – wersja zoptymalizowana (mniejsza). deskmate-diy-debug.apk – zapasowa wersja debug.
+            Instalacja: pobierz plik na telefonie i zezwól na instalację z nieznanych źródeł.
 
   python:
     runs-on: ubuntu-latest

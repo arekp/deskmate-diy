@@ -26,6 +26,10 @@ android {
         versionCode = 1
         versionName = "0.1.0"
 
+        // Rozmiar APK: wszystkie docelowe telefony (S23 Ultra, Fold8 Ultra, Flip6) to arm64.
+        // Bez tego APK miał biblioteki natywne ML Kit dla 4 procesorów (194 MB z 221 MB).
+        ndk { abiFilters += "arm64-v8a" }
+
         buildConfigField("String", "ANTHROPIC_API_KEY", "\"${secret("anthropic.apiKey")}\"")
         buildConfigField("String", "ANTHROPIC_MODEL", "\"${secret("anthropic.model", "claude-haiku-5-5")}\"")
         buildConfigField("String", "GEMINI_API_KEY", "\"${secret("gemini.apiKey")}\"")
@@ -49,9 +53,19 @@ android {
     }
 
     buildTypes {
+        // Wersja publikowana jako deskmate-diy.apk: zoptymalizowana (R8) i podpisana tym samym kluczem testowym,
+        // więc instaluje się jako aktualizacja. Wersja debug (deskmate-diy-debug.apk) zostaje jako zapas.
         release {
-            isMinifyEnabled = false
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+            signingConfig = signingConfigs.getByName("debug")
         }
+    }
+
+    packaging {
+        // Biblioteki .so skompresowane w APK (mniejsze pobieranie; system rozpakuje je przy instalacji)
+        jniLibs { useLegacyPackaging = true }
     }
 
     buildFeatures {
@@ -92,11 +106,12 @@ dependencies {
     implementation("androidx.camera:camera-camera2:$cameraX")
     implementation("androidx.camera:camera-lifecycle:$cameraX")
     implementation("androidx.camera:camera-view:$cameraX") // podgląd kamery w rogu ekranu
-    implementation("com.google.mlkit:face-detection:16.1.7")
+    // Twarze, etykiety i tekst: modele z Usług Google Play (nie w APK). Poza: tylko wersja wbudowana.
+    implementation("com.google.android.gms:play-services-mlkit-face-detection:17.1.0")
     // Rozpoznawanie otoczenia na telefonie (modele w APK, bez internetu)
-    implementation("com.google.mlkit:image-labeling:17.0.9")
+    implementation("com.google.android.gms:play-services-mlkit-image-labeling:16.0.8")
     implementation("com.google.mlkit:pose-detection:18.0.0-beta5")
-    implementation("com.google.mlkit:text-recognition:16.0.1")
+    implementation("com.google.android.gms:play-services-mlkit-text-recognition:19.0.1")
 
     // HTTP do API modelu językowego i pomocnika ekranu
     implementation("com.squareup.okhttp3:okhttp:4.12.0")

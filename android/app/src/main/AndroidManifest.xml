@@ -48,6 +48,11 @@
         android:theme="@android:style/Theme.Material.NoActionBar.Fullscreen"
         android:usesCleartextTraffic="true">
 
+        <!-- Modele ML Kit z Usług Google Play pobierane od razu po instalacji (twarze, etykiety, tekst) -->
+        <meta-data
+            android:name="com.google.mlkit.vision.DEPENDENCIES"
+            android:value="face,ica,ocr" />
+
         <!-- Udostępnianie logów diagnostycznych (Ustawienia → Logi) -->
         <provider
             android:name="androidx.core.content.FileProvider"
