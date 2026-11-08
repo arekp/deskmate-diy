@@ -1,0 +1,1049 @@
+<title>DeskMate na ramieniu</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;600;800&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* Układ: podgląd 3D z pozami po lewej, obciążenie serw i wymiary po prawej; jedna kolumna na telefonie. */
+:root {
+  --bg: #e8ecee;
+  --panel: #f5f7f8;
+  --fg: #1b2428;
+  --muted: #55656d;
+  --line: #c5ced3;
+  --accent: #c2410c;
+  --accent-fg: #ffffff;
+  --part: #6b8796;
+  --body: #d3dbdf;
+  --shell: #f1f3f4;
+  --edge: #1e2a30;
+  --p1: #e6eaec;
+  --p2: #c9d3d8;
+  --metal: #9aa5ac;
+  --cap: #2a3338;
+  --ok: #2f7d4f;
+  --warn: #b7791f;
+  --bad: #c0392b;
+  --f-body: "Archivo", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --f-mono: "IBM Plex Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #12181b; --panel: #1a2226; --fg: #e3eaed; --muted: #8fa1aa; --line: #2c383e;
+    --accent: #ff7a3d; --accent-fg: #1a0e07; --part: #7e9aa9; --body: #3d4a50; --shell: #c3ccd1; --edge: #0a0e10; --p1: #2b353a; --p2: #3c4a51; --metal: #8b979e; --cap: #7d8a91;
+    --ok: #4fbf7c; --warn: #e0a84a; --bad: #ff6b5b;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #12181b; --panel: #1a2226; --fg: #e3eaed; --muted: #8fa1aa; --line: #2c383e;
+  --accent: #ff7a3d; --accent-fg: #1a0e07; --part: #7e9aa9; --body: #3d4a50; --shell: #c3ccd1; --edge: #0a0e10; --p1: #2b353a; --p2: #3c4a51; --metal: #8b979e; --cap: #7d8a91;
+  --ok: #4fbf7c; --warn: #e0a84a; --bad: #ff6b5b;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--fg); font-family: var(--f-body); line-height: 1.5;
+  padding-block: 24px 40px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+.wrap { max-width: 1180px; margin: 0 auto; display: grid; gap: 20px; }
+header h1 { font-size: clamp(1.5rem, 4vw, 2.2rem); font-weight: 800; letter-spacing: -0.01em; margin: 0 0 4px; text-wrap: balance; }
+header p { margin: 0; color: var(--muted); max-width: 74ch; }
+.eyebrow { font: 500 0.72rem/1 var(--f-mono); letter-spacing: 0.12em; text-transform: uppercase; color: var(--accent); margin-bottom: 8px; }
+.main { display: grid; gap: 20px; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); align-items: start; }
+@media (max-width: 860px) { .main { grid-template-columns: minmax(0, 1fr); } }
+.stage { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
+#view { position: relative; width: 100%; aspect-ratio: 4 / 3.3; max-height: 72vh; min-height: 320px; cursor: grab; touch-action: none; }
+#view:active { cursor: grabbing; }
+#view canvas { display: block; width: 100%; height: 100%; }
+.hint { position: absolute; left: 10px; bottom: 8px; font: 400 0.7rem var(--f-mono); color: var(--muted); pointer-events: none; }
+.pose-tag { position: absolute; left: 10px; top: 10px; font: 500 0.75rem var(--f-mono); color: var(--fg); background: var(--panel); border: 1px solid var(--line); border-radius: 4px; padding: 4px 8px; pointer-events: none; }
+.controls { display: grid; gap: 12px; padding: 12px; border-top: 1px solid var(--line); }
+.row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.grp-label { font: 500 0.68rem var(--f-mono); letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); width: 100%; }
+button.v {
+  font: 600 0.82rem var(--f-body); padding: 6px 12px; border-radius: 4px; cursor: pointer;
+  background: transparent; color: var(--fg); border: 1px solid var(--line);
+}
+button.v:hover { border-color: var(--accent); }
+button.v:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+button.v[aria-pressed="true"] { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); }
+button.g { border-style: dashed; }
+label { font-size: 0.85rem; display: inline-flex; gap: 6px; align-items: center; }
+.slider { display: grid; grid-template-columns: 9.5em minmax(100px, 1fr) 7ch; gap: 10px; align-items: center; font-size: 0.85rem; }
+.slider output { font-family: var(--f-mono); text-align: right; font-size: 0.8rem; font-variant-numeric: tabular-nums; }
+input[type="range"] { accent-color: var(--accent); width: 100%; }
+input[type="checkbox"] { accent-color: var(--accent); }
+select { font: 500 0.85rem var(--f-body); color: var(--fg); background: var(--panel); border: 1px solid var(--line); border-radius: 4px; padding: 5px 8px; max-width: 100%; }
+details.adv summary { cursor: pointer; font-size: 0.85rem; color: var(--muted); }
+details.adv[open] summary { margin-bottom: 10px; }
+.side { display: grid; gap: 18px; min-width: 0; }
+h2 { font-size: 0.78rem; font-family: var(--f-mono); font-weight: 500; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px; }
+table { width: 100%; border-collapse: collapse; font-size: 0.86rem; }
+td, th { padding: 6px 8px 6px 0; border-bottom: 1px solid var(--line); vertical-align: top; text-align: left; }
+th { font: 500 0.7rem var(--f-mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+td.n { font-family: var(--f-mono); font-size: 0.78rem; text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.load { display: grid; gap: 10px; }
+.bar { display: grid; grid-template-columns: 6.5em minmax(0, 1fr) 9.5ch; gap: 10px; align-items: center; font-size: 0.85rem; }
+.track { position: relative; height: 10px; border-radius: 2px; background: var(--line); overflow: hidden; }
+.fill { position: absolute; inset: 0 auto 0 0; width: 0; background: var(--ok); transition: width .15s linear; }
+.tick { position: absolute; top: -2px; bottom: -2px; width: 1px; background: var(--fg); opacity: .5; }
+.bar output { font-family: var(--f-mono); font-size: 0.78rem; text-align: right; font-variant-numeric: tabular-nums; }
+.verdict { font: 500 0.8rem var(--f-mono); padding: 8px 10px; border: 1px solid var(--line); border-left-width: 4px; border-radius: 4px; background: var(--panel); }
+.small { font-size: 0.8rem; color: var(--muted); margin: 0; }
+.list { margin: 0; padding-left: 1.1em; font-size: 0.88rem; display: grid; gap: 6px; }
+.list b { font-weight: 600; }
+.src { font-size: 0.82rem; display: grid; gap: 4px; margin: 0; padding-left: 1.1em; }
+.src a { color: var(--fg); }
+.figs { display: grid; gap: 16px; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+.figs-head { grid-column: 1 / -1; }
+.figs-head p { margin-top: -4px; }
+@media (max-width: 860px) { .figs { grid-template-columns: minmax(0, 1fr); } }
+.figs figure { margin: 0; background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 10px; display: grid; gap: 8px; min-width: 0; }
+.figs svg { width: 100%; height: auto; display: block; }
+.figs figcaption { font-size: 0.82rem; color: var(--muted); }
+.p1 { fill: var(--p1); stroke: var(--fg); }
+.p2 { fill: var(--p2); stroke: var(--fg); }
+.sv { fill: var(--accent); fill-opacity: .8; stroke: var(--fg); }
+.sv-h { fill: none; stroke: var(--accent); stroke-dasharray: 2 1.4; stroke-width: .6; }
+.mt { fill: var(--metal); stroke: var(--fg); }
+.mt-h { fill: none; stroke: var(--metal); stroke-dasharray: 1.5 1.2; stroke-width: .6; }
+.ck { fill: var(--cap); stroke: var(--fg); }
+.hole { fill: var(--panel); stroke: none; }
+.hole-s { fill: var(--panel); stroke: var(--fg); stroke-width: .4; }
+.scr { stroke: var(--fg); stroke-width: 1.1; }
+.ax { stroke: var(--fg); stroke-width: .35; stroke-dasharray: 6 1.5 1 1.5; }
+.acc-s { fill: none; stroke: var(--accent); stroke-width: .9; }
+.acc-f { fill: var(--accent); }
+.ink-f { fill: var(--fg); }
+.lbl text { font: 4.2px var(--f-body); fill: var(--fg); }
+.ld { stroke: var(--muted); stroke-width: .3; }
+@media (max-width: 520px) { .slider { grid-template-columns: 1fr 7ch; } .slider input { grid-column: 1 / -1; grid-row: 2; } }
+@media (prefers-reduced-motion: reduce) { .fill { transition: none; } }
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="eyebrow">Koncept B · głowa z ładowarką na ramieniu 5 DOF</div>
+    <h1>DeskMate na ramieniu</h1>
+    <p>Nasz uchwyt telefonu z ładowarką siedzi na końcu ramienia jak głowa lampki. Obły korpus to podstawa z elektroniką. Wybierz pozę albo gest i zobacz, jak rusza się ramię i ile pracują serwa. Pozy są liczone odwrotną kinematyką z położenia głowy.</p>
+  </header>
+
+  <div class="main">
+    <section class="stage" aria-label="Podgląd 3D robota na ramieniu">
+      <div id="view"><span class="pose-tag" id="poseTag">Czuwa</span><span class="hint">przeciągnij = obrót, kółko = zoom</span></div>
+      <div class="controls">
+        <div class="row" role="group" aria-label="Pozy">
+          <span class="grp-label">Pozy</span>
+          <button class="v p" data-pose="spi" aria-pressed="false">Śpi</button>
+          <button class="v p" data-pose="czuwa" aria-pressed="true">Czuwa</button>
+          <button class="v p" data-pose="patrzy" aria-pressed="false">Patrzy na Ciebie</button>
+          <button class="v p" data-pose="ciekawy" aria-pressed="false">Ciekawość</button>
+          <button class="v p" data-pose="klaw" aria-pressed="false">Klawiatura</button>
+          <button class="v p" data-pose="smutek" aria-pressed="false">Smutek</button>
+          <button class="v p" data-pose="wideo" aria-pressed="false">Wideorozmowa</button>
+        </div>
+        <div class="row" role="group" aria-label="Gesty">
+          <span class="grp-label">Gesty</span>
+          <button class="v g" data-gest="tak">Tak (kiwnięcie)</button>
+          <button class="v g" data-gest="nie">Nie</button>
+          <button class="v g" data-gest="radosc">Radość</button>
+          <button class="v g" data-gest="rozglada">Rozgląda się</button>
+          <button class="v g" data-gest="demo">Pokaz wszystkiego</button>
+        </div>
+        <div class="row" role="group" aria-label="Widok">
+          <span class="grp-label">Widok</span>
+          <button class="v w" data-view="iso" aria-pressed="true">3/4</button>
+          <button class="v w" data-view="side" aria-pressed="false">Bok</button>
+          <button class="v w" data-view="front" aria-pressed="false">Przód</button>
+          <button class="v w" data-view="top" aria-pressed="false">Góra</button>
+          <button class="v w" data-view="zb" aria-pressed="false">Zbliżenie: bark</button>
+          <button class="v w" data-view="zl" aria-pressed="false">Zbliżenie: łokieć</button>
+          <button class="v w" data-view="zs" aria-pressed="false">Zbliżenie: szyjka</button>
+        </div>
+        <div class="row">
+          <label><input id="breath" type="checkbox" checked> Oddychanie w spoczynku</label>
+          <label><input id="gaze" type="checkbox" checked> Kierunek spojrzenia</label>
+          <label><input id="shell" type="checkbox" checked> Osłona siatkowa</label>
+          <label><input id="kb" type="checkbox" checked> Biurko i klawiatura</label>
+          <label><input id="xr" type="checkbox"> Przekrój: serwa, elektronika, piasek</label>
+          <label><input id="pl" type="checkbox" checked> Cokół z piaskiem (v0.2)</label>
+        </div>
+        <details class="adv">
+          <summary>Sterowanie ręczne położeniem głowy</summary>
+          <div style="display:grid;gap:10px">
+            <div class="slider"><label for="sYaw">Obrót podstawy</label><input id="sYaw" type="range" min="-90" max="90" step="1" value="0"><output id="oYaw" for="sYaw">0°</output></div>
+            <div class="slider"><label for="sR">Wysięg głowy</label><input id="sR" type="range" min="40" max="230" step="1" value="110"><output id="oR" for="sR">110 mm</output></div>
+            <div class="slider"><label for="sZ">Wysokość głowy</label><input id="sZ" type="range" min="70" max="300" step="1" value="165"><output id="oZ" for="sZ">165 mm</output></div>
+            <div class="slider"><label for="sF">Nachylenie twarzy</label><input id="sF" type="range" min="45" max="150" step="1" value="95"><output id="oF" for="sF">95°</output></div>
+            <div class="slider"><label for="sChg">Przesuw ładowarki</label><input id="sChg" type="range" min="-8" max="8" step="0.5" value="0"><output id="oChg" for="sChg">0 mm</output></div>
+            <div class="slider"><label for="sRoll">Przechył głowy</label><input id="sRoll" type="range" min="-30" max="30" step="1" value="0"><output id="oRoll" for="sRoll">0°</output></div>
+            <p class="small">Nachylenie 90° to twarz pionowo do przodu, mniej to patrzenie w górę, więcej w dół.</p>
+          </div>
+        </details>
+      </div>
+    </section>
+
+    <aside class="side">
+      <div>
+        <h2>Obciążenie serw w tej pozie</h2>
+        <div class="row" style="margin-bottom:10px">
+          <label for="servo">Zestaw serw</label>
+          <select id="servo">
+            <option value="20|11" selected>Prototyp: DS3218 w barku i łokciu, MG996R w nadgarstku (6 V)</option>
+            <option value="11|11">Same MG996R (6 V, 11 kg·cm)</option>
+            <option value="30|30">STS3215 12 V wszędzie (30 kg·cm)</option>
+            <option value="2.3|2.3">SCS0009 jak w RIG-Arm (2,3 kg·cm)</option>
+          </select>
+        </div>
+        <div class="load">
+          <div class="bar"><span>Bark</span><div class="track"><div class="fill" id="fS"></div><div class="tick" style="left:33%"></div></div><output id="tS">0</output></div>
+          <div class="bar"><span>Łokieć</span><div class="track"><div class="fill" id="fE"></div><div class="tick" style="left:33%"></div></div><output id="tE">0</output></div>
+          <div class="bar"><span>Nadgarstek</span><div class="track"><div class="fill" id="fW"></div><div class="tick" style="left:33%"></div></div><output id="tW">0</output></div>
+          <div class="verdict" id="verdict">…</div>
+          <p class="small">Pasek pokazuje moment od ciężaru jako procent momentu utyku serwa. Kreska to 33%, przyjęta tu granica pracy ciągłej bez grzania. DS3218 liczone jako 20 kg·cm przy 6 V, MG996R jako 11 kg·cm przy 6 V. Masy przyjęte: głowa z telefonem, etui, ładowarką i osłoną 350 g, MG996R 55 g, DS3218 60 g, MG90S w szyjce 15 g, ogniwa z PETG 15–45 g.</p>
+        </div>
+      </div>
+
+      <div>
+        <h2>Wymiary ramienia</h2>
+        <table>
+          <tr><td>Oś barku nad blatem</td><td class="n">107 mm (z dnem)</td></tr>
+          <tr><td>Ramię (bark → łokieć)</td><td class="n">110 mm</td></tr>
+          <tr><td>Przedramię (łokieć → nadgarstek)</td><td class="n">100 mm</td></tr>
+          <tr><td>Nadgarstek → orczyk przechyłu</td><td class="n">58 mm</td></tr>
+          <tr><td>Oś przechyłu → środek telefonu</td><td class="n">30 mm</td></tr>
+          <tr><td>Wysięg głowy przed osią obrotu</td><td class="n">do ok. 230 mm</td></tr>
+          <tr><td>Wysokość środka głowy</td><td class="n">ok. 85–290 mm</td></tr>
+        </table>
+      </div>
+
+      <div>
+        <h2>Zmiany v0.2</h2>
+        <ol class="list">
+          <li><b>Cokół z piaskiem</b> 22 mm pod korpusem, stopa szersza o 8%. Około 1 kg suchego piasku (żółty w przekroju) daje zapas przed przewróceniem 41–43 mm w szybkim geście. Bez obciążnika robot się przewraca. Pomysł z podstawy SO-ARM101 „Weighted Base”.</li>
+          <li><b>Gałki z radełkiem</b> i gniazdem sześciokątnym zamiast płaskich dekli na przegubach.</li>
+          <li><b>Czerwone listwy</b> wzdłuż boków ramienia i przedramienia oraz napis „DeskMate” na nadgarstku.</li>
+          <li><b>Przesuwana ładowarka:</b> rama z ładowarką i półką jedzie w bok o ±8 mm, pod cewkę telefonu. Suwak „Przesuw ładowarki” jest w sterowaniu ręcznym, a niebieski pierścień pokazuje cewkę ładowarki.</li>
+        </ol>
+      </div>
+
+      <div>
+        <h2>Obudowa ramienia</h2>
+        <ol class="list">
+          <li><b>Ażur Voronoi:</b> ramię i przedramię mają ściany z zaokrąglonych, organicznych otworów o średnicy około 10–13 mm i żeberkach około 3 mm. Końce przy przegubach i pas wzdłuż podziału połówek zostają pełne, bo tam idą śruby. Przez otwory widać serwa.</li>
+          <li><b>Ogniwa</b> to skorupy o przekroju zaokrąglonego prostokąta, lekko wybrzuszone: 48 × 32 mm przy barku, 44 × 30 mm przy nadgarstku. W środku mieści się serwo 40 × 20 mm. Każde ogniwo drukujesz z dwóch połówek skręcanych od spodu.</li>
+          <li><b>Przeguby</b> to okrągłe krążki Ø56, Ø56 i Ø50 mm. Ciemne tarcze po bokach to policzki następnego ogniwa, przykręcone do orczyka.</li>
+          <li><b>Pierścień w kolorze akcentu</b> na każdym przegubie to cienki wkład z innego filamentu. Pokazuje, gdzie robot się zgina.</li>
+          <li><b>Kable</b> idą w środku skorup, więc z zewnątrz ich nie widać. „Przekrój” pokazuje, jak mieszczą się serwa.</li>
+        </ol>
+      </div>
+
+      <div>
+        <h2>Osie (5 serw)</h2>
+        <ol class="list">
+          <li><b>Obrót podstawy</b> w korpusie, ±90°.</li>
+          <li><b>Bark</b>, pochylenie ramienia do przodu i do tyłu.</li>
+          <li><b>Łokieć</b> pracuje „do góry”, jak w lampce. Głowa może się przybliżać i oddalać bez zmiany wysokości.</li>
+          <li><b>Nadgarstek</b> to kiwanie głową i patrzenie w dół lub w górę.</li>
+          <li><b>Przechył głowy</b> za ładowarką, ±30°. To przechylenie głowy jak u zaciekawionego psa.</li>
+        </ol>
+      </div>
+
+      <div>
+        <h2>Skąd te długości</h2>
+        <ol class="list">
+          <li><b>SO-101</b> ma ogniwa około 13 cm, zasięg około 50 cm i udźwig około 500 g na serwach STS3215. Nasze ogniwa są krótsze, bo głowa jest ciężka i szeroka, a ruch ma się mieścić nad biurkiem.</li>
+          <li><b>Lampka ELEGNT</b> (badania Apple) pokazuje, że naturalność daje kilka ruchów: zwrot głowy przed działaniem, patrzenie na rozmówcę, kiwanie, nachylanie się z ciekawości, opuszczanie głowy ze smutku. Do tego zmienne tempo i pauzy. Wszystkie te ruchy są w pozach i gestach powyżej.</li>
+          <li><b>Loona DeskMate</b> trzyma iPhone'a na stałej podstawie z 3 osiami (obrót, pochylenie, przechył) i ładuje go bezprzewodowo. Ramię dodaje do tego wysięg i wysokość.</li>
+          <li><b>RIG-Arm</b> ma serwa SCS0009 o momencie 2,3 kg·cm. Głowy z telefonem nie uniesie, co widać po przełączeniu serwa obok. Jego układ i ESP32 mogą zostać, ale bark, łokieć i nadgarstek potrzebują STS3215.</li>
+        </ol>
+      </div>
+
+      <div>
+        <h2>Zasilanie z jednego kabla USB-C</h2>
+        <ol class="list">
+          <li><b>Ładowarka USB-C PD 65 W</b> z kablem 5 A (zwykła ładowarka do laptopa) podłączona do gniazda z tyłu korpusu.</li>
+          <li><b>Wyzwalacz PD</b> (moduł z CH224K lub IP2721) prosi ładowarkę o 20 V. Bez niego dostaniesz tylko 5 V.</li>
+          <li><b>Przetwornica 20 V → 6 V, 10 A</b> zasila serwa przez PCA9685. Kondensator 4700 µF na tej linii łagodzi skoki prądu przy starcie kilku serw naraz.</li>
+          <li><b>Moduł USB QC3.0</b> zasila ładowarkę Anker 313. Potrzebuje ona szybkiego ładowania QC 9 V / 2 A, inaczej da tylko 5 W.</li>
+          <li><b>Mała przetwornica 5 V</b> zasila ESP32 i logikę PCA9685, osobno od serw. Dzięki temu ESP32 się nie resetuje, gdy serwa ruszają.</li>
+        </ol>
+        <table style="margin-top:10px">
+          <tr><th>Odbiornik</th><th class="n">Typowo</th><th class="n">Szczyt</th></tr>
+          <tr><td>Serwa w ruchu</td><td class="n">15–25 W</td><td class="n">do ok. 60 W</td></tr>
+          <tr><td>Ładowarka telefonu (wejście)</td><td class="n">18 W</td><td class="n">18 W</td></tr>
+          <tr><td>ESP32 i logika</td><td class="n">1 W</td><td class="n">2 W</td></tr>
+          <tr><td><b>Razem</b></td><td class="n"><b>ok. 35–45 W</b></td><td class="n"><b>ok. 80 W</b></td></tr>
+        </table>
+        <p class="small" style="margin-top:8px">Szczyt zdarza się tylko wtedy, gdy kilka serw rusza jednocześnie z obciążeniem. Program powinien startować serwa po kolei, co kilkadziesiąt ms, i ograniczać prędkość. Wtedy ładowarka 65 W wystarczy. Port USB w komputerze (2,5–15 W) nie wystarczy nawet na same serwa.</p>
+      </div>
+
+      <div>
+        <h2>Jak siedzą serwa MG996R i DS3218</h2>
+        <ol class="list">
+          <li><b>Bark i łokieć:</b> serwo leży w kieszeni na końcu ogniwa, wałkiem na osi przegubu, przykręcone 4 śrubami M3 przez uszy do żeberek skorupy. Okrągły metalowy orczyk 25T jest przykręcony 4 śrubami M3 do policzka następnego ogniwa.</li>
+          <li><b>Łożysko po drugiej stronie:</b> w barku i łokciu po przeciwnej stronie siedzi łożysko 608, a w nim trzpień M8 z drugiego policzka. Ciężar głowy niesie łożysko, serwo tylko obraca.</li>
+          <li><b>Nadgarstek:</b> tak samo, tylko bez łożyska, bo obciążenie jest małe. Wałek MG996R ma własne łożyska kulkowe.</li>
+          <li><b>Przechył głowy:</b> MG90S stoi pionowo w szyjce, wałkiem w osi głowy. MG996R się tu nie mieści: wałek jest 10 mm od końca korpusu, a uszy mają 54 mm, więc szyjka musiałaby mieć około Ø80.</li>
+          <li><b>Obrót podstawy:</b> MG996R stoi pionowo w korpusie, a wieżyczka leży na łożysku talerzowym. Serwo tylko obraca i nie niesie ciężaru ramienia.</li>
+          <li><b>Kable:</b> przewody serw idą w środku skorup, z pętlą zapasu przy każdym przegubie, do płytki PCA9685 w korpusie. Tą samą drogą idzie kabel ładowarki do głowy.</li>
+        </ol>
+      </div>
+
+      <div>
+        <h2>Co się zmienia względem wersji z szyją</h2>
+        <ol class="list">
+          <li>Odpadają szyja, uszy, serwo TILT i łożysko 608. Blok osi zastępuje kołnierz serwa przechyłu za ładowarką.</li>
+          <li>Osłona siatkowa ma jeden okrągły otwór na środku, przez który wchodzi serwo przechyłu.</li>
+          <li>Korpus z ramionami zostaje jako podstawa. W środku mieści ESP32, sterownik serw i zasilanie z USB-C, bez akumulatora.</li>
+          <li>Kabel ładowarki idzie wzdłuż ramienia z zapasem na każdym przegubie.</li>
+        </ol>
+      </div>
+
+      <div>
+        <h2>Czego ta wizualizacja nie sprawdza</h2>
+        <ol class="list">
+          <li>Kolizji ramienia z korpusem i głowy z ramieniem. Pozy dobrałem ręcznie tak, żeby się nie stykały.</li>
+          <li>Momentów dynamicznych. Przy szybkich gestach serwa pracują mocniej niż w tabeli.</li>
+          <li>Ugięcia drukowanych ogniw.</li>
+        </ol>
+      </div>
+
+      <div>
+        <h2>Źródła</h2>
+        <ul class="src">
+          <li><a href="https://www.roboticscenter.ai/en/hardware/so-101/specs" target="_blank" rel="noopener">SO-101: dane techniczne</a></li>
+          <li><a href="https://arxiv.org/html/2501.12493v1" target="_blank" rel="noopener">ELEGNT: ekspresyjny ruch robota-lampki</a></li>
+          <li><a href="https://keyirobot.com/en-us/blogs/news/loona-deskmate-an-iphone-powered-ai-desk-robot" target="_blank" rel="noopener">Loona DeskMate</a></li>
+          <li><a href="https://gitee.com/luwudynamics/rig_arm" target="_blank" rel="noopener">RIG-Arm / RIG-Omni</a></li>
+          <li><a href="https://openelab.io/products/feetech-scs0009-ultra-compact-servo" target="_blank" rel="noopener">Feetech SCS0009</a></li>
+        </ul>
+      </div>
+    </aside>
+  </div>
+  <section class="figs" aria-label="Rysunki przegubu">
+    <div class="figs-head">
+      <h2>Jak serwo siedzi w przegubie (łokieć, wymiary w mm)</h2>
+      <p class="small">Ten sam układ jest w barku. Nadgarstek jest taki sam, tylko bez łożyska po lewej stronie.</p>
+    </div>
+    <figure>
+      <svg viewBox="-112 -68 224 136" role="img" aria-label="Przekrój przez oś łokcia: serwo w krążku ramienia, orczyk przykręcony do policzka przedramienia, łożysko 608 po drugiej stronie">
+        <defs><marker id="ar" viewBox="0 0 6 6" refX="5" refY="3" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M0 0L6 3L0 6z" class="ink-f"/></marker></defs>
+        <g transform="scale(1,-1)" stroke-width="0.4">
+          <rect x="-23" y="-64" width="46" height="42" class="p1"/>
+          <rect x="-27" y="-28" width="54" height="56" rx="7" class="p1"/>
+          <rect x="25.2" y="-13" width="2.6" height="26" class="hole"/>
+          <rect x="14.25" y="-37" width="8.75" height="5" class="p1"/>
+          <rect x="14.25" y="12" width="8.75" height="5" class="p1"/>
+          <rect x="-15" y="-30.7" width="36" height="40.7" class="sv"/>
+          <rect x="11.75" y="-37.35" width="2.5" height="54" class="sv"/>
+          <line x1="8" y1="-34.5" x2="22" y2="-34.5" class="scr"/>
+          <line x1="8" y1="14.5" x2="22" y2="14.5" class="scr"/>
+          <rect x="21" y="-3" width="4.5" height="6" class="mt"/>
+          <rect x="25.5" y="-12" width="3" height="24" class="mt"/>
+          <rect x="-27" y="-11" width="7" height="22" class="mt"/>
+          <rect x="28.5" y="-21.8" width="3" height="58" class="p2"/>
+          <rect x="-31.5" y="-21.8" width="3" height="58" class="p2"/>
+          <rect x="-31.5" y="34" width="63" height="6" class="p2"/>
+          <rect x="-23" y="40" width="46" height="24" class="p2"/>
+          <line x1="25.5" y1="8" x2="31.5" y2="8" class="scr"/>
+          <line x1="25.5" y1="-8" x2="31.5" y2="-8" class="scr"/>
+          <rect x="-31.5" y="-4" width="11.5" height="8" class="ck"/>
+          <line x1="-42" y1="0" x2="42" y2="0" class="ax"/>
+        </g>
+        <g class="lbl">
+          <line x1="-60" y1="50" x2="-23" y2="50" class="ld"/><text x="-110" y="51.5">Ramię (rodzic)</text>
+          <line x1="-60" y1="14" x2="-15" y2="14" class="ld"/><text x="-110" y="12">Serwo MG996R</text><text x="-110" y="17.5">lub DS3218</text>
+          <line x1="-60" y1="-6" x2="-27" y2="-6" class="ld"/><text x="-110" y="-7">Łożysko 608</text><text x="-110" y="-1.5">+ trzpień M8</text>
+          <line x1="-60" y1="-30" x2="-31.5" y2="-30" class="ld"/><text x="-110" y="-28.5">Policzki widełek</text>
+          <line x1="-60" y1="-54" x2="-23" y2="-54" class="ld"/><text x="-110" y="-52.5">Przedramię (dziecko)</text>
+          <line x1="40" y1="-24" x2="28" y2="-11" class="ld"/><text x="42" y="-27">Okrągły orczyk 25T,</text><text x="42" y="-21.5">4× M3 do policzka</text>
+          <line x1="40" y1="2" x2="34" y2="0" class="ld"/><text x="42" y="3.5">Oś przegubu</text>
+          <line x1="40" y1="30" x2="20" y2="34" class="ld"/><text x="42" y="28">Uszy serwa, 4× M3</text><text x="42" y="33.5">do żeberek skorupy</text>
+          <line x1="40" y1="52" x2="23" y2="52" class="ld"/><text x="42" y="53.5">Krążek Ø56 × 54</text>
+        </g>
+      </svg>
+      <figcaption>Przekrój przez oś. Serwo wciska się w kieszeń na końcu ramienia i przykręca przez uszy. Policzek po prawej jest przykręcony do orczyka i obraca przedramię. Policzek po lewej obraca się na łożysku 608, które przenosi ciężar głowy. Szerokość przegubu z policzkami: 63 mm.</figcaption>
+    </figure>
+    <figure>
+      <svg viewBox="-112 -72 224 144" role="img" aria-label="Widok z boku łokcia: serwo w kieszeni ramienia, policzek przedramienia na krążku, zakres ruchu">
+        <defs><marker id="ar2" viewBox="0 0 6 6" refX="5" refY="3" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M0 0L6 3L0 6z" class="acc-f"/></marker></defs>
+        <g transform="scale(1,-1)" stroke-width="0.4">
+          <rect x="-15.5" y="-68" width="31" height="44" class="p1"/>
+          <circle cx="0" cy="0" r="28" class="p1"/>
+          <rect x="-9.85" y="-30.7" width="19.7" height="40.7" class="sv-h"/>
+          <rect x="-9.85" y="-37.35" width="19.7" height="54" class="sv-h"/>
+          <circle cx="-5" cy="-35" r="1.4" class="hole-s"/><circle cx="5" cy="-35" r="1.4" class="hole-s"/>
+          <circle cx="-5" cy="14.6" r="1.4" class="hole-s"/><circle cx="5" cy="14.6" r="1.4" class="hole-s"/>
+          <line x1="0" y1="-68" x2="0" y2="-28" class="ax"/>
+          <g transform="rotate(-35)">
+            <rect x="-14" y="0" width="28" height="36" class="p2"/>
+            <rect x="-15" y="30" width="30" height="38" class="p2"/>
+            <circle cx="0" cy="0" r="22.4" class="p2"/>
+          </g>
+          <circle cx="0" cy="0" r="12" class="mt-h"/>
+          <circle cx="0" cy="0" r="17.5" class="acc-s"/>
+          <circle cx="0" cy="0" r="13.9" class="ck"/>
+          <circle cx="0" cy="0" r="1.2" class="ink-f"/>
+        </g>
+        <path d="M 37.6 13.7 A 40 40 0 0 0 23 -32.8" class="acc-s" fill="none" marker-end="url(#ar2)"/>
+        <g class="lbl">
+          <line x1="-60" y1="-6" x2="-27" y2="-6" class="ld"/><text x="-110" y="-7.5">Krążek łokcia</text><text x="-110" y="-2">(koniec ramienia)</text>
+          <line x1="-60" y1="22" x2="-10" y2="24" class="ld"/><text x="-110" y="20.5">Serwo w kieszeni</text><text x="-110" y="26">(linia przerywana)</text>
+          <line x1="-60" y1="50" x2="0" y2="50" class="ld"/><text x="-110" y="48.5">Podział skorupy</text><text x="-110" y="54">na 2 połówki</text>
+          <line x1="-60" y1="-44" x2="-12" y2="-22" class="ld"/><text x="-110" y="-45.5">Policzek przedramienia</text>
+          <line x1="40" y1="35" x2="6" y2="35" class="ld"/><text x="42" y="33.5">Otwory M3</text><text x="42" y="39">w uszach serwa</text>
+          <text x="46" y="-12">Zakres łokcia</text><text x="46" y="-6.5">40–138°</text>
+          <line x1="40" y1="14" x2="12" y2="6" class="ld"/><text x="42" y="12.5">Dekiel Ø28 na</text><text x="42" y="18">śruby orczyka</text>
+        </g>
+      </svg>
+      <figcaption>Widok z boku. Skorupa ramienia dzieli się na dwie połówki wzdłuż środka, więc serwo wkładasz od boku i skręcasz połówki. Przedramię obejmuje krążek widełkami. Dekiel zakrywa śruby orczyka, a pomarańczowy pierścień pokazuje oś.</figcaption>
+    </figure>
+  </section>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(function () {
+  var D2R = Math.PI / 180;
+  // geometria ramienia (mm), ta sama co w tabeli
+  var SZ = 98, L1 = 110, L2 = 100, L3 = 58, HC = 30;
+  var MASS = { head: 0.35, roll: 0.015, wp: 0.055, el: 0.06, l1: 0.045, l2: 0.04, l3: 0.015 };
+  var LIM = { a1: [-40, 50], a2: [40, 138], a3: [-40, 75] };
+
+  var host = document.getElementById('view');
+  var renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+  host.appendChild(renderer.domElement);
+  var scene = new THREE.Scene();
+  var camera = new THREE.PerspectiveCamera(32, 1, 10, 8000);
+  scene.add(new THREE.HemisphereLight(0xffffff, 0x6a7a84, 0.95));
+  var d1 = new THREE.DirectionalLight(0xffffff, 0.8); d1.position.set(300, 500, 500); scene.add(d1);
+  var d2 = new THREE.DirectionalLight(0xffffff, 0.35); d2.position.set(-400, 200, -300); scene.add(d2);
+
+  var lineMat = new THREE.LineBasicMaterial({ color: 0x1e2a30 });
+  var M = {
+    part: new THREE.MeshStandardMaterial({ color: 0x6b8796, roughness: 0.55, metalness: 0.05 }),
+    body: new THREE.MeshStandardMaterial({ color: 0xd3dbdf, roughness: 0.6, metalness: 0.02 }),
+    tpu: new THREE.MeshStandardMaterial({ color: 0x1c1f22, roughness: 0.9 }),
+    pad: new THREE.MeshStandardMaterial({ color: 0xe6e9eb, roughness: 0.5 }),
+    phone: new THREE.MeshStandardMaterial({ color: 0x23272e, roughness: 0.35, metalness: 0.3 }),
+    screen: new THREE.MeshStandardMaterial({ color: 0x050607, roughness: 0.2 }),
+    eye: new THREE.MeshBasicMaterial({ color: 0x7be7ff }),
+    metal: new THREE.MeshStandardMaterial({ color: 0xb7c0c6, roughness: 0.35, metalness: 0.8 }),
+    band: new THREE.MeshStandardMaterial({ color: 0xd9a521, roughness: 0.7 }),
+    servo: new THREE.MeshStandardMaterial({ color: 0xc2410c, roughness: 0.5 }),
+    shell: new THREE.MeshStandardMaterial({ color: 0xf1f3f4, roughness: 0.38, metalness: 0.04 }),
+    cap: new THREE.MeshStandardMaterial({ color: 0x262e33, roughness: 0.45, metalness: 0.2 }),
+    ghost: new THREE.MeshBasicMaterial({ color: 0x88aabb, transparent: true, opacity: 0.12, depthWrite: false })
+  };
+
+  // CAD (x w prawo, y do przodu, z w górę) -> three (x, z, y)
+  function edge(m) { m.add(new THREE.LineSegments(new THREE.EdgesGeometry(m.geometry, 25), lineMat)); }
+  function box(g, x0, x1, y0, y1, z0, z1, mat, noEdge) {
+    var m = new THREE.Mesh(new THREE.BoxGeometry(x1 - x0, z1 - z0, y1 - y0), mat);
+    m.position.set((x0 + x1) / 2, (z0 + z1) / 2, (y0 + y1) / 2);
+    g.add(m); if (!noEdge) edge(m); return m;
+  }
+  function cylX(g, r, x0, x1, cy, cz, mat) {
+    var m = new THREE.Mesh(new THREE.CylinderGeometry(r, r, x1 - x0, 40), mat);
+    m.rotation.z = Math.PI / 2; m.position.set((x0 + x1) / 2, cz, cy); g.add(m); return m;
+  }
+  function cylY(g, r, y0, y1, cx, cz, mat) {
+    var m = new THREE.Mesh(new THREE.CylinderGeometry(r, r, y1 - y0, 64), mat);
+    m.rotation.x = Math.PI / 2; m.position.set(cx, cz, (y0 + y1) / 2); g.add(m); return m;
+  }
+  function cylZ(g, r, z0, z1, cx, cy, mat, seg) {
+    var m = new THREE.Mesh(new THREE.CylinderGeometry(r, r, z1 - z0, seg || 48), mat);
+    m.position.set(cx, (z0 + z1) / 2, cy); g.add(m); return m;
+  }
+
+  // ---------- korpus z obłymi ramionami ----------
+  var world = new THREE.Group(); scene.add(world);
+  var xray = [];                                                      // części widoczne tylko w przekroju
+  (function () {
+    var NS = 96, N = 4.2, RX = 110, RY = 95, HB = 52, S_TOP = 0.46, H_SH = 12;
+    var prof = [[0, 0], [0.93, 0]], k;
+    for (k = 1; k <= 6; k++) { var q = k / 6 * Math.PI / 2; prof.push([0.93 + 0.07 * Math.sin(q), 5 - 5 * Math.cos(q)]); }
+    for (k = 1; k <= 20; k++) { var f = k / 20 * Math.PI / 2; prof.push([S_TOP + (1 - S_TOP) * Math.cos(f), H_SH + (HB - H_SH) * Math.pow(Math.sin(f), 0.85)]); }
+    prof.push([0, HB]);
+    var outl = [];
+    for (var i = 0; i < NS; i++) {
+      var an = Math.PI * 2 * i / NS, cs = Math.cos(an), sn = Math.sin(an);
+      outl.push([RX * Math.sign(cs) * Math.pow(Math.abs(cs), 2 / N), RY * Math.sign(sn) * Math.pow(Math.abs(sn), 2 / N)]);
+    }
+    var pos = [], idx = [];
+    prof.forEach(function (p) {
+      var sy = p[0] * (1 - 0.08 * Math.max(0, (p[1] - H_SH) / (HB - H_SH)));
+      outl.forEach(function (o) { pos.push(o[0] * p[0], p[1], o[1] * sy); });
+    });
+    for (var r = 0; r < prof.length - 1; r++) for (i = 0; i < NS; i++) {
+      var a = r * NS + i, b = r * NS + (i + 1) % NS, c = a + NS, d = b + NS;
+      idx.push(a, c, b, b, c, d);
+    }
+    var bg = new THREE.BufferGeometry();
+    bg.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); bg.setIndex(idx); bg.computeVertexNormals();
+    world.add(new THREE.Mesh(bg, M.body));
+  })();
+  cylZ(world, 42, 52, 56, 0, 0, M.metal, 64);
+  // ---------- v0.2: cokół wypełniany piaskiem (22 mm, stopa szersza o 8%) ----------
+  var deskG = new THREE.Group(); world.add(deskG); deskG.position.y = -22;
+  var M_sand = new THREE.MeshStandardMaterial({ color: 0xd9c08c, roughness: 1 });
+  function plinthGeo(H, y0, inset) {
+    var NS = 96, N = 4.2, pos = [], idx = [], rows = [];
+    for (var j = 0; j <= 6; j++) rows.push(j / 6);
+    rows.forEach(function (t) {
+      var sc = 0.93 * (1 + 0.08 * (1 - t)) - inset, y = y0 + t * H;
+      for (var i = 0; i < NS; i++) {
+        var an = Math.PI * 2 * i / NS, cs = Math.cos(an), sn = Math.sin(an);
+        pos.push(110 * sc * Math.sign(cs) * Math.pow(Math.abs(cs), 2 / N), y, 95 * sc * Math.sign(sn) * Math.pow(Math.abs(sn), 2 / N));
+      }
+    });
+    for (var r = 0; r < rows.length - 1; r++) for (var i = 0; i < NS; i++) {
+      var a = r * NS + i, b = r * NS + (i + 1) % NS, c = a + NS, d = b + NS; idx.push(a, c, b, b, c, d);
+    }
+    [0, rows.length - 1].forEach(function (rr) {
+      var ci = pos.length / 3; pos.push(0, y0 + (rr ? H : 0), 0);
+      for (var i = 0; i < NS; i++) { var a = rr * NS + i, b = rr * NS + (i + 1) % NS; if (rr) idx.push(ci, b, a); else idx.push(ci, a, b); }
+    });
+    var g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setIndex(idx); g.computeVertexNormals(); return g;
+  }
+  var plinth = new THREE.Mesh(plinthGeo(22, -22, 0), M.body); world.add(plinth);
+  var sand = new THREE.Mesh(plinthGeo(19, -20.5, 0.02), M_sand); world.add(sand);
+  // ---------- zasilanie z USB-C: gniazdo z tyłu korpusu, kabel do ładowarki USB-C PD ----------
+  var M_pcb = new THREE.MeshStandardMaterial({ color: 0x1f6f4a, roughness: 0.6 });
+  var M_dark = new THREE.MeshStandardMaterial({ color: 0x1b1f22, roughness: 0.5 });
+  box(world, -5, 5, -96, -88, 4, 11, M_dark, true);                     // gniazdo USB-C w tylnej ściance
+  (function () {
+    var pts = [[0, 7.5, -96], [0, 7, -112], [0, 4, -135], [0, 3, -170], [20, 3, -260], [40, 3, -360], [45, 8, -405]];
+    var v = pts.map(function (p) { return new THREE.Vector3(p[0], p[1], p[2]); });
+    v.forEach(function (q, i) { if (i > 1) q.y -= 22; });
+    world.add(new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(v), 80, 2.2, 10, false), M_dark));
+    box(deskG, 18, 72, -470, -405, 0, 30, M_dark);                         // ładowarka USB-C PD 65 W
+  })();
+  // elektronika w korpusie (widoczna w przekroju)
+  function board(x0, x1, z0, z1, h, mat) { var m = box(world, x0, x1, z0, z1, 4, 4 + h, mat || M_pcb); xray.push(m); return m; }
+  board(-8, 8, -86, -72, 2);                                              // wyzwalacz USB-C PD (CH224K), 20 V
+  board(-90, -38, -48, 12, 24, M.metal);                                  // przetwornica 20 V -> 6 V, 10 A (radiator)
+  board(38, 84, -60, -34, 8);                                             // moduł USB QC3.0 dla ładowarki Anker 313
+  board(58, 80, -24, -6, 4);                                              // przetwornica 5 V dla ESP32
+  board(36, 88, 4, 32, 6);                                                // ESP32
+  board(34, 96, 38, 64, 5);                                               // PCA9685, 16 kanałów PWM
+  (function () {                                                          // kondensator 4700 µF na linii serw
+    var c = cylZ(world, 9, 4, 36, -22, 40, M_dark, 24); xray.push(c);
+  })();
+
+  var floor = new THREE.Mesh(new THREE.CircleGeometry(420, 72), new THREE.MeshBasicMaterial({ color: 0x88aabb, transparent: true, opacity: 0.07, depthWrite: false }));
+  floor.rotation.x = -Math.PI / 2; floor.position.y = -0.5; deskG.add(floor);
+  var kbG = new THREE.Group(); deskG.add(kbG);
+  box(kbG, -200, 200, 300, 430, 0, 22, M.ghost, true);
+  var kbm = kbG.children[0]; kbm.add(new THREE.LineSegments(new THREE.EdgesGeometry(kbm.geometry), new THREE.LineBasicMaterial({ color: 0x88aabb })));
+
+  // ---------- ramię: obrót -> bark -> łokieć -> nadgarstek -> przechył -> głowa ----------
+  // Każdy przegub: krążek na końcu ogniwa-rodzica (w nim serwo) i widełki ogniwa-dziecka,
+  // których policzki obejmują krążek z obu stron. Policzek +x jest przykręcony do orczyka, policzek -x siedzi na łożysku.
+  function puck(g, R, W, y) {
+    var f = Math.min(7, R * 0.3), pts = [new THREE.Vector2(0, -W / 2)], i, a;
+    for (i = 0; i <= 8; i++) { a = -Math.PI / 2 + i / 8 * Math.PI / 2; pts.push(new THREE.Vector2(R - f + f * Math.cos(a), -W / 2 + f + f * Math.sin(a))); }
+    for (i = 0; i <= 8; i++) { a = i / 8 * Math.PI / 2; pts.push(new THREE.Vector2(R - f + f * Math.cos(a), W / 2 - f + f * Math.sin(a))); }
+    pts.push(new THREE.Vector2(0, W / 2));
+    var m = new THREE.Mesh(new THREE.LatheGeometry(pts, 64), M.shell);
+    m.rotation.z = Math.PI / 2; m.position.y = y; g.add(m);
+    return m;
+  }
+  // widełki ogniwa-dziecka: dwa policzki (okrągła tarcza + ramię) w ramce dziecka, oś w początku układu
+  function fork(g, R, W, t, yEnd) {
+    var rc = R * 0.8;
+    [-1, 1].forEach(function (s) {
+      var xc = s * (W / 2 + 2);
+      // policzek: okrągła tarcza wokół osi zwężająca się ku ogniwu (kształt kropli)
+      var sh = new THREE.Shape(), tw = t * 0.9;
+      sh.moveTo(tw / 2, yEnd); sh.lineTo(rc, 0); sh.absarc(0, 0, rc, 0, -Math.PI, true); sh.lineTo(-tw / 2, yEnd); sh.lineTo(tw / 2, yEnd);
+      var ch = new THREE.Mesh(new THREE.ExtrudeGeometry(sh, { depth: 3, bevelEnabled: false, curveSegments: 40 }), M.shell);
+      ch.rotation.y = Math.PI / 2; ch.position.set(xc - 1.5, 0, 0); g.add(ch);
+      // v0.2: gałka z radełkiem i gniazdem sześciokątnym (wzorem „Cyber Base”) zamiast płaskiego dekla
+      var base = new THREE.Mesh(new THREE.CylinderGeometry(rc * 0.66, rc * 0.7, 1.6, 48), M.cap); base.rotation.z = Math.PI / 2; base.position.set(xc + s * 2.3, 0, 0); g.add(base);
+      var kn = new THREE.Shape(), r0 = rc * 0.5, nT = 22;
+      for (var k = 0; k <= nT * 4; k++) { var an = k / (nT * 4) * Math.PI * 2, rr = r0 + (Math.cos(an * nT) > 0 ? 1.1 : 0); if (k) kn.lineTo(rr * Math.cos(an), rr * Math.sin(an)); else kn.moveTo(rr, 0); }
+      var hx = new THREE.Path(); for (var k2 = 0; k2 <= 6; k2++) { var a2 = k2 / 6 * Math.PI * 2; if (k2) hx.lineTo(3.6 * Math.cos(a2), 3.6 * Math.sin(a2)); else hx.moveTo(3.6, 0); }
+      kn.holes.push(hx);
+      var knob = new THREE.Mesh(new THREE.ExtrudeGeometry(kn, { depth: 3.6, bevelEnabled: true, bevelThickness: 0.5, bevelSize: 0.4, bevelSegments: 2, curveSegments: 4 }), M.cap);
+      knob.rotation.y = s * Math.PI / 2; knob.position.set(xc + s * 3.1, 0, 0); g.add(knob);
+      var ring = new THREE.Mesh(new THREE.TorusGeometry(rc * 0.78, 0.8, 8, 64), M.servo); ring.rotation.y = Math.PI / 2; ring.position.set(xc + s * 1.6, 0, 0); g.add(ring);
+    });
+  }
+  // v0.2: czerwone listwy ozdobne na pełnym pasie boku ogniwa (wzorem „Cyber Base”)
+  function stripes(g, y0, y1, w0, w1) {
+    var n = 10, a = 0.38, b = 0.8;
+    [-1, 1].forEach(function (s) {
+      for (var i = 0; i < n; i++) {
+        var t0 = a + (b - a) * i / n, t1 = a + (b - a) * (i + 1) / n, tm = (t0 + t1) / 2;
+        var hw = (w1 + (w0 - w1) * Math.pow(1 - tm, 2.2)) / 2;
+        var m = new THREE.Mesh(new THREE.BoxGeometry(1.2, (t1 - t0) * (y1 - y0) + 0.3, 3.2), M.servo);
+        m.position.set(s * (hw + 0.5), y0 + tm * (y1 - y0), 0); g.add(m);
+      }
+    });
+  }
+  // ---------- ażurowa skorupa (Voronoi z zaokrąglonymi otworami): mapa przezroczystości rysowana na canvasie ----------
+  // Szerokość mapy = obwód ogniwa (ok. 160 mm), wysokość = długość (ok. 80 mm). Pełne kołnierze na końcach
+  // i dwa pełne paski wzdłuż linii podziału połówek; reszta to komórki o średnicy ok. 13 mm i żeberkach ok. 2,6 mm.
+  var latticeTex = (function () {
+    var W = 512, H = 256, PX = W / 160, cv = document.createElement('canvas'); cv.width = W; cv.height = H;
+    var ctx = cv.getContext('2d'), img = ctx.createImageData(W, H), A = new Float32Array(W * H), pts = [], gx = 12, gy = 6, seed = 7;
+    function rnd() { seed = (seed * 16807) % 2147483647; return seed / 2147483647; }
+    for (var j = 0; j < gy; j++) for (var i = 0; i < gx; i++) pts.push([(i + 0.15 + 0.7 * rnd()) * W / gx, (j + 0.15 + 0.7 * rnd()) * H / gy]);
+    var edgeW = 2.6 * PX, rim = 0.09 * H, band = 1.6 * PX;
+    for (var y = 0; y < H; y++) for (var x = 0; x < W; x++) {
+      var f1 = 1e9, f2 = 1e9;
+      for (var k = 0; k < pts.length; k++) {
+        var dx = Math.abs(x - pts[k][0]); dx = Math.min(dx, W - dx);
+        var dd = Math.hypot(dx, y - pts[k][1]);
+        if (dd < f1) { f2 = f1; f1 = dd; } else if (dd < f2) f2 = dd;
+      }
+      var solid = Math.max(0, Math.min(1, (edgeW - (f2 - f1)) / 2 + 0.5));
+      var ux = Math.min(x, W - x, Math.abs(x - W / 2));
+      if (y < rim || y > H - rim || ux < band) solid = 1;
+      A[y * W + x] = solid;
+    }
+    // dwa rozmycia i próg: zaokrąglone, organiczne otwory i nieco grubsze żeberka (ok. 3 mm)
+    function blur(src, r) {
+      var tmp = new Float32Array(W * H), out = new Float32Array(W * H), k = 2 * r + 1, xx, yy, q, acc;
+      for (yy = 0; yy < H; yy++) for (xx = 0; xx < W; xx++) { acc = 0; for (q = -r; q <= r; q++) acc += src[yy * W + (xx + q + W) % W]; tmp[yy * W + xx] = acc / k; }
+      for (yy = 0; yy < H; yy++) for (xx = 0; xx < W; xx++) { acc = 0; for (q = -r; q <= r; q++) acc += tmp[Math.min(H - 1, Math.max(0, yy + q)) * W + xx]; out[yy * W + xx] = acc / k; }
+      return out;
+    }
+    var B = blur(blur(A, 4), 4);
+    for (var p = 0; p < W * H; p++) {
+      var v = Math.round(Math.max(0, Math.min(1, (B[p] - 0.42) * 6 + 0.5)) * 255), o = p * 4;
+      img.data[o] = img.data[o + 1] = img.data[o + 2] = v; img.data[o + 3] = 255;
+    }
+    ctx.putImageData(img, 0, 0);
+    var t = new THREE.CanvasTexture(cv); t.wrapS = THREE.RepeatWrapping; return t;
+  })();
+  M.lattice = new THREE.MeshStandardMaterial({ color: 0xf1f3f4, roughness: 0.42, metalness: 0.04, alphaMap: latticeTex, alphaTest: 0.5, side: THREE.DoubleSide });
+  // skorupa ogniwa od y0 do y1: przy y0 szeroka (łączy policzki widełek), dalej zwęża się do w1; ażurowa = dwie warstwy z otworami
+  function loft(g, y0, y1, w0, w1, t0, t1, lattice) {
+    function build(inset, mat) {
+      var NR = 28, NP = 48, n = 3.2, pos = [], uv = [], idx = [], j, i, len = y1 - y0;
+      for (j = 0; j <= NR; j++) {
+        var s = j / NR, bul = 1 + 0.06 * Math.sin(Math.PI * s);
+        var hw = (w1 + (w0 - w1) * Math.pow(1 - s, 2.2)) / 2 - inset, ht = (t0 + (t1 - t0) * s) / 2 * bul - inset;
+        for (i = 0; i <= NP; i++) {
+          var an = Math.PI * 2 * i / NP, c = Math.cos(an), sn = Math.sin(an);
+          pos.push(hw * Math.sign(c) * Math.pow(Math.abs(c), 2 / n), y0 + s * len, ht * Math.sign(sn) * Math.pow(Math.abs(sn), 2 / n));
+          uv.push(i / NP, s);
+        }
+      }
+      var R1 = NP + 1;
+      for (j = 0; j < NR; j++) for (i = 0; i < NP; i++) {
+        var a = j * R1 + i, b = a + 1, cc = a + R1, d = b + R1;
+        idx.push(a, cc, b, b, cc, d);
+      }
+      if (!inset) [0, NR].forEach(function (jj) {
+        var ci = pos.length / 3, yy = y0 + jj / NR * len; pos.push(0, yy, 0); uv.push(0, jj / NR);
+        for (i = 0; i < NP; i++) { var a = jj * R1 + i, b = a + 1; if (jj === 0) idx.push(ci, b, a); else idx.push(ci, a, b); }
+      });
+      var geo = new THREE.BufferGeometry();
+      geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+      geo.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
+      geo.setIndex(idx); geo.computeVertexNormals();
+      var m = new THREE.Mesh(geo, mat); g.add(m); return m;
+    }
+    if (!lattice) return build(0, M.shell);
+    build(0, M.lattice); return build(2.4, M.lattice);
+  }
+  // ---------- serwa w środku (widoczne w przekroju): standard 40 × 20 mm, MG996R / DS3218 ----------
+  // MG996R: korpus 40,7 × 19,7 mm, wysokość korpusu ok. 37 mm + wałek, uszy montażowe 54 mm, wałek ok. 10 mm od krótszego końca.
+  function xr(m) { xray.push(m); return m; }   // serwa widać przez ażur; przekrój tylko prześwietla obudowy
+  function xmesh(geo, mat, g, x, y, z) { var m = new THREE.Mesh(geo, mat); m.position.set(x, y, z); g.add(m); return xr(m); }
+  // przegub pochylenia: serwo w ogniwie-rodzicu, wałek na osi x, orczyk po stronie +x, łożysko 608 po stronie -x
+  function pitchServo(g, y, bearing) {
+    var c = xmesh(new THREE.BoxGeometry(36, 40.7, 19.7), M.servo, g, 3, y - 10.35, 0); edge(c);         // korpus x -15..21
+    var t = xmesh(new THREE.BoxGeometry(2.5, 54, 19.7), M.servo, g, 13, y - 10.35, 0); edge(t);         // uszy z 4 śrubami M3
+    var s = xmesh(new THREE.CylinderGeometry(3, 3, 4.5, 20), M.metal, g, 23.25, y, 0); s.rotation.z = Math.PI / 2;
+    var h = xmesh(new THREE.CylinderGeometry(12, 12, 3, 40), M.metal, g, 27, y, 0); h.rotation.z = Math.PI / 2;   // okrągły orczyk 25T
+    if (bearing) {
+      var b = xmesh(new THREE.CylinderGeometry(11, 11, 7, 40), M.metal, g, -23.5, y, 0); b.rotation.z = Math.PI / 2;   // łożysko 608
+      var p = xmesh(new THREE.CylinderGeometry(4, 4, 12, 20), M.cap, g, -26, y, 0); p.rotation.z = Math.PI / 2;        // trzpień M8 z policzka
+    }
+  }
+
+  var yawG = new THREE.Group(); scene.add(yawG);
+  (function () {                                                     // wieżyczka obrotowa, wąska pod policzkami barku
+    var p = [[0, 56], [44, 56], [44, 58.5], [42.5, 60.5], [36, 63], [27, 66], [23, 70], [22, 77], [20.5, 84], [0, 86]];
+    var m = new THREE.Mesh(new THREE.LatheGeometry(p.map(function (q) { return new THREE.Vector2(q[0], q[1]); }), 72), M.shell);
+    yawG.add(m);
+    var band = new THREE.Mesh(new THREE.TorusGeometry(43.2, 0.9, 8, 96), M.cap); band.rotation.x = Math.PI / 2; band.position.y = 58.6; yawG.add(band);
+  })();
+  // serwo obrotu w korpusie (pionowo, wałek do góry) i łożysko talerzowe pod wieżyczką
+  (function () {
+    var c = xmesh(new THREE.BoxGeometry(40.7, 37, 19.7), M.servo, world, 10.35, 17 + 18.5, 0); edge(c);
+    var t = xmesh(new THREE.BoxGeometry(54, 2.5, 19.7), M.servo, world, 10.35, 45, 0); edge(t);
+    xmesh(new THREE.CylinderGeometry(3, 3, 5, 20), M.metal, world, 0, 56.5, 0);
+    var r = xmesh(new THREE.TorusGeometry(36, 3, 10, 72), M.metal, world, 0, 55, 0); r.rotation.x = Math.PI / 2;
+  })();
+  puck(yawG, 28, 54, SZ);
+  pitchServo(yawG, SZ, true);
+
+  var shG = new THREE.Group(); shG.position.set(0, SZ, 0); yawG.add(shG);
+  fork(shG, 28, 54, 32, 36);
+  loft(shG, 30, L1, 66, 50, 32, 31, true); stripes(shG, 30, L1, 66, 50);
+  puck(shG, 28, 54, L1);
+  pitchServo(shG, L1, true);
+  var elG = new THREE.Group(); elG.position.y = L1; shG.add(elG);
+  fork(elG, 28, 54, 31, 36);
+  loft(elG, 30, L2, 66, 50, 31, 30, true); stripes(elG, 30, L2, 66, 50);
+  puck(elG, 25, 50, L2);
+  pitchServo(elG, L2, false);
+  var wrG = new THREE.Group(); wrG.position.y = L2; elG.add(wrG);
+  fork(wrG, 25, 50, 30, 33);
+  loft(wrG, 28, 42, 57, 46, 30, 44);
+  (function () {                                                     // szyjka z serwem przechyłu (wałek wzdłuż szyjki)
+    // MG90S: korpus 22,8 × 12,2 × ok. 23 mm, uszy 32 mm; MG996R z uszami 54 mm i przesuniętym wałkiem wymagałby szyjki Ø80
+    var p = [[0, 40], [23, 40], [24.5, 45], [25.5, 50], [25.5, 54], [24.5, 56.5], [22, 58], [0, 58]];
+    var m = new THREE.Mesh(new THREE.LatheGeometry(p.map(function (q) { return new THREE.Vector2(q[0], q[1]); }), 72), M.shell);
+    wrG.add(m);
+    var r = new THREE.Mesh(new THREE.TorusGeometry(23.2, 1, 8, 72), M.servo); r.rotation.x = Math.PI / 2; r.position.y = 58.2; wrG.add(r);
+    // v0.2: wytłoczony napis na bokach nadgarstka
+    var cv = document.createElement('canvas'); cv.width = 256; cv.height = 64;
+    var cx = cv.getContext('2d'); cx.font = '700 40px Archivo, sans-serif'; cx.textAlign = 'center'; cx.textBaseline = 'middle'; cx.fillStyle = '#c2410c'; cx.fillText('DeskMate', 128, 34);
+    var lt = new THREE.CanvasTexture(cv), lm = new THREE.MeshBasicMaterial({ map: lt, transparent: true, depthWrite: false });
+    [-1, 1].forEach(function (s) {
+      var pl = new THREE.Mesh(new THREE.PlaneGeometry(26, 6.5), lm);
+      pl.rotation.set(0, s * Math.PI / 2, Math.PI / 2 * s); pl.position.set(s * 26.6, 36, 0); wrG.add(pl);
+    });
+    var c = xmesh(new THREE.BoxGeometry(22.8, 23, 12.2), M.servo, wrG, 5.5, 31 + 11.5, 0); edge(c);
+    var t = xmesh(new THREE.BoxGeometry(32.2, 2.5, 12.2), M.servo, wrG, 5.5, 50, 0); edge(t);
+    xmesh(new THREE.CylinderGeometry(2.5, 2.5, 4, 20), M.metal, wrG, 0, 56, 0);
+  })();
+  // głowa: lokalny przód (+z) ma patrzeć wzdłuż ogniwa nadgarstka (+y)
+  var headPivot = new THREE.Group(); headPivot.position.y = L3; headPivot.rotation.x = -Math.PI / 2; wrG.add(headPivot);
+  var rollG = new THREE.Group(); headPivot.add(rollG);
+  var holdG = new THREE.Group(); holdG.position.z = 24; rollG.add(holdG);    // oś przechyłu 24 mm za płaszczyzną y=0 uchwytu
+  cylZ(rollG, 12, -1, 0, 0, 0, M.metal);                                     // tarcza orczyka
+
+  // ---------- uchwyt z ładowarką (wymiary z wersji A, szczęka na 168 mm) ----------
+  (function (g) {
+    var ring = new THREE.Shape(); ring.absarc(0, 0, 52, 0, Math.PI * 2, false);
+    var hl = new THREE.Path(); hl.absarc(0, 0, 50.3, 0, Math.PI * 2, true); ring.holes.push(hl);
+    var rm = new THREE.Mesh(new THREE.ExtrudeGeometry(ring, { depth: 9, bevelEnabled: false, curveSegments: 64 }), M.part);
+    // v0.2: rama z ładowarką i półką przesuwa się w bok o ±8 mm po podłużnych otworach
+    var cg = new THREE.Group(); g.add(cg); window.__chargerG = cg;
+    rm.position.z = -11.2; cg.add(rm);
+    cylY(cg, 52, -14.2, -11.2, 0, 0, M.part);
+    cylY(cg, 50, -11.2, 0, 0, 0, M.pad);
+    var M_coil = new THREE.MeshBasicMaterial({ color: 0x3fb8d8, transparent: true, opacity: 0.55, depthWrite: false });
+    var coil = new THREE.Mesh(new THREE.TorusGeometry(21, 1.6, 8, 48), M_coil); coil.position.z = 0.6; cg.add(coil);
+    [-40, -20, 20, 40].forEach(function (x) { box(cg, x - 9.7, x + 9.7, -11.15, -11.0, -1.7, 1.7, M_dark, true); });   // podłużne otwory
+    box(g, -91.5, 100, -21, -14.2, -8, 8, M.part);                          // szyna
+    box(g, -91.5, -85.5, -24, 14.5, -31, 31, M.part);                       // lewa szczęka
+    box(g, -85.5, -81, 12, 14.5, -14, 14, M.part);
+    box(g, 85.5, 91.5, -24, 14.5, -31, 31, M.part);                         // prawa szczęka
+    box(g, 81, 85.5, 12, 14.5, -14, 14, M.part);
+    box(g, 65.5, 85.5, -23.4, -11.8, -10.4, 10.4, M.part);
+    box(g, -85.5, -84, 0, 12, -14, 14, M.tpu); box(g, 84, 85.5, 0, 12, -14, 14, M.tpu);
+    box(g, 100, 103, -22, -13.2, -9.5, 9.5, M.part);
+    [[36, 48], [-48, -36]].forEach(function (xx) {                         // nogi i półka (część ramy, przesuwa się z nią)
+      box(cg, xx[0], xx[1], -14.2, -11.2, -44.35, -33, M.part);
+      box(cg, xx[0], xx[1], -14.2, 12, -44.35, -41.35, M.part);
+      box(cg, xx[0], xx[1], 12, 14.5, -44.35, -38.35, M.part);
+    });
+    box(g, -22, 22, -24, -14.2, -12, 12, M.part);                          // kołnierz serwa przechyłu
+    // gumki
+    [-25, 25].forEach(function (zb) {
+      var pts = [], i, a, xl = -80.5, xr = 80.5, yc = -21.5, r = 3.5;
+      for (i = 0; i <= 8; i++) pts.push([xl + (xr - xl) * i / 8, yc + r]);
+      for (i = 1; i < 12; i++) { a = Math.PI / 2 - Math.PI * i / 12; pts.push([xr + r * Math.cos(a), yc + r * Math.sin(a)]); }
+      for (i = 0; i <= 8; i++) pts.push([xr - (xr - xl) * i / 8, yc - r]);
+      for (i = 1; i < 12; i++) { a = -Math.PI / 2 - Math.PI * i / 12; pts.push([xl + r * Math.cos(a), yc + r * Math.sin(a)]); }
+      var v = pts.map(function (p) { return new THREE.Vector3(p[0], zb, p[1]); });
+      g.add(new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(v, true, 'catmullrom', 0.1), 120, 1.2, 8, true), M.band));
+    });
+    // telefon
+    box(g, -81.7, 81.7, 1.5, 10.4, -39.05, 39.05, M.phone, true);
+    box(g, -80.5, 80.5, 10.4, 10.6, -37.8, 37.8, M.screen, true);
+    window.__eyes = [];
+    [-28, 28].forEach(function (x) { window.__eyes.push(box(g, x - 6, x + 6, 10.6, 10.8, 3, 25, M.eye, true)); });
+    box(g, -9, 9, 10.6, 10.8, -14, -11, M.eye, true);
+  })(holdG);
+
+  // ---------- siatkowa osłona tyłu głowy z otworem na serwo przechyłu ----------
+  var shellG = new THREE.Group(); holdG.add(shellG);
+  (function () {
+    var SX = 82, SZ2 = 57, SN = 4.2, SD = 46, SR = 0.97, Y0 = -1.5;
+    function sOf(x, h) { return Math.pow(Math.pow(Math.abs(x) / SX, SN) + Math.pow(Math.abs(h) / SZ2, SN), 1 / SN); }
+    function P(p) { var s = Math.min(1, sOf(p[0], p[1])); return new THREE.Vector3(p[0], p[1], Y0 - SD * Math.pow(1 - Math.pow(s, 4), 0.25)); }
+    var R = [[0, 0, 30, 30, 30]];
+    function sd(rr, x, h) {
+      var dx = Math.abs(x - rr[0]) - (rr[2] - rr[4]), dy = Math.abs(h - rr[1]) - (rr[3] - rr[4]);
+      return Math.hypot(Math.max(dx, 0), Math.max(dy, 0)) + Math.min(Math.max(dx, dy), 0) - rr[4];
+    }
+    function cut(x, h, skip) { for (var i = 0; i < R.length; i++) if (i !== skip && sd(R[i], x, h) < -0.01) return true; return false; }
+    function ok(p) { return sOf(p[0], p[1]) < SR && !cut(p[0], p[1], -1); }
+    function tube(pts, r, closed) {
+      var clean = [pts[0]];
+      for (var i = 1; i < pts.length; i++) { var q = clean[clean.length - 1]; if (Math.hypot(pts[i][0] - q[0], pts[i][1] - q[1]) > 0.4) clean.push(pts[i]); }
+      if (clean.length < 3) return;
+      var v = clean.map(P);
+      shellG.add(new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(v, !!closed), Math.max(2, v.length), r, 6, !!closed), M.part));
+    }
+    function runs(pts, test, r) {
+      var cur = [];
+      pts.forEach(function (p) { if (test(p)) cur.push(p); else { if (cur.length > 1) tube(cur, r); cur = []; } });
+      if (cur.length > 1) tube(cur, r);
+    }
+    [55, -55].forEach(function (deg) {
+      var a = deg * Math.PI / 180, dx = Math.cos(a), dy = Math.sin(a), nx = -dy, ny = dx;
+      for (var o = -200; o <= 200; o += 13) {
+        var pts = [];
+        for (var t = -200; t <= 200; t += 1.5) pts.push([o * nx + t * dx, o * ny + t * dy]);
+        runs(pts, ok, 1.3);
+      }
+    });
+    var rim = [], hole = [];
+    for (var i = 0; i < 480; i++) {
+      var an = Math.PI * 2 * i / 480, cs = Math.cos(an), sn = Math.sin(an);
+      rim.push([SR * SX * Math.sign(cs) * Math.pow(Math.abs(cs), 2 / SN), SR * SZ2 * Math.sign(sn) * Math.pow(Math.abs(sn), 2 / SN)]);
+      if (i % 4 === 0) hole.push([30 * cs, 30 * sn]);
+    }
+    tube(rim, 1.9, true); tube(hole, 2.2, true);
+  })();
+
+  // linia spojrzenia
+  var gazeLine = (function () {
+    var gm = new THREE.LineDashedMaterial({ color: 0x3fb8d8, dashSize: 8, gapSize: 6 });
+    var geo = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 0, 11), new THREE.Vector3(0, 0, 420)]);
+    var l = new THREE.Line(geo, gm); l.computeLineDistances(); holdG.add(l); return l;
+  })();
+
+  // ---------- kinematyka ----------
+  // stan głowy: obrót podstawy, wysięg r i wysokość z środka telefonu, nachylenie twarzy f (90 = pionowo do przodu), przechył
+  function ik(r, z, f) {
+    var d = f * D2R, wr = r - (HC + L3) * Math.sin(d), wz = z - (HC + L3) * Math.cos(d);
+    var dx = wr, dz = wz - SZ, Dd = Math.hypot(dx, dz), clamped = false;
+    var maxR = (L1 + L2) * 0.995, minR = Math.abs(L1 - L2) + 25;
+    if (Dd > maxR) { dx *= maxR / Dd; dz *= maxR / Dd; Dd = maxR; clamped = true; }
+    if (Dd < minR) { dx *= minR / Dd; dz *= minR / Dd; Dd = minR; clamped = true; }
+    var c = (Dd * Dd - L1 * L1 - L2 * L2) / (2 * L1 * L2);
+    var a2 = Math.acos(Math.max(-1, Math.min(1, c)));
+    var phi = Math.atan2(dx, dz), k = Math.atan2(L2 * Math.sin(a2), L1 + L2 * Math.cos(a2));
+    var a1 = phi - k, a3 = d - a1 - a2;
+    var q = [a1 / D2R, a2 / D2R, a3 / D2R];
+    ['a1', 'a2', 'a3'].forEach(function (n, i) { var lo = LIM[n][0], hi = LIM[n][1]; if (q[i] < lo || q[i] > hi) clamped = true; q[i] = Math.max(lo, Math.min(hi, q[i])); });
+    return { q: q, clamped: clamped };
+  }
+  function torques(q) {
+    var a1 = q[0] * D2R, b = a1 + q[1] * D2R, d = b + q[2] * D2R;
+    var E = L1 * Math.sin(a1), W = E + L2 * Math.sin(b), J = W + L3 * Math.sin(d), H = J + HC * Math.sin(d);
+    var m = MASS;
+    var tS = (m.head * H + m.roll * J + m.wp * W + m.l3 * (W + J) / 2 + m.l2 * (E + W) / 2 + m.el * E + m.l1 * E / 2) / 10;
+    var tE = (m.head * (H - E) + m.roll * (J - E) + m.wp * (W - E) + m.l3 * ((W + J) / 2 - E) + m.l2 * (W - E) / 2) / 10;
+    var tW = (m.head * (H - W) + m.roll * (J - W) + m.l3 * (J - W) / 2) / 10;
+    return [Math.abs(tS), Math.abs(tE), Math.abs(tW)];
+  }
+
+  // ---------- pozy i gesty ----------
+  var POSES = {
+    spi:     { name: 'Śpi',               yaw: 0,   r: 128, z: 88,  f: 140, roll: 0 },
+    czuwa:   { name: 'Czuwa',             yaw: 0,   r: 122, z: 168, f: 95,  roll: 0 },
+    patrzy:  { name: 'Patrzy na Ciebie',  yaw: 0,   r: 120, z: 215, f: 78,  roll: 0 },
+    ciekawy: { name: 'Ciekawość',         yaw: 12,  r: 175, z: 190, f: 96,  roll: 18 },
+    klaw:    { name: 'Klawiatura',        yaw: -8,  r: 170, z: 135, f: 132, roll: 0 },
+    smutek:  { name: 'Smutek',            yaw: 0,   r: 100, z: 118, f: 132, roll: -6 },
+    wideo:   { name: 'Wideorozmowa',      yaw: 0,   r: 95,  z: 270, f: 88,  roll: 0 }
+  };
+  var KEYS = ['yaw', 'r', 'z', 'f', 'roll'];
+  var cur = { yaw: 0, r: 122, z: 168, f: 95, roll: 0 };
+  var anim = [];            // kolejka segmentów {from,to,dur,ease,label}
+  var animT = 0, seg = null, offs = { yaw: 0, r: 0, z: 0, f: 0, roll: 0 };
+  var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var breathEl = document.getElementById('breath'); if (reduce) breathEl.checked = false;
+
+  function easeIO(t) { return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2; }
+  function easeOutBack(t) { var c1 = 1.4, c3 = c1 + 1; return 1 + c3 * Math.pow(t - 1, 3) + c1 * Math.pow(t - 1, 2); }
+  function copy(o) { var r = {}; KEYS.forEach(function (k) { r[k] = o[k]; }); return r; }
+  function tag(t) { document.getElementById('poseTag').textContent = t; }
+
+  // ruch do pozy: najpierw zwrot głowy (intencja), potem ramię
+  function goPose(key, then) {
+    var p = POSES[key], from = copy(cur), mid = copy(cur);
+    mid.yaw = p.yaw; mid.f = from.f + (p.f - from.f) * 0.5; mid.roll = p.roll * 0.5;
+    var dist = Math.hypot(p.r - from.r, p.z - from.z);
+    anim.push({ to: mid, dur: 0.45, ease: easeIO, label: p.name });
+    anim.push({ to: copy(p), dur: 0.6 + dist / 260, ease: key === 'ciekawy' ? easeOutBack : easeIO, label: p.name });
+    if (key === 'smutek') anim[anim.length - 1].dur *= 1.8;   // smutek jest wolny
+    if (then) anim.push({ fn: then });
+  }
+  function rel(dk, dur, label, ease) { anim.push({ rel: dk, dur: dur, ease: ease || easeIO, label: label }); }
+  function pause(dur) { anim.push({ rel: {}, dur: dur, ease: easeIO }); }
+  var GEST = {
+    tak: function () { rel({ f: 14, z: -4 }, 0.22, 'Tak'); rel({ f: -6, z: 2 }, 0.22, 'Tak'); rel({ f: 12, z: -3 }, 0.2, 'Tak'); rel({ f: 0, z: 0 }, 0.35, 'Tak'); },
+    nie: function () { rel({ yaw: -16, roll: 4 }, 0.3, 'Nie'); rel({ yaw: 14, roll: -4 }, 0.38, 'Nie'); rel({ yaw: -9, roll: 2 }, 0.3, 'Nie'); rel({ yaw: 0, roll: 0 }, 0.35, 'Nie'); },
+    radosc: function () { rel({ z: 22, f: -10, roll: 10 }, 0.25, 'Radość', easeOutBack); rel({ z: 0, roll: -8 }, 0.2, 'Radość'); rel({ z: 14, f: -6, roll: 8 }, 0.22, 'Radość', easeOutBack); rel({ z: 0, f: 0, roll: 0 }, 0.3, 'Radość'); },
+    rozglada: function () { rel({ yaw: -40, f: -6 }, 0.9, 'Rozgląda się'); pause(0.5); rel({ yaw: 40, f: -6, roll: 6 }, 1.3, 'Rozgląda się'); pause(0.4); rel({ yaw: 0, f: 0, roll: 0 }, 0.5, 'Rozgląda się', easeOutBack); },
+    demo: function () {
+      goPose('spi'); pause(0.8); goPose('czuwa'); GEST.rozglada(); goPose('patrzy'); GEST.tak(); goPose('ciekawy'); pause(0.6);
+      goPose('klaw'); pause(0.8); goPose('smutek'); pause(0.6); goPose('patrzy'); GEST.radosc(); goPose('wideo'); pause(0.8); goPose('czuwa');
+    }
+  };
+
+  function startSeg() {
+    while (anim.length && anim[0].fn) { anim.shift().fn(); }
+    seg = anim.shift() || null; animT = 0;
+    if (!seg) return;
+    seg.from = copy(cur); seg.fromOffs = copy(offs);
+    if (seg.label) tag(seg.label);
+  }
+  function stepAnim(dt) {
+    if (!seg) { if (anim.length) startSeg(); if (!seg) return false; }
+    animT += dt / (reduce ? 0.001 : seg.dur);
+    var t = Math.min(1, animT), e = seg.ease(t);
+    if (seg.rel) {
+      KEYS.forEach(function (k) { var tgt = seg.rel[k] !== undefined ? seg.rel[k] : seg.fromOffs[k]; offs[k] = seg.fromOffs[k] + (tgt - seg.fromOffs[k]) * e; });
+    } else {
+      KEYS.forEach(function (k) { cur[k] = seg.from[k] + (seg.to[k] - seg.from[k]) * e; });
+    }
+    if (t >= 1) { seg = null; if (anim.length) startSeg(); }
+    return true;
+  }
+
+  // ---------- zastosowanie stanu ----------
+  var sliders = { yaw: ['sYaw', 'oYaw', '°'], r: ['sR', 'oR', ' mm'], z: ['sZ', 'oZ', ' mm'], f: ['sF', 'oF', '°'], roll: ['sRoll', 'oRoll', '°'] };
+  var servoMax = 20, servoW = 11;
+  function setBar(id, outId, t, lim) {
+    var pct = t / lim * 100, el = document.getElementById(id);
+    el.style.width = Math.min(100, pct) + '%';
+    el.style.background = pct < 33 ? 'var(--ok)' : pct < 50 ? 'var(--warn)' : 'var(--bad)';
+    document.getElementById(outId).textContent = t.toFixed(1) + ' kg·cm';
+    return pct;
+  }
+  var lastClamped = false;
+  function apply(t) {
+    var br = (breathEl.checked && !seg && !anim.length) ? 1 : 0;
+    var s = {};
+    KEYS.forEach(function (k) { s[k] = cur[k] + offs[k]; });
+    s.z += br * 2.5 * Math.sin(t * 2 * Math.PI / 4.2);
+    s.f += br * 1.2 * Math.sin(t * 2 * Math.PI / 4.2 + 1);
+    var res = ik(s.r, s.z, s.f), q = res.q;
+    yawG.rotation.y = s.yaw * D2R;
+    shG.rotation.x = q[0] * D2R; elG.rotation.x = q[1] * D2R; wrG.rotation.x = q[2] * D2R;
+    rollG.rotation.z = -s.roll * D2R;
+    // mruganie
+    var blink = (t % 5.3) < 0.12 ? 0.15 : 1;
+    window.__eyes.forEach(function (m) { m.scale.y = blink; });
+    // suwaki
+    KEYS.forEach(function (k) {
+      var sl = sliders[k], el = document.getElementById(sl[0]);
+      if (document.activeElement !== el) el.value = Math.round(cur[k] + offs[k]);
+      document.getElementById(sl[1]).textContent = Math.round(cur[k] + offs[k]) + sl[2];
+    });
+    var tq = torques(q);
+    var pS = setBar('fS', 'tS', tq[0], servoMax), pE = setBar('fE', 'tE', tq[1], servoMax);
+    setBar('fW', 'tW', tq[2], servoW);
+    var worst = Math.max(pS, pE), v = document.getElementById('verdict');
+    var msg = worst < 33 ? 'W tej pozie serwa mają zapas.' : worst < 50 ? 'Do krótkich pozycji. Dłużej w tej pozie serwo będzie się grzać.' : worst < 100 ? 'Za ciężko na pracę ciągłą. Potrzebne mocniejsze serwo albo sprężyna w barku.' : 'Serwo nie uniesie głowy w tej pozie.';
+    if (res.clamped) msg += ' Cel poza zasięgiem, ramię zatrzymało się na granicy.';
+    v.textContent = msg;
+    v.style.borderLeftColor = worst < 33 ? 'var(--ok)' : worst < 50 ? 'var(--warn)' : 'var(--bad)';
+  }
+
+  // ---------- kamera ----------
+  var target = new THREE.Vector3(0, 140, 60);
+  var cam = { th: 0.85, ph: 1.2, d: 1000 };
+  var views = { iso: [0.85, 1.2], front: [0, Math.PI / 2], side: [Math.PI / 2, Math.PI / 2], top: [0, 0.05] };
+  function baseDist() { var asp = host.clientWidth / Math.max(1, host.clientHeight); return 1000 * Math.max(1, 1.2 / asp); }
+  function place() {
+    var s = Math.sin(cam.ph);
+    camera.position.set(target.x + cam.d * s * Math.sin(cam.th), target.y + cam.d * Math.cos(cam.ph), target.z + cam.d * s * Math.cos(cam.th));
+    camera.lookAt(target);
+  }
+  function resize() {
+    var w = host.clientWidth, h = host.clientHeight;
+    renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix();
+  }
+  var ptrs = {}, lastPinch = 0;
+  host.addEventListener('pointerdown', function (e) { host.setPointerCapture(e.pointerId); ptrs[e.pointerId] = [e.clientX, e.clientY]; });
+  host.addEventListener('pointerup', function (e) { delete ptrs[e.pointerId]; lastPinch = 0; });
+  host.addEventListener('pointercancel', function (e) { delete ptrs[e.pointerId]; lastPinch = 0; });
+  host.addEventListener('pointermove', function (e) {
+    var p = ptrs[e.pointerId]; if (!p) return;
+    var ids = Object.keys(ptrs);
+    if (ids.length === 1) {
+      cam.th -= (e.clientX - p[0]) * 0.008;
+      cam.ph = Math.min(Math.PI - 0.05, Math.max(0.05, cam.ph - (e.clientY - p[1]) * 0.008));
+      p[0] = e.clientX; p[1] = e.clientY;
+    } else {
+      p[0] = e.clientX; p[1] = e.clientY;
+      var a = ptrs[ids[0]], b = ptrs[ids[1]], dist = Math.hypot(a[0] - b[0], a[1] - b[1]);
+      if (lastPinch) cam.d = Math.min(2400, Math.max(350, cam.d * lastPinch / dist));
+      lastPinch = dist;
+    }
+    pressView(null);
+  });
+  host.addEventListener('wheel', function (e) { e.preventDefault(); cam.d = Math.min(2400, Math.max(350, cam.d * (1 + e.deltaY * 0.001))); }, { passive: false });
+
+  var vbtns = document.querySelectorAll('button.w');
+  function pressView(n) { vbtns.forEach(function (b) { b.setAttribute('aria-pressed', String(b.dataset.view === n)); }); }
+  var follow = null, ZOOM = { zb: function () { return shG; }, zl: function () { return elG; }, zs: function () { return wrG; } };
+  function setXray(on) { var x = document.getElementById('xr'); if (x.checked !== on) { x.checked = on; x.dispatchEvent(new Event('change')); } }
+  vbtns.forEach(function (b) { b.addEventListener('click', function () {
+    var k = b.dataset.view;
+    if (ZOOM[k]) { follow = ZOOM[k](); cam.th = Math.PI / 2 + 0.55; cam.ph = 1.25; cam.d = 330; setXray(true); }
+    else { follow = null; target.set(0, 140, 60); var v = views[k]; cam.th = v[0]; cam.ph = v[1]; cam.d = baseDist(); }
+    pressView(k);
+  }); });
+
+  var pbtns = document.querySelectorAll('button.p');
+  function pressPose(n) { pbtns.forEach(function (b) { b.setAttribute('aria-pressed', String(b.dataset.pose === n)); }); }
+  function stopAll() { anim.length = 0; seg = null; KEYS.forEach(function (k) { cur[k] += offs[k]; offs[k] = 0; }); }
+  pbtns.forEach(function (b) { b.addEventListener('click', function () { stopAll(); pressPose(b.dataset.pose); goPose(b.dataset.pose); }); });
+  document.querySelectorAll('button.g').forEach(function (b) {
+    b.addEventListener('click', function () { stopAll(); if (b.dataset.gest === 'demo') pressPose(null); GEST[b.dataset.gest](); });
+  });
+  KEYS.forEach(function (k) {
+    var el = document.getElementById(sliders[k][0]);
+    el.addEventListener('input', function () { stopAll(); cur[k] = +el.value; pressPose(null); tag('Ręcznie'); });
+  });
+  document.getElementById('servo').addEventListener('change', function (e) { var v = e.target.value.split('|'); servoMax = +v[0]; servoW = +v[1]; });
+  document.getElementById('gaze').addEventListener('change', function (e) { gazeLine.visible = e.target.checked; });
+  document.getElementById('shell').addEventListener('change', function (e) { shellG.visible = e.target.checked; });
+  document.getElementById('kb').addEventListener('change', function (e) { kbG.visible = e.target.checked; });
+  document.getElementById('pl').addEventListener('change', function (e) { var on = e.target.checked; plinth.visible = sand.visible = on; deskG.position.y = on ? -22 : 0; });
+  document.getElementById('sChg').addEventListener('input', function (e) { var v = +e.target.value; window.__chargerG.position.x = v; document.getElementById('oChg').textContent = (v > 0 ? '+' : '') + v + ' mm'; });
+  document.getElementById('xr').addEventListener('change', function (e) {
+    var on = e.target.checked;
+    [M.shell, M.body, M.cap, M.lattice].forEach(function (mt) { mt.transparent = on; mt.opacity = on ? 0.22 : 1; mt.depthWrite = !on; mt.needsUpdate = true; });
+  });
+
+  function css(n) { return getComputedStyle(document.documentElement).getPropertyValue(n).trim(); }
+  function applyTheme() {
+    M.part.color.set(css('--part') || '#6b8796');
+    M.servo.color.set(css('--accent') || '#c2410c');
+    M.body.color.set(css('--body') || '#d3dbdf');
+    M.shell.color.set(css('--shell') || '#f1f3f4');
+    if (M.lattice) M.lattice.color.set(css('--shell') || '#f1f3f4');
+    lineMat.color.set(css('--edge') || '#1e2a30');
+  }
+  window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', applyTheme);
+  new MutationObserver(applyTheme).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+
+  cam.d = baseDist(); applyTheme(); resize();
+  if (window.ResizeObserver) new ResizeObserver(resize).observe(host);
+  window.addEventListener('resize', resize);
+
+  var last = performance.now();
+  function frame(now) {
+    var dt = Math.min(0.05, (now - last) / 1000); last = now;
+    stepAnim(dt);
+    apply(now / 1000);
+    if (follow) follow.getWorldPosition(target);
+    place(); renderer.render(scene, camera);
+    requestAnimationFrame(frame);
+  }
+  window.__deskmate = { ik: ik, torques: torques, POSES: POSES };
+  requestAnimationFrame(frame);
+})();
+</script>

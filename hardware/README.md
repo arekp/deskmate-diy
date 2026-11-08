@@ -5,6 +5,8 @@ lista części, orientacja i ustawienia druku, śruby, kolejność montażu i **
 wymiarów do zmierzenia przed drukiem**. Gotowe pliki: [stl/](stl/), podglądy:
 [renders/](renders/), skrypty (STL/PNG, szczelność, kolizje): [tools/](tools/).
 
+> **Wariant B (koncept):** głowa z ładowarką na ramieniu 5 DOF z ażurem Voronoi – STL, generator i podgląd 3D w [ramie/](ramie/README.md).
+
 | Przód | 3/4 | Bok (pochylenie −25°) |
 |---|---|---|
 | ![](renders/asm_front_fold8_open.png) | ![](renders/asm_34_s23.png) | ![](renders/asm_side_fold8_open_tilt-25.png) |

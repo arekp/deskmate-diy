@@ -1,0 +1,294 @@
+<title>Montaż DeskMate</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;600;800&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* Układ: instrukcja warsztatowa – kolumna kroków; w każdym kroku rysunek po lewej, czynności i śruby po prawej (na telefonie jedno pod drugim). */
+:root {
+  --bg: #eceff1;
+  --panel: #f8fafb;
+  --fg: #1b2428;
+  --muted: #55656d;
+  --line: #c5ced3;
+  --accent: #c2410c;
+  --accent-soft: #fbe7dc;
+  --steel: #4e5a61;
+  --f-body: "Archivo", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --f-mono: "IBM Plex Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #12181b; --panel: #1a2226; --fg: #e3eaed; --muted: #8fa1aa; --line: #2c383e;
+    --accent: #ff7a3d; --accent-soft: #3a2116; --steel: #9fb0b8; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #12181b; --panel: #1a2226; --fg: #e3eaed; --muted: #8fa1aa; --line: #2c383e;
+  --accent: #ff7a3d; --accent-soft: #3a2116; --steel: #9fb0b8; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--fg); font-family: var(--f-body); line-height: 1.55; font-size: 15px;
+  padding-block: 28px 48px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+.wrap { max-width: 1120px; margin: 0 auto; display: grid; gap: 28px; }
+.eyebrow { font: 500 0.72rem/1 var(--f-mono); letter-spacing: 0.12em; text-transform: uppercase; color: var(--accent); margin-bottom: 8px; }
+h1 { font-size: clamp(1.7rem, 4.5vw, 2.5rem); font-weight: 800; letter-spacing: -0.01em; margin: 0 0 6px; text-wrap: balance; }
+h2 { font-size: 1.35rem; font-weight: 800; margin: 0; text-wrap: balance; }
+h3 { font: 500 0.74rem var(--f-mono); letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px; }
+p { margin: 0; max-width: 70ch; }
+.lead { color: var(--muted); }
+.intro { display: grid; gap: 18px; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); align-items: start; }
+@media (max-width: 860px) { .intro { grid-template-columns: minmax(0, 1fr); } }
+figure { margin: 0; background: #fafafa; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
+figure img { display: block; width: 100%; height: auto; }
+.box { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 16px; display: grid; gap: 14px; min-width: 0; }
+ul.plain, ol.acts { margin: 0; padding-left: 1.15em; display: grid; gap: 6px; }
+ol.acts li::marker { font-family: var(--f-mono); color: var(--accent); }
+.step { display: grid; gap: 14px; padding-top: 22px; border-top: 1px solid var(--line); }
+.step-head { display: flex; gap: 14px; align-items: baseline; flex-wrap: wrap; }
+.num { font: 500 0.8rem var(--f-mono); color: var(--accent); background: var(--accent-soft); border-radius: 3px; padding: 3px 8px; }
+.step-body { display: grid; gap: 18px; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); align-items: start; }
+@media (max-width: 860px) { .step-body { grid-template-columns: minmax(0, 1fr); } }
+.screws { display: grid; gap: 4px; margin: 0; padding: 0; list-style: none; }
+.screws li { display: grid; grid-template-columns: 4.2em minmax(0, 1fr); gap: 8px; font-size: 0.92rem; }
+.screws .q { font-family: var(--f-mono); font-variant-numeric: tabular-nums; color: var(--steel); text-align: right; }
+.tip { font-size: 0.9rem; color: var(--muted); border-left: 3px solid var(--accent); padding-left: 10px; }
+.scroll { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 0.92rem; }
+th, td { padding: 6px 10px 6px 0; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
+th { font: 500 0.7rem var(--f-mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+td.n { font-family: var(--f-mono); font-variant-numeric: tabular-nums; text-align: right; white-space: nowrap; }
+code { font-family: var(--f-mono); font-size: 0.86em; }
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="eyebrow">DeskMate · wariant B · prototyp v0.2</div>
+    <h1>Montaż DeskMate na ramieniu</h1>
+    <p class="lead">Instrukcja krok po kroku. Rysunki są wyrenderowane z tych samych plików STL, które drukujesz. Pomarańczowe kreski pokazują, gdzie część wraca przy składaniu. Ciemniejszy szary to lewa połówka, jaśniejszy to prawa.</p>
+  </header>
+
+  <section class="intro" aria-label="Mapa części i przygotowanie">
+    <figure><img src="img/mapa.jpg" alt="Złożony robot z podpisanymi numerami katalogów części" width="900" height="852"></figure>
+    <div class="box">
+      <div>
+        <h3>Przed montażem</h3>
+        <ol class="acts">
+          <li>Wydrukuj <code>00_test_pasowania</code> i sprawdź łożysko 608, łeb M8 i czop gałki. Za ciasno? Popraw kompensację otworów w Bambu Studio.</li>
+          <li>Ustaw każde serwo w pozycji środkowej (90°), zanim założysz orczyk. Wystarczy tester serw albo ESP32 z PCA9685.</li>
+          <li>Wydrukuj cokół i wypełnij go piaskiem. Klej lub żywica musi wyschnąć, zanim przykręcisz korpus.</li>
+          <li><strong>Orczyki zakładaj zawsze tak samo:</strong> najpierw przykręć orczyk do policzka. Orczyk jest wtedy zdjęty z serwa i służy jako szablon do nawiercenia Ø2. Dopiero potem nasuń policzek z orczykiem na wałek i wkręć śrubę środkową przez otwór Ø8 w policzku. Nie wierć przy założonym serwie.</li>
+          <li><strong>Śrub M8 się nie wkręca.</strong> Łeb siedzi w sześciokątnym gnieździe policzka, a gładki trzpień wchodzi w łożysko. Trzyma go skręcenie połówek.</li>
+        </ol>
+      </div>
+      <div>
+        <h3>Narzędzia</h3>
+        <ul class="plain">
+          <li>wkrętak krzyżakowy i imbus 2,5 mm (M3),</li>
+          <li>wiertło Ø2 (otwory pod wkręty orczyków) i Ø8 (otwór na piasek),</li>
+          <li>klej CA, klej na gorąco, taśma dwustronna.</li>
+        </ul>
+      </div>
+      <div>
+        <h3>Zasada połówek</h3>
+        <p>Każde ogniwo ma dwie połówki. W prawej siedzi serwo przykręcone przez uszy do żeberek. W lewej jest łożysko 608. Połówki skręcasz śrubami M3 wkładanymi od lewej strony, gdzie są pogłębienia na łby.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="step" id="krok1">
+    <div class="step-head"><span class="num">Krok 1</span><h2>Serwo obrotu w korpusie</h2></div>
+    <div class="step-body">
+      <figure><img src="img/krok1.jpg" alt="Korpus od spodu, serwo MG996R i cztery śruby M3 przed wkręceniem" width="850" height="752" loading="lazy"></figure>
+      <div class="box">
+        <ol class="acts">
+          <li>Odwróć korpus do góry dnem.</li>
+          <li>Wsuń MG996R od spodu, wałkiem do góry, tak żeby korpus serwa wszedł w prostokątny otwór w suficie.</li>
+          <li>Przykręć serwo przez uszy do dwóch słupków.</li>
+          <li>Kable serwa poprowadź do miejsca na PCA9685.</li>
+        </ol>
+        <div><h3>Śruby</h3><ul class="screws"><li><span class="q">4 ×</span><span>M3 × 10 przez uszy w słupki (od spodu)</span></li></ul></div>
+        <p class="tip">Uszy serwa leżą na słupkach. Jeśli Twoje serwo ma uszy niżej, podłóż podkładkę.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="step" id="krok2">
+    <div class="step-head"><span class="num">Krok 2</span><h2>Elektronika, cokół i korpus</h2></div>
+    <div class="step-body">
+      <figure><img src="img/krok2.jpg" alt="Cokół z płytkami elektroniki, nad nim korpus, pod spodem cztery śruby" width="850" height="752" loading="lazy"></figure>
+      <div class="box">
+        <ol class="acts">
+          <li>Cokół: nawierć Ø8 w znaczniku, wsyp około 1 kg suchego piasku, opukaj i zalej otwór żywicą albo klejem na gorąco.</li>
+          <li>Przyklej płytki taśmą dwustronną na górze cokołu: wyzwalacz PD przy gnieździe USB-C z tyłu, przetwornicę 6 V po lewej, a ESP32, PCA9685, QC3.0 i przetwornicę 5 V po prawej.</li>
+          <li>Połącz przewody według schematu zasilania i wsuń gniazdo USB-C w otwór z tyłu korpusu.</li>
+          <li>Nałóż korpus z serwem obrotu i przykręć go od spodu przez cokół.</li>
+          <li>Na spód cokołu naklej piankę albo nóżki.</li>
+        </ol>
+        <div><h3>Śruby</h3><ul class="screws"><li><span class="q">4 ×</span><span>M3 × 20 stożkowe, od spodu przez cokół w kolumny korpusu</span></li></ul></div>
+        <p class="tip">Dwie szczeliny wentylacyjne w środku cokołu muszą zostać odkryte. Nie zasłaniaj ich płytkami.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="step" id="krok3">
+    <div class="step-head"><span class="num">Krok 3</span><h2>Talerz i wieża z serwem barku</h2></div>
+    <div class="step-body">
+      <figure><img src="img/krok3.jpg" alt="Talerz nad korpusem, rozsunięte połówki wieży z serwem i łożyskiem" width="850" height="752" loading="lazy"></figure>
+      <div class="box">
+        <ol class="acts">
+          <li>Okrągły orczyk serwa obrotu włóż we wnękę od spodu talerza. Otwory pod wkręty orczyka nawierć Ø2 przez otwory w orczyku.</li>
+          <li>Ustaw serwo obrotu na 90°, nałóż talerz z orczykiem na wałek i dokręć śrubę środkową przez otwór Ø8.</li>
+          <li>Do prawej połówki wieży włóż serwo barku (DS3218) i przykręć przez uszy. Orczyka jeszcze nie zakładaj, trafi na policzek ramienia w kroku 4.</li>
+          <li>Do lewej połówki wciśnij łożysko 608 od środka.</li>
+          <li>Przeprowadź kable przez otwór w talerzu, złóż połówki i skręć je od lewej.</li>
+          <li>Nałóż wieżę fartuchem na talerz i przykręć z boku.</li>
+        </ol>
+        <div><h3>Śruby</h3><ul class="screws">
+          <li><span class="q">4 ×</span><span>M3 × 10 przez uszy serwa barku</span></li>
+          <li><span class="q">1 ×</span><span>M3 × 45 łączenie połówek (krążek)</span></li>
+          <li><span class="q">2 ×</span><span>M3 × 35 łączenie połówek (wieża)</span></li>
+          <li><span class="q">4 ×</span><span>M3 × 10 promieniowo przez fartuch w talerz</span></li>
+          <li><span class="q">kpl.</span><span>wkręty orczyka (z zestawu orczyka)</span></li>
+        </ul></div>
+        <p class="tip">Kable zostaw z luzem, bo przy obrocie wieży ±90° przesuwają się w łukowej szczelinie korpusu.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="step" id="krok4">
+    <div class="step-head"><span class="num">Krok 4</span><h2>Bark: ramię na wieży</h2></div>
+    <div class="step-body">
+      <figure><img src="img/krok4.jpg" alt="Połówki ramienia rozsunięte na boki wokół krążka wieży, śruba M8 i serwo łokcia" width="850" height="752" loading="lazy"></figure>
+      <div class="box">
+        <ol class="acts">
+          <li>Najpierw przygotuj ramię jako rodzica łokcia: do prawej połówki włóż serwo łokcia (DS3218) i przykręć przez uszy, a do lewej wciśnij łożysko 608.</li>
+          <li>Orczyk przykręć do prawego policzka ramienia (zasada z „Przed montażem”). Ustaw serwo barku na 90°, nasuń policzek z orczykiem na wałek i dokręć śrubę środkową przez otwór Ø8.</li>
+          <li>Śrubę M8 × 12 włóż łbem w sześciokątne gniazdo lewego policzka. Lewą połówkę ramienia nasuń z boku na krążek wieży tak, żeby trzpień wszedł w łożysko.</li>
+          <li>Przeprowadź kable przez ażur i skręć połówki ramienia od lewej.</li>
+        </ol>
+        <div><h3>Śruby i części</h3><ul class="screws">
+          <li><span class="q">1 ×</span><span>M8 × 12 (oś barku)</span></li>
+          <li><span class="q">4 ×</span><span>M3 × 10 przez uszy serwa łokcia</span></li>
+          <li><span class="q">1 ×</span><span>M3 × 50 łączenie połówek (przy barku)</span></li>
+          <li><span class="q">2 ×</span><span>M3 × 45 łączenie połówek (środek i krążek łokcia)</span></li>
+          <li><span class="q">1 ×</span><span>łożysko 608 (łokieć)</span></li>
+        </ul></div>
+        <p class="tip">Zanim przykręcisz policzek, sprawdź, czy ramię w pozycji 90° serwa stoi pionowo.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="step" id="krok5">
+    <div class="step-head"><span class="num">Krok 5</span><h2>Łokieć: przedramię</h2></div>
+    <div class="step-body">
+      <figure><img src="img/krok5.jpg" alt="Połówki przedramienia wokół krążka łokcia, serwo nadgarstka i łożysko" width="850" height="730" loading="lazy"></figure>
+      <div class="box">
+        <ol class="acts">
+          <li>Do prawej połówki przedramienia włóż serwo nadgarstka (MG996R), a do lewej łożysko 608.</li>
+          <li>Orczyk przykręć do prawego policzka przedramienia, nasuń go na wałek serwa łokcia ustawionego na 90° i dokręć śrubę środkową.</li>
+          <li>M8 × 12 w gnieździe lewego policzka, trzpień w łożysko łokcia.</li>
+          <li>Skręć połówki przedramienia.</li>
+        </ol>
+        <div><h3>Śruby i części</h3><ul class="screws">
+          <li><span class="q">1 ×</span><span>M8 × 12 (oś łokcia)</span></li>
+          <li><span class="q">4 ×</span><span>M3 × 10 przez uszy serwa nadgarstka</span></li>
+          <li><span class="q">1 ×</span><span>M3 × 50 i 1 × M3 × 45 łączenie połówek</span></li>
+          <li><span class="q">1 ×</span><span>łożysko 608 (nadgarstek)</span></li>
+        </ul></div>
+        <p class="tip">Napis DeskMate jest po prawej stronie przedramienia, a czerwona listwa po lewej.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="step" id="krok6">
+    <div class="step-head"><span class="num">Krok 6</span><h2>Nadgarstek i szyjka</h2></div>
+    <div class="step-body">
+      <figure><img src="img/krok6.jpg" alt="Połówki szyjki z serwem MG90S między nimi, nad krążkiem przedramienia" width="850" height="730" loading="lazy"></figure>
+      <div class="box">
+        <ol class="acts">
+          <li>Orczyk przykręć do prawego policzka szyjki, nasuń go na wałek serwa nadgarstka i dokręć śrubę środkową.</li>
+          <li>MG90S włóż do gniazda w prawej połówce szyjki, uszami w szczelinę i wałkiem w osi szyjki. Kabel poprowadź kanałem w dół.</li>
+          <li>M8 × 12 w gnieździe lewej połówki, trzpień w łożysko nadgarstka.</li>
+          <li>Złóż połówki szyjki: zaciskają serwo bez dodatkowych śrub.</li>
+        </ol>
+        <div><h3>Śruby</h3><ul class="screws">
+          <li><span class="q">1 ×</span><span>M8 × 12 (oś nadgarstka)</span></li>
+          <li><span class="q">4 ×</span><span>M3 × 35 łączenie połówek szyjki (od lewej)</span></li>
+        </ul></div>
+        <p class="tip">Przed złożeniem ustaw MG90S na 90°, żeby telefon stał poziomo.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="step" id="krok7">
+    <div class="step-head"><span class="num">Krok 7</span><h2>Uchwyt telefonu z ładowarką</h2></div>
+    <div class="step-body">
+      <figure><img src="img/krok7.jpg" alt="Uchwyt od tyłu: rama ładowarki, szyna, prawa szczęka, zaślepka i kołnierz przechyłu" width="850" height="752" loading="lazy"></figure>
+      <div class="box">
+        <ol class="acts">
+          <li><strong>Poprawka v0.2:</strong> przewierć Ø6 na środku szyny i na środku ramy, za ładowarką. Model nie ma jeszcze tego otworu, a bez niego nie dosięgniesz śruby orczyka MG90S.</li>
+          <li>Orczyk MG90S przykręć do kołnierza (orczyk jako szablon Ø2), a kołnierz przykręć do tyłu szyny 2 śrubami M3 × 10.</li>
+          <li>Nasuń prawą szczękę na szynę i zabezpiecz ją zaślepką. Wklej nakładki TPU i załóż gumki.</li>
+          <li>Ustaw MG90S na 90° i nasuń uchwyt orczykiem na wałek. Śrubę orczyka dokręć przez otwór Ø6 w szynie.</li>
+          <li>Przykręć ramę do szyny 4 śrubami stożkowymi od przodu, z przesunięciem pod cewkę Twojego telefonu. W S23 Ultra cewka jest mniej więcej na środku pleców.</li>
+          <li>Włóż ładowarkę w ramę, kablem przez wycięcie, a potem włóż telefon. Jeśli nie ładuje, wyjmij ładowarkę, przesuń ramę i spróbuj jeszcze raz. Śruby ramy są pod ładowarką, więc przy włożonym telefonie się do nich nie dostaniesz.</li>
+        </ol>
+        <div><h3>Śruby</h3><ul class="screws">
+          <li><span class="q">4 ×</span><span>M3 × 10 stożkowe: rama do szyny</span></li>
+          <li><span class="q">2 ×</span><span>M3 × 10: kołnierz do szyny</span></li>
+          <li><span class="q">1 ×</span><span>M3 × 12: zaślepka</span></li>
+        </ul></div>
+        <p class="tip">Rysunek jest od tyłu, więc prawa szczęka wypada po lewej stronie obrazka.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="step" id="krok8">
+    <div class="step-head"><span class="num">Krok 8</span><h2>Gałki, pierścienie i listwy</h2></div>
+    <div class="step-body">
+      <figure><img src="img/krok8.jpg" alt="Łokieć z gałkami i pierścieniami przed wciśnięciem oraz listwą przy rowku" width="850" height="752" loading="lazy"></figure>
+      <div class="box">
+        <ol class="acts">
+          <li>Prawe gałki wciśnij czopem Ø7,8 w otwór Ø8 nad śrubą orczyka. Da się je zdjąć.</li>
+          <li>Lewe gałki wciśnij sześciokątnym czopem w gniazdo nad łbem M8.</li>
+          <li>Pierścienie przyklej klejem CA na policzki dookoła gałek: 4 większe przy barku i łokciu, 2 mniejsze przy nadgarstku, 1 na szyjkę.</li>
+          <li>Bez AMS: wklej czerwone listwy w rowki (2 na ramieniu, 1 na przedramieniu) i pomaluj napis DeskMate.</li>
+        </ol>
+        <div><h3>Części</h3><ul class="screws">
+          <li><span class="q">6 ×</span><span>gałka (katalog 09)</span></li>
+          <li><span class="q">7 ×</span><span>pierścień (katalog 08)</span></li>
+          <li><span class="q">3 ×</span><span>listwa, tylko bez AMS (katalog 08)</span></li>
+        </ul></div>
+        <p class="tip">Gałka trzyma się luźno? Daj kroplę kleju na gorąco. Łatwo go usunąć, gdy trzeba dokręcić orczyk.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="step" id="sruby" aria-label="Wszystkie śruby">
+    <div class="step-head"><span class="num">Razem</span><h2>Wszystkie śruby i łożyska</h2></div>
+    <div class="scroll">
+      <table>
+        <thead><tr><th>Element</th><th class="n">Ile</th><th>Gdzie</th></tr></thead>
+        <tbody>
+          <tr><td>M3 × 10</td><td class="n">20</td><td>uszy 4 serw (16), talerz wieży (4)</td></tr>
+          <tr><td>M3 × 10 stożkowe</td><td class="n">4</td><td>rama ładowarki do szyny</td></tr>
+          <tr><td>M3 × 10 (kołnierz)</td><td class="n">2</td><td>kołnierz przechyłu do szyny</td></tr>
+          <tr><td>M3 × 12</td><td class="n">1</td><td>zaślepka szyny</td></tr>
+          <tr><td>M3 × 20 stożkowe</td><td class="n">4</td><td>korpus do cokołu</td></tr>
+          <tr><td>M3 × 35</td><td class="n">6</td><td>wieża (2), szyjka (4)</td></tr>
+          <tr><td>M3 × 45</td><td class="n">4</td><td>wieża (1), ramię (2), przedramię (1)</td></tr>
+          <tr><td>M3 × 50</td><td class="n">2</td><td>ramię (1), przedramię (1)</td></tr>
+          <tr><td>M8 × 12, łeb sześciokątny</td><td class="n">3</td><td>osie barku, łokcia i nadgarstka</td></tr>
+          <tr><td>Łożysko 608</td><td class="n">3</td><td>bark (w wieży), łokieć (w ramieniu), nadgarstek (w przedramieniu)</td></tr>
+          <tr><td>Orczyk okrągły 25T</td><td class="n">4</td><td>obrót, bark, łokieć, nadgarstek</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="tip">To prototyp, który nie był jeszcze składany. Wymiary serw pochodzą z kart katalogowych, a klony różnią się o około 1 mm. Jeśli coś nie pasuje, opisz co, a poprawię pliki.</p>
+  </section>
+</div>

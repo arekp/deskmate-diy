@@ -1,0 +1,505 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>DeskMate szyja i uchwyt</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;600;800&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* Układ: jedna kolumna na telefonie, na szerokim ekranie podgląd 3D po lewej, dane po prawej. */
+:root {
+  --bg: #e8ecee;
+  --panel: #f5f7f8;
+  --fg: #1b2428;
+  --muted: #55656d;
+  --line: #c5ced3;
+  --accent: #c2410c;
+  --accent-fg: #ffffff;
+  --part: #6b8796;
+  --body: #d3dbdf;
+  --edge: #1e2a30;
+  --f-body: "Archivo", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --f-mono: "IBM Plex Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #12181b; --panel: #1a2226; --fg: #e3eaed; --muted: #8fa1aa; --line: #2c383e;
+    --accent: #ff7a3d; --accent-fg: #1a0e07; --part: #7e9aa9; --body: #3d4a50; --edge: #0a0e10;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #12181b; --panel: #1a2226; --fg: #e3eaed; --muted: #8fa1aa; --line: #2c383e;
+  --accent: #ff7a3d; --accent-fg: #1a0e07; --part: #7e9aa9; --body: #3d4a50; --edge: #0a0e10;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--fg); font-family: var(--f-body); line-height: 1.5;
+  padding-block: 24px 40px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+.wrap { max-width: 1180px; margin: 0 auto; display: grid; gap: 20px; }
+header h1 { font-size: clamp(1.5rem, 4vw, 2.2rem); font-weight: 800; letter-spacing: -0.01em; margin: 0 0 4px; text-wrap: balance; }
+header p { margin: 0; color: var(--muted); max-width: 72ch; }
+.eyebrow { font: 500 0.72rem/1 var(--f-mono); letter-spacing: 0.12em; text-transform: uppercase; color: var(--accent); margin-bottom: 8px; }
+.main { display: grid; gap: 20px; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); align-items: start; }
+@media (max-width: 860px) { .main { grid-template-columns: minmax(0, 1fr); } }
+.stage { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
+#view { position: relative; width: 100%; aspect-ratio: 4 / 3.4; max-height: 74vh; min-height: 320px; cursor: grab; touch-action: none; }
+#view:active { cursor: grabbing; }
+#view canvas { display: block; width: 100%; height: 100%; }
+.hint { position: absolute; left: 10px; bottom: 8px; font: 400 0.7rem var(--f-mono); color: var(--muted); pointer-events: none; }
+.controls { display: grid; gap: 12px; padding: 12px; border-top: 1px solid var(--line); }
+.row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+button.v {
+  font: 600 0.82rem var(--f-body); padding: 6px 12px; border-radius: 4px; cursor: pointer;
+  background: transparent; color: var(--fg); border: 1px solid var(--line);
+}
+button.v:hover { border-color: var(--accent); }
+button.v:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+button.v[aria-pressed="true"] { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); }
+label { font-size: 0.85rem; display: inline-flex; gap: 6px; align-items: center; }
+.slider { display: grid; grid-template-columns: 9.5em minmax(100px, 1fr) 9ch; gap: 10px; align-items: center; font-size: 0.85rem; }
+.slider output { font-family: var(--f-mono); text-align: right; font-size: 0.8rem; }
+input[type="range"] { accent-color: var(--accent); width: 100%; }
+input[type="checkbox"] { accent-color: var(--accent); }
+.side { display: grid; gap: 16px; min-width: 0; }
+h2 { font-size: 0.78rem; font-family: var(--f-mono); font-weight: 500; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px; }
+.scroll { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 0.86rem; }
+td, th { padding: 6px 8px 6px 0; border-bottom: 1px solid var(--line); vertical-align: top; text-align: left; }
+th { font: 500 0.7rem var(--f-mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+td.n, th.n { font-family: var(--f-mono); font-size: 0.78rem; text-align: right; white-space: nowrap; }
+td:first-child { color: var(--fg); }
+.legend { display: grid; gap: 6px; font-size: 0.86rem; margin: 0; padding: 0; list-style: none; }
+.legend li { display: flex; gap: 10px; align-items: baseline; }
+.sw { flex: none; width: 12px; height: 12px; border-radius: 2px; border: 1px solid var(--edge); transform: translateY(1px); }
+.checks { margin: 0; padding-left: 1.1em; font-size: 0.88rem; display: grid; gap: 6px; }
+.checks b { font-weight: 600; }
+.ok { font: 500 0.8rem var(--f-mono); padding: 8px 10px; border: 1px solid var(--line); border-radius: 4px; background: var(--panel); }
+@media (max-width: 520px) { .slider { grid-template-columns: 1fr 9ch; } .slider input { grid-column: 1 / -1; grid-row: 2; } }
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="eyebrow">Wariant A z gumkami · krótka szyja · stacjonarny</div>
+    <h1>DeskMate: szyja od tyłu i uchwyt z części</h1>
+    <p>Robot stoi w miejscu i rusza tylko głową (PAN i TILT). Telefon-twarz siedzi nisko, tuż nad obłymi ramionami, na krótkiej szyi wyrastającej z tyłu korpusu. Wszystko składa się z osobnych wydruków. Suwak „Rozłożenie" pokazuje, jak części wchodzą jedna w drugą.</p>
+  </header>
+
+  <div class="main">
+    <section class="stage" aria-label="Podgląd 3D robota">
+      <div id="view"><span class="hint">przeciągnij = obrót, kółko = zoom</span></div>
+      <div class="controls">
+        <div class="row" role="group" aria-label="Widok">
+          <button class="v" data-view="iso" aria-pressed="true">3/4</button>
+          <button class="v" data-view="front" aria-pressed="false">Przód</button>
+          <button class="v" data-view="back" aria-pressed="false">Tył</button>
+          <button class="v" data-view="top" aria-pressed="false">Góra</button>
+          <button class="v" data-view="side" aria-pressed="false">Bok</button>
+        </div>
+        <div class="slider">
+          <label for="expl">Rozłożenie</label>
+          <input id="expl" type="range" min="0" max="100" step="1" value="0">
+          <output id="explOut" for="expl">0%</output>
+        </div>
+        <div class="slider">
+          <label for="pan">Obrót (PAN)</label>
+          <input id="pan" type="range" min="-80" max="80" step="1" value="0">
+          <output id="panOut" for="pan">0°</output>
+        </div>
+        <div class="slider">
+          <label for="tilt">Pochylenie (TILT)</label>
+          <input id="tilt" type="range" min="-25" max="30" step="1" value="0">
+          <output id="tiltOut" for="tilt">0°</output>
+        </div>
+        <div class="slider">
+          <label for="open">Prawa szczęka</label>
+          <input id="open" type="range" min="168" max="184" step="1" value="168">
+          <output id="openOut" for="open">168 mm</output>
+        </div>
+        <div class="row">
+          <label><input id="showPhone" type="checkbox" checked> Telefon</label>
+          <label><input id="showCase" type="checkbox" checked> Obrys etui</label>
+          <label><input id="showShell" type="checkbox" checked> Osłona siatkowa</label>
+        </div>
+      </div>
+    </section>
+
+    <aside class="side">
+      <div class="ok">Kontrola pasowania: brak kolizji między częściami przy TILT od −25° do +30° i szczęce 168–184 mm.</div>
+      <div>
+        <h2>Części do wydruku</h2>
+        <div class="scroll">
+          <table>
+            <tr><th>Część</th><th class="n">Szt.</th><th class="n">Wymiar mm</th></tr>
+            <tr><td>Rama (rura ładowarki, nogi, półka)</td><td class="n">1</td><td class="n">104 × 29 × 104</td></tr>
+            <tr><td>Szyna z lewą szczęką</td><td class="n">1</td><td class="n">192 × 39 × 62</td></tr>
+            <tr><td>Prawa szczęka (ruchoma)</td><td class="n">1</td><td class="n">26 × 39 × 62</td></tr>
+            <tr><td>Blok osi TILT z żebrami</td><td class="n">1</td><td class="n">53 × 19 × 24</td></tr>
+            <tr><td>Zaślepka szyny</td><td class="n">1</td><td class="n">3 × 9 × 19</td></tr>
+            <tr><td>Kołnierz szyi</td><td class="n">1</td><td class="n">90 × 32 × 10</td></tr>
+            <tr><td>Ucho (prawe i lewe)</td><td class="n">2</td><td class="n">12 × 56 × 24</td></tr>
+            <tr><td>Szyja, segmenty Ø30</td><td class="n">2</td><td class="n">ok. 85 razem</td></tr>
+            <tr><td>Osłona siatkowa, góra</td><td class="n">1</td><td class="n">160 × 47 × 32</td></tr>
+            <tr><td>Osłona siatkowa, dolny policzek</td><td class="n">2</td><td class="n">56 × 40 × 42</td></tr>
+            <tr><td>Nakładka z TPU</td><td class="n">2</td><td class="n">28 × 12 × 1,5</td></tr>
+          </table>
+        </div>
+      </div>
+      <div>
+        <h2>Jak części się łączą</h2>
+        <ol class="checks">
+          <li><b>Rama + szyna:</b> 4 śruby M3 od przodu przez tarczę ramy. Zakrywa je ładowarka.</li>
+          <li><b>Szyna + blok osi:</b> 2 żebra, te same śruby, ta sama droga.</li>
+          <li><b>Prawa szczęka:</b> nasuwasz ją na szynę z prawej strony. Zaślepka (1 śruba M3) zatrzymuje ją na końcu.</li>
+          <li><b>Blok + oś:</b> po prawej orczyk serwa (4 śruby M3), po lewej śruba M8 w łożysku 608.</li>
+          <li><b>Uszy + kołnierz + szyja:</b> po 2 śruby M3 na ucho, szyja wkręcana w kołnierz.</li>
+          <li><b>Osłona siatkowa:</b> trzy części wpinane zatrzaskami w krawędź tarczy ramy. Okno w środku przepuszcza uszy i serwo, boczne szczeliny szynę, kanał na dole szyję.</li>
+          <li><b>Gumki i TPU:</b> gumki zakładasz na słupki, nakładki wklejasz.</li>
+        </ol>
+      </div>
+      <div>
+        <h2>Wymiary całości</h2>
+        <table>
+          <tr><td>Telefon w etui</td><td class="n">168 × 82,7 × 12</td></tr>
+          <tr><td>Korpus (obłe ramiona)</td><td class="n">220 × 190 × 52</td></tr>
+          <tr><td>Oś TILT nad blatem</td><td class="n">140</td></tr>
+          <tr><td>Wysokość z uchwytem</td><td class="n">ok. 192</td></tr>
+          <tr><td>Szerokość uchwytu</td><td class="n">ok. 195</td></tr>
+        </table>
+      </div>
+      <div>
+        <h2>Legenda</h2>
+        <ul class="legend">
+          <li><span class="sw" style="background:var(--part)"></span>Druk PETG</li>
+          <li><span class="sw" style="background:#1c1f22"></span>TPU: nakładki szczęk</li>
+          <li><span class="sw" style="background:#d9a521"></span>Gumki (silikonowe o-ringi lub recepturki)</li>
+          <li><span class="sw" style="background:var(--body)"></span>Korpus i szyja</li>
+          <li><span class="sw" style="background:var(--accent)"></span>Serwo TILT i orczyk</li>
+        </ul>
+      </div>
+      <div>
+        <h2>Czego ta kontrola nie obejmuje</h2>
+        <ol class="checks">
+          <li>Kontrola liczy bryły uproszczone do prostopadłościanów i walców, z krokiem 0,6 mm. Zaokrąglenia i otwory na śruby pomija.</li>
+          <li>Łączenia mają zapas 0,25 mm tylko tam, gdzie części się przesuwają (szyna, szczęka). Pozostałe wymiary dopasujesz po próbnym wydruku.</li>
+          <li>Wytrzymałość żeber i uszu nie jest liczona.</li>
+          <li>Osłona siatkowa i krótsza szyja nie są objęte kontrolą kolizji. Zatrzaski osłony to na razie tylko pomysł, nie ma ich w modelu.</li>
+        </ol>
+      </div>
+    </aside>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(function () {
+  var D = {"AX_Y":-36.0,"T":12.0,"H":82.69999999999999,"AXIS_YG":-30.0,"AXIS_ZG":140.0,"DECK_TOP":72.0,"NECK_PATH":[[0,66],[-15,78],[-40,92],[-55,105],[-58,121]],"NECK_R":15.0,"static":[{"name":"rama","grp":"print","prims":[{"t":"cyl","ax":"y","ro":52,"ri":50.3,"a":[-11.2,-2.2],"c":[0,0]},{"t":"cyl","ax":"y","ro":52,"ri":0.0,"a":[-14.2,-11.2],"c":[0,0]},{"t":"box","b":[-5,5,0,1.5,44,50.3]},{"t":"box","b":[-5,5,-2.2,1.5,50,52]},{"t":"box","b":[-5,5,0,1.5,-50.3,-44]},{"t":"box","b":[-5,5,-2.2,1.5,-52,-50]},{"t":"box","b":[36,48,-14.2,-11.2,-44.349999999999994,-33]},{"t":"box","b":[36,48,-14.2,12.0,-44.349999999999994,-41.349999999999994]},{"t":"box","b":[36,48,12.0,14.5,-44.349999999999994,-38.349999999999994]},{"t":"box","b":[-48,-36,-14.2,-11.2,-44.349999999999994,-33]},{"t":"box","b":[-48,-36,-14.2,12.0,-44.349999999999994,-41.349999999999994]},{"t":"box","b":[-48,-36,12.0,14.5,-44.349999999999994,-38.349999999999994]}],"cuts":[{"t":"box","b":[-53,-49,-11.2,-2.2,-7.5,7.5]}],"vec":[0,40,0],"frame":"holder","label":"Rama: rura ładowarki, nogi i półka"},{"name":"ladowarka","grp":"pad","prims":[{"t":"cyl","ax":"y","ro":50,"ri":0.0,"a":[-11.2,0],"c":[0,0]},{"t":"box","b":[-58,-50,-9,-2,-6,6]}],"cuts":[],"vec":[0,85,0],"frame":"holder","label":"Ładowarka Anker 313"},{"name":"szyna","grp":"print","prims":[{"t":"box","b":[-91.5,100,-21,-14.2,-8,8]},{"t":"box","b":[-91.5,-85.5,-24,14.5,-31,31]},{"t":"box","b":[-85.5,-81,12.0,14.5,-14,14]},{"t":"box","b":[-85.5,-77.5,-24,-19,20,22]},{"t":"cyl","ax":"z","ro":2.2,"ri":0.0,"a":[22,29],"c":[-80.5,-21.5]},{"t":"box","b":[-85.5,-77.5,-24,-19,-22,-20]},{"t":"cyl","ax":"z","ro":2.2,"ri":0.0,"a":[-29,-22],"c":[-80.5,-21.5]}],"cuts":[],"vec":[0,-35,0],"frame":"holder","label":"Szyna z lewą szczęką"},{"name":"tpu_l","grp":"tpu","prims":[{"t":"box","b":[-85.5,-84,0,12.0,-14,14]}],"cuts":[],"vec":[-85,20,0],"frame":"holder","label":"Nakładka TPU"},{"name":"zaslepka","grp":"print","prims":[{"t":"box","b":[100,103,-22,-13.2,-9.5,9.5]}],"cuts":[],"vec":[70,-35,0],"frame":"holder","label":"Zaślepka szyny"},{"name":"blok","grp":"print","prims":[{"t":"box","b":[-26.5,26.5,-40,-32,-12,12]},{"t":"box","b":[18,24,-32,-21,-8,8]},{"t":"box","b":[-24,-18,-32,-21,-8,8]}],"cuts":[],"vec":[0,-95,0],"frame":"holder","label":"Blok osi TILT z żebrami"},{"name":"orczyk","grp":"servo","prims":[{"t":"cyl","ax":"x","ro":12.5,"ri":0.0,"a":[26.5,29.5],"c":[-36.0,0]}],"cuts":[],"vec":[40,-95,0],"frame":"holder","label":"Orczyk serwa"},{"name":"sworzen","grp":"hw","prims":[{"t":"cyl","ax":"x","ro":4,"ri":0.0,"a":[-37,-26.5],"c":[-36.0,0]}],"cuts":[],"vec":[-40,-95,0],"frame":"holder","label":"Śruba M8 w łożysku"}],"moving":{"168":[{"name":"szczeka_p","grp":"print","prims":[{"t":"box","b":[85.5,91.5,-24,14.5,8.25,31]},{"t":"box","b":[85.5,91.5,-24,14.5,-31,-8.25]},{"t":"box","b":[85.5,91.5,-13.95,14.5,-8.25,8.25]},{"t":"box","b":[85.5,91.5,-24,-21.25,-8.25,8.25]},{"t":"box","b":[65.5,85.5,-23.4,-11.8,8.25,10.4]},{"t":"box","b":[65.5,85.5,-23.4,-11.8,-10.4,-8.25]},{"t":"box","b":[65.5,85.5,-23.4,-21.25,-8.25,8.25]},{"t":"box","b":[65.5,85.5,-13.95,-11.8,-8.25,8.25]},{"t":"box","b":[81.0,85.5,12.0,14.5,-14,14]},{"t":"box","b":[77.5,85.5,-24,-19,20,22]},{"t":"cyl","ax":"z","ro":2.2,"ri":0.0,"a":[22,29],"c":[80.5,-21.5]},{"t":"box","b":[77.5,85.5,-24,-19,-22,-20]},{"t":"cyl","ax":"z","ro":2.2,"ri":0.0,"a":[-29,-22],"c":[80.5,-21.5]}],"cuts":[],"vec":[65,-35,0],"frame":"holder","label":"Prawa szczęka (ruchoma)"},{"name":"tpu_p","grp":"tpu","prims":[{"t":"box","b":[84.0,85.5,0,12.0,-14,14]}],"cuts":[],"vec":[85,20,0],"frame":"holder","label":"Nakładka TPU"}],"169":[{"name":"szczeka_p","grp":"print","prims":[{"t":"box","b":[86.0,92.0,-24,14.5,8.25,31]},{"t":"box","b":[86.0,92.0,-24,14.5,-31,-8.25]},{"t":"box","b":[86.0,92.0,-13.95,14.5,-8.25,8.25]},{"t":"box","b":[86.0,92.0,-24,-21.25,-8.25,8.25]},{"t":"box","b":[66.0,86.0,-23.4,-11.8,8.25,10.4]},{"t":"box","b":[66.0,86.0,-23.4,-11.8,-10.4,-8.25]},{"t":"box","b":[66.0,86.0,-23.4,-21.25,-8.25,8.25]},{"t":"box","b":[66.0,86.0,-13.95,-11.8,-8.25,8.25]},{"t":"box","b":[81.5,86.0,12.0,14.5,-14,14]},{"t":"box","b":[78.0,86.0,-24,-19,20,22]},{"t":"cyl","ax":"z","ro":2.2,"ri":0.0,"a":[22,29],"c":[81.0,-21.5]},{"t":"box","b":[78.0,86.0,-24,-19,-22,-20]},{"t":"cyl","ax":"z","ro":2.2,"ri":0.0,"a":[-29,-22],"c":[81.0,-21.5]}],"cuts":[],"vec":[65,-35,0],"frame":"holder","label":"Prawa szczęka (ruchoma)"},{"name":"tpu_p","grp":"tpu","prims":[{"t":"box","b":[84.5,86.0,0,12.0,-14,14]}],"cuts":[],"vec":[85,20,0],"frame":"holder","label":"Nakładka TPU"}],"170":[{"name":"szczeka_p","grp":"print","prims":[{"t":"box","b":[86.5,92.5,-24,14.5,8.25,31]},{"t":"box","b":[86.5,92.5,-24,14.5,-31,-8.25]},{"t":"box","b":[86.5,92.5,-13.95,14.5,-8.25,8.25]},{"t":"box","b":[86.5,92.5,-24,-21.25,-8.25,8.25]},{"t":"box","b":[66.5,86.5,-23.4,-11.8,8.25,10.4]},{"t":"box","b":[66.5,86.5,-23.4,-11.8,-10.4,-8.25]},{"t":"box","b":[66.5,86.5,-23.4,-21.25,-8.25,8.25]},{"t":"box","b":[66.5,86.5,-13.95,-11.8,-8.25,8.25]},{"t":"box","b":[82.0,86.5,12.0,14.5,-14,14]},{"t":"box","b":[78.5,86.5,-24,-19,20,22]},{"t":"cyl","ax":"z","ro":2.2,"ri":0.0,"a":[22,29],"c":[81.5,-21.5]},{"t":"box","b":[78.5,86.5,-24,-19,-22,-20]},{"t":"cyl","ax":"z","ro":2.2,"ri":0.0,"a":[-29,-22],"c":[81.5,-21.5]}],"cuts":[],"vec":[65,-35,0],"frame":"holder","label":"Prawa szczęka (ruchoma)"},{"name":"tpu_p","grp":"tpu","prims":[{"t":"box","b":[85.0,86.5,0,12.0,-14,14]}],"cuts":[],"vec":[85,20,0],"frame":"holder","label":"Nakładka TPU"}],"171":[{"name":"szczeka_p","grp":"print","prims":[{"t":"box","b":[87.0,93.0,-24,14.5,8.25,31]},{"t":"box","b":[87.0,93.0,-24,14.5,-31,-8.25]},{"t":"box","b":[87.0,93.0,-13.95,14.5,-8.25,8.25]},{"t":"box","b":[87.0,93.0,-24,-21.25,-8.25,8.25]},{"t":"box","b":[67.0,87.0,-23.4,-11.8,8.25,10.4]},{"t":"box","b":[67.0,87.0,-23.4,-11.8,-10.4,-8.25]},{"t":"box","b":[67.0,87.0,-23.4,-21.25,-8.25,8.25]},{"t":"box","b":[67.0,87.0,-13.95,-11.8,-8.25,8.25]},{"t":"box","b":[82.5,87.0,12.0,14.5,-14,14]},{"t":"box","b":[79.0,87.0,-24,-19,20,22]},{"t":"cyl","ax":"z","ro":2.2,"ri":0.0,"a":[22,29],"c":[82.0,-21.5]},{"t":"box","b":[79.0,87.0,-24,-19,-22,-20]},{"t":"cyl","ax":"z","ro":2.2,"ri":0.0,"a":[-29,-22],"c":[82.0,-21.5]}],"cuts":[],"vec":[65,-35,0],"frame":"holder","label":"Prawa szczęka (ruchoma)"},{"name":"tpu_p","grp":"tpu","prims":[{"t":"box","b":[85.5,87.0,0,12.0,-14,14]}],"cuts":[],"vec":[85,20,0],"frame":"holder","label":"Nakładka TPU"}],"172":[{"name":"szczeka_p","grp":"print","prims":[{"t":"box","b":[87.5,93.5,-24,14.5,8.25,31]},{"t":"box","b":[87.5,93.5,-24,14.5,-31,-8.25]},{"t":"box","b":[87.5,93.5,-13.95,14.5,-8.25,8.25]},{"t":"box","b":[87.5,93.5,-24,-21.25,-8.25,8.25]},{"t":"box","b":[67.5,87.5,-23.4,-11.8,8.25,10.4]},{"t":"box","b":[67.5,87.5,-23.4,-11.8,-10.4,-8.25]},{"t":"box","b":[67.5,87.5,-23.4,-21.25,-8.25,8.25]},{"t":"box","b":[67.5,87.5,-13.95,-11.8,-8.25,8.25]},{"t":"box","b":[83.0,87.5,12.0,14.5,-14,14]},{"t":"box","b":[79.5,87.5,-24,-19,20,22]},{"t":"cyl","ax":"z","ro":2.2,"ri":0.0,"a":[22,29],"c":[82.5,-21.5]},{"t":"box","b":[79.5,87.5,-24,-19,-22,-20]},{"t":"cyl","ax":"z","ro":2.2,"ri":0.0,"a":[-29,-22],"c":[82.5,-21.5]}],"cuts":[],"vec":[65,-35,0],"frame":"holder","label":"Prawa szczęka (ruchoma)"},{"name":"tpu_p","grp":"tpu","prims":[{"t":"box","b":[86.0,87.5,0,12.0,-14,14]}],"cuts":[],"vec":[85,20,0],"frame":"holder","label":"Nakładka TPU"}],"173":[{"name":"szczeka_p","grp":"print","prims":[{"t":"box","b":[88.0,94.0,-24,14.5,8.25,31]},{"t":"box","b":[88.0,94.0,-24,14.5,-31,-8.25]},{"t":"box","b":[88.0,94.0,-13.95,14.5,-8.25,8.25]},{"t":"box","b":[88.0,94.0,-24,-21.25,-8.25,8.25]},{"t":"box","b":[68.0,88.0,-23.4,-11.8,8.25,10.4]},{"t":"box","b":[68.0,88.0,-23.4,-11.8,-10.4,-8.25]},{"t":"box","b":[68.0,88.0,-23.4,-21.25,-8.25,8.25]},{"t":"box","b":[68.0,88.0,-13.95,-11.8,-8.25,8.25]},{"t":"box","b":[83.5,88.0,12.0,14.5,-14,14]},{"t":"box","b":[80.0,88.0,-24,-19,20,22]},{"t":"cyl","ax":"z","ro":2.2,"ri":0.0,"a":[22,29],"c":[83.0,-21.5]},{"t":"box","b":[80.0,88.0,-24,-19,-22,-20]},{"t":"cyl","ax":"z","ro":2.2,"ri":0.0,"a":[-29,-22],"c":[83.0,-21.5]}],"cuts":[],"vec":[65,-35,0],"frame":"holder","label":"Prawa szczęka (ruchoma)"},{"name":"tpu_p","grp":"tpu","prims":[{"t":"box","b":[86.5,88.0,0,12.0,-14,14]}],"cuts":[],"vec":[85,20,0],"frame":"holder","label":"Nakładka TPU"}],"174":[{"name":"szczeka_p","grp":"print","prims":[{"t":"box","b":[88.5,94.5,-24,14.5,8.25,31]},{"t":"box","b":[88.5,94.5,-24,14.5,-31,-8.25]},{"t":"box","b":[88.5,94.5,-13.95,14.5,-8.25,8.25]},{"t":"box","b":[88.5,94.5,-24,-21.25,-8.25,8.25]},{"t":"box","b":[68.5,88.5,-23.4,-11.8,8.25,10.4]},{"t":"box","b":[68.5,88.5,-23.4,-11.8,-10.4,-8.25]},{"t":"box","b":[68.5,88.5,-23.4,-21.25,-8.25,8.25]},{"t":"box","b":[68.5,88.5,-13.95,-11.8,-8.25,8.25]},{"t":"box","b":[84.0,88.5,12.0,14.5,-14,14]},{"t":"box","b":[80.5,88.5,-24,-19,20,22]},{"t":"cyl","ax":"z","ro":2.2,"ri":0.0,"a":[22,29],"c":[83.5,-21.5]},{"t":"box","b":[80.5,88.5,-24,-19,-22,-20]},{"t":"cyl","ax":"z","ro":2.2,"ri":0.0,"a":[-29,-22],"c":[83.5,-21.5]}],"cuts":[],"vec":[65,-35,0],"frame":"holder","label":"Prawa szczęka (ruchoma)"},{"name":"tpu_p","grp":"tpu","prims":[{"t":"box","b":[87.0,88.5,0,12.0,-14,14]}],"cuts":[],"vec":[85,20,0],"frame":"holder","label":"Nakładka TPU"}],"175":[{"name":"szczeka_p","grp":"print","prims":[{"t":"box","b":[89.0,95.0,-24,14.5,8.25,31]},{"t":"box","b":[89.0,95.0,-24,14.5,-31,-8.25]},{"t":"box","b":[89.0,95.0,-13.95,14.5,-8.25,8.25]},{"t":"box","b":[89.0,95.0,-24,-21.25,-8.25,8.25]},{"t":"box","b":[69.0,89.0,-23.4,-11.8,8.25,10.4]},{"t":"box","b":[69.0,89.0,-23.4,-11.8,-10.4,-8.25]},{"t":"box","b":[69.0,89.0,-23.4,-21.25,-8.25,8.25]},{"t":"box","b":[69.0,89.0,-13.95,-11.8,-8.25,8.25]},{"t":"box","b":[84.5,89.0,12.0,14.5,-14,14]},{"t":"box","b":[81.0,89.0,-24,-19,20,22]},{"t":"cyl","ax":"z","ro":2.2,"ri":0.0,"a":[22,29],"c":[84.0,-21.5]},{"t":"box","b":[81.0,89.0,-24,-19,-22,-20]},{"t":"cyl","ax":"z","ro":2.2,"ri":0.0,"a":[-29,-22],"c":[84.0,-21.5]}],"cuts":[],"vec":[65,-35,0],"frame":"holder","label":"Prawa szczęka (ruchoma)"},{"name":"tpu_p","grp":"tpu","prims":[{"t":"box","b":[87.5,89.0,0,12.0,-14,14]}],"cuts":[],"vec":[85,20,0],"frame":"holder","label":"Nakładka TPU"}],"176":[{"name":"szczeka_p","grp":"print","prims":[{"t":"box","b":[89.5,95.5,-24,14.5,8.25,31]},{"t":"box","b":[89.5,95.5,-24,14.5,-31,-8.25]},{"t":"box","b":[89.5,95.5,-13.95,14.5,-8.25,8.25]},{"t":"box","b":[89.5,95.5,-24,-21.25,-8.25,8.25]},{"t":"box","b":[69.5,89.5,-23.4,-11.8,8.25,10.4]},{"t":"box","b":[69.5,89.5,-23.4,-11.8,-10.4,-8.25]},{"t":"box","b":[69.5,89.5,-23.4,-21.25,-8.25,8.25]},{"t":"box","b":[69.5,89.5,-13.95,-11.8,-8.25,8.25]},{"t":"box","b":[85.0,89.5,12.0,14.5,-14,14]},{"t":"box","b":[81.5,89.5,-24,-19,20,22]},{"t":"cyl","ax":"z","ro":2.2,"ri":0.0,"a":[22,29],"c":[84.5,-21.5]},{"t":"box","b":[81.5,89.5,-24,-19,-22,-20]},{"t":"cyl","ax":"z","ro":2.2,"ri":0.0,"a":[-29,-22],"c":[84.5,-21.5]}],"cuts":[],"vec":[65,-35,0],"frame":"holder","label":"Prawa szczęka (ruchoma)"},{"name":"tpu_p","grp":"tpu","prims":[{"t":"box","b":[88.0,89.5,0,12.0,-14,14]}],"cuts":[],"vec":[85,20,0],"frame":"holder","label":"Nakładka TPU"}],"177":[{"name":"szczeka_p","grp":"print","prims":[{"t":"box","b":[90.0,96.0,-24,14.5,8.25,31]},{"t":"box","b":[90.0,96.0,-24,14.5,-31,-8.25]},{"t":"box","b":[90.0,96.0,-13.95,14.5,-8.25,8.25]},{"t":"box","b":[90.0,96.0,-24,-21.25,-8.25,8.25]},{"t":"box","b":[70.0,90.0,-23.4,-11.8,8.25,10.4]},{"t":"box","b":[70.0,90.0,-23.4,-11.8,-10.4,-8.25]},{"t":"box","b":[70.0,90.0,-23.4,-21.25,-8.25,8.25]},{"t":"box","b":[70.0,90.0,-13.95,-11.8,-8.25,8.25]},{"t":"box","b":[85.5,90.0,12.0,14.5,-14,14]},{"t":"box","b":[82.0,90.0,-24,-19,20,22]},{"t":"cyl","ax":"z","ro":2.2,"ri":0.0,"a":[22,29],"c":[85.0,-21.5]},{"t":"box","b":[82.0,90.0,-24,-19,-22,-20]},{"t":"cyl","ax":"z","ro":2.2,"ri":0.0,"a":[-29,-22],"c":[85.0,-21.5]}],"cuts":[],"vec":[65,-35,0],"frame":"holder","label":"Prawa szczęka (ruchoma)"},{"name":"tpu_p","grp":"tpu","prims":[{"t":"box","b":[88.5,90.0,0,12.0,-14,14]}],"cuts":[],"vec":[85,20,0],"frame":"holder","label":"Nakładka TPU"}],"178":[{"name":"szczeka_p","grp":"print","prims":[{"t":"box","b":[90.5,96.5,-24,14.5,8.25,31]},{"t":"box","b":[90.5,96.5,-24,14.5,-31,-8.25]},{"t":"box","b":[90.5,96.5,-13.95,14.5,-8.25,8.25]},{"t":"box","b":[90.5,96.5,-24,-21.25,-8.25,8.25]},{"t":"box","b":[70.5,90.5,-23.4,-11.8,8.25,10.4]},{"t":"box","b":[70.5,90.5,-23.4,-11.8,-10.4,-8.25]},{"t":"box","b":[70.5,90.5,-23.4,-21.25,-8.25,8.25]},{"t":"box","b":[70.5,90.5,-13.95,-11.8,-8.25,8.25]},{"t":"box","b":[86.0,90.5,12.0,14.5,-14,14]},{"t":"box","b":[82.5,90.5,-24,-19,20,22]},{"t":"cyl","ax":"z","ro":2.2,"ri":0.0,"a":[22,29],"c":[85.5,-21.5]},{"t":"box","b":[82.5,90.5,-24,-19,-22,-20]},{"t":"cyl","ax":"z","ro":2.2,"ri":0.0,"a":[-29,-22],"c":[85.5,-21.5]}],"cuts":[],"vec":[65,-35,0],"frame":"holder","label":"Prawa szczęka (ruchoma)"},{"name":"tpu_p","grp":"tpu","prims":[{"t":"box","b":[89.0,90.5,0,12.0,-14,14]}],"cuts":[],"vec":[85,20,0],"frame":"holder","label":"Nakładka TPU"}],"179":[{"name":"szczeka_p","grp":"print","prims":[{"t":"box","b":[91.0,97.0,-24,14.5,8.25,31]},{"t":"box","b":[91.0,97.0,-24,14.5,-31,-8.25]},{"t":"box","b":[91.0,97.0,-13.95,14.5,-8.25,8.25]},{"t":"box","b":[91.0,97.0,-24,-21.25,-8.25,8.25]},{"t":"box","b":[71.0,91.0,-23.4,-11.8,8.25,10.4]},{"t":"box","b":[71.0,91.0,-23.4,-11.8,-10.4,-8.25]},{"t":"box","b":[71.0,91.0,-23.4,-21.25,-8.25,8.25]},{"t":"box","b":[71.0,91.0,-13.95,-11.8,-8.25,8.25]},{"t":"box","b":[86.5,91.0,12.0,14.5,-14,14]},{"t":"box","b":[83.0,91.0,-24,-19,20,22]},{"t":"cyl","ax":"z","ro":2.2,"ri":0.0,"a":[22,29],"c":[86.0,-21.5]},{"t":"box","b":[83.0,91.0,-24,-19,-22,-20]},{"t":"cyl","ax":"z","ro":2.2,"ri":0.0,"a":[-29,-22],"c":[86.0,-21.5]}],"cuts":[],"vec":[65,-35,0],"frame":"holder","label":"Prawa szczęka (ruchoma)"},{"name":"tpu_p","grp":"tpu","prims":[{"t":"box","b":[89.5,91.0,0,12.0,-14,14]}],"cuts":[],"vec":[85,20,0],"frame":"holder","label":"Nakładka TPU"}],"180":[{"name":"szczeka_p","grp":"print","prims":[{"t":"box","b":[91.5,97.5,-24,14.5,8.25,31]},{"t":"box","b":[91.5,97.5,-24,14.5,-31,-8.25]},{"t":"box","b":[91.5,97.5,-13.95,14.5,-8.25,8.25]},{"t":"box","b":[91.5,97.5,-24,-21.25,-8.25,8.25]},{"t":"box","b":[71.5,91.5,-23.4,-11.8,8.25,10.4]},{"t":"box","b":[71.5,91.5,-23.4,-11.8,-10.4,-8.25]},{"t":"box","b":[71.5,91.5,-23.4,-21.25,-8.25,8.25]},{"t":"box","b":[71.5,91.5,-13.95,-11.8,-8.25,8.25]},{"t":"box","b":[87.0,91.5,12.0,14.5,-14,14]},{"t":"box","b":[83.5,91.5,-24,-19,20,22]},{"t":"cyl","ax":"z","ro":2.2,"ri":0.0,"a":[22,29],"c":[86.5,-21.5]},{"t":"box","b":[83.5,91.5,-24,-19,-22,-20]},{"t":"cyl","ax":"z","ro":2.2,"ri":0.0,"a":[-29,-22],"c":[86.5,-21.5]}],"cuts":[],"vec":[65,-35,0],"frame":"holder","label":"Prawa szczęka (ruchoma)"},{"name":"tpu_p","grp":"tpu","prims":[{"t":"box","b":[90.0,91.5,0,12.0,-14,14]}],"cuts":[],"vec":[85,20,0],"frame":"holder","label":"Nakładka TPU"}],"181":[{"name":"szczeka_p","grp":"print","prims":[{"t":"box","b":[92.0,98.0,-24,14.5,8.25,31]},{"t":"box","b":[92.0,98.0,-24,14.5,-31,-8.25]},{"t":"box","b":[92.0,98.0,-13.95,14.5,-8.25,8.25]},{"t":"box","b":[92.0,98.0,-24,-21.25,-8.25,8.25]},{"t":"box","b":[72.0,92.0,-23.4,-11.8,8.25,10.4]},{"t":"box","b":[72.0,92.0,-23.4,-11.8,-10.4,-8.25]},{"t":"box","b":[72.0,92.0,-23.4,-21.25,-8.25,8.25]},{"t":"box","b":[72.0,92.0,-13.95,-11.8,-8.25,8.25]},{"t":"box","b":[87.5,92.0,12.0,14.5,-14,14]},{"t":"box","b":[84.0,92.0,-24,-19,20,22]},{"t":"cyl","ax":"z","ro":2.2,"ri":0.0,"a":[22,29],"c":[87.0,-21.5]},{"t":"box","b":[84.0,92.0,-24,-19,-22,-20]},{"t":"cyl","ax":"z","ro":2.2,"ri":0.0,"a":[-29,-22],"c":[87.0,-21.5]}],"cuts":[],"vec":[65,-35,0],"frame":"holder","label":"Prawa szczęka (ruchoma)"},{"name":"tpu_p","grp":"tpu","prims":[{"t":"box","b":[90.5,92.0,0,12.0,-14,14]}],"cuts":[],"vec":[85,20,0],"frame":"holder","label":"Nakładka TPU"}],"182":[{"name":"szczeka_p","grp":"print","prims":[{"t":"box","b":[92.5,98.5,-24,14.5,8.25,31]},{"t":"box","b":[92.5,98.5,-24,14.5,-31,-8.25]},{"t":"box","b":[92.5,98.5,-13.95,14.5,-8.25,8.25]},{"t":"box","b":[92.5,98.5,-24,-21.25,-8.25,8.25]},{"t":"box","b":[72.5,92.5,-23.4,-11.8,8.25,10.4]},{"t":"box","b":[72.5,92.5,-23.4,-11.8,-10.4,-8.25]},{"t":"box","b":[72.5,92.5,-23.4,-21.25,-8.25,8.25]},{"t":"box","b":[72.5,92.5,-13.95,-11.8,-8.25,8.25]},{"t":"box","b":[88.0,92.5,12.0,14.5,-14,14]},{"t":"box","b":[84.5,92.5,-24,-19,20,22]},{"t":"cyl","ax":"z","ro":2.2,"ri":0.0,"a":[22,29],"c":[87.5,-21.5]},{"t":"box","b":[84.5,92.5,-24,-19,-22,-20]},{"t":"cyl","ax":"z","ro":2.2,"ri":0.0,"a":[-29,-22],"c":[87.5,-21.5]}],"cuts":[],"vec":[65,-35,0],"frame":"holder","label":"Prawa szczęka (ruchoma)"},{"name":"tpu_p","grp":"tpu","prims":[{"t":"box","b":[91.0,92.5,0,12.0,-14,14]}],"cuts":[],"vec":[85,20,0],"frame":"holder","label":"Nakładka TPU"}],"183":[{"name":"szczeka_p","grp":"print","prims":[{"t":"box","b":[93.0,99.0,-24,14.5,8.25,31]},{"t":"box","b":[93.0,99.0,-24,14.5,-31,-8.25]},{"t":"box","b":[93.0,99.0,-13.95,14.5,-8.25,8.25]},{"t":"box","b":[93.0,99.0,-24,-21.25,-8.25,8.25]},{"t":"box","b":[73.0,93.0,-23.4,-11.8,8.25,10.4]},{"t":"box","b":[73.0,93.0,-23.4,-11.8,-10.4,-8.25]},{"t":"box","b":[73.0,93.0,-23.4,-21.25,-8.25,8.25]},{"t":"box","b":[73.0,93.0,-13.95,-11.8,-8.25,8.25]},{"t":"box","b":[88.5,93.0,12.0,14.5,-14,14]},{"t":"box","b":[85.0,93.0,-24,-19,20,22]},{"t":"cyl","ax":"z","ro":2.2,"ri":0.0,"a":[22,29],"c":[88.0,-21.5]},{"t":"box","b":[85.0,93.0,-24,-19,-22,-20]},{"t":"cyl","ax":"z","ro":2.2,"ri":0.0,"a":[-29,-22],"c":[88.0,-21.5]}],"cuts":[],"vec":[65,-35,0],"frame":"holder","label":"Prawa szczęka (ruchoma)"},{"name":"tpu_p","grp":"tpu","prims":[{"t":"box","b":[91.5,93.0,0,12.0,-14,14]}],"cuts":[],"vec":[85,20,0],"frame":"holder","label":"Nakładka TPU"}],"184":[{"name":"szczeka_p","grp":"print","prims":[{"t":"box","b":[93.5,99.5,-24,14.5,8.25,31]},{"t":"box","b":[93.5,99.5,-24,14.5,-31,-8.25]},{"t":"box","b":[93.5,99.5,-13.95,14.5,-8.25,8.25]},{"t":"box","b":[93.5,99.5,-24,-21.25,-8.25,8.25]},{"t":"box","b":[73.5,93.5,-23.4,-11.8,8.25,10.4]},{"t":"box","b":[73.5,93.5,-23.4,-11.8,-10.4,-8.25]},{"t":"box","b":[73.5,93.5,-23.4,-21.25,-8.25,8.25]},{"t":"box","b":[73.5,93.5,-13.95,-11.8,-8.25,8.25]},{"t":"box","b":[89.0,93.5,12.0,14.5,-14,14]},{"t":"box","b":[85.5,93.5,-24,-19,20,22]},{"t":"cyl","ax":"z","ro":2.2,"ri":0.0,"a":[22,29],"c":[88.5,-21.5]},{"t":"box","b":[85.5,93.5,-24,-19,-22,-20]},{"t":"cyl","ax":"z","ro":2.2,"ri":0.0,"a":[-29,-22],"c":[88.5,-21.5]}],"cuts":[],"vec":[65,-35,0],"frame":"holder","label":"Prawa szczęka (ruchoma)"},{"name":"tpu_p","grp":"tpu","prims":[{"t":"box","b":[92.0,93.5,0,12.0,-14,14]}],"cuts":[],"vec":[85,20,0],"frame":"holder","label":"Nakładka TPU"}]},"yoke":[{"name":"szyja","grp":"body","prims":[{"t":"cyl","ax":"z","ro":15.7,"ri":0.0,"a":[-119.0,-114.0],"c":[0,-9.0]},{"t":"cyl","ax":"z","ro":15.7,"ri":0.0,"a":[-114.0,-109.0],"c":[0,-15.0]},{"t":"cyl","ax":"z","ro":15.7,"ri":0.0,"a":[-109.0,-105.0],"c":[0,-20.166666666666664]},{"t":"cyl","ax":"z","ro":15.7,"ri":0.0,"a":[-105.0,-101.0],"c":[0,-24.5]},{"t":"cyl","ax":"z","ro":15.7,"ri":0.0,"a":[-101.0,-97.0],"c":[0,-28.833333333333336]},{"t":"cyl","ax":"z","ro":15.7,"ri":0.0,"a":[-97.0,-93.0],"c":[0,-33.16666666666667]},{"t":"cyl","ax":"z","ro":15.7,"ri":0.0,"a":[-93.0,-89.0],"c":[0,-37.5]},{"t":"cyl","ax":"z","ro":15.7,"ri":0.0,"a":[-89.0,-85.0],"c":[0,-41.83333333333333]},{"t":"cyl","ax":"z","ro":15.7,"ri":0.0,"a":[-85.0,-80.83333333333333],"c":[0,-45.416666666666664]},{"t":"cyl","ax":"z","ro":15.7,"ri":0.0,"a":[-80.83333333333333,-76.66666666666667],"c":[0,-48.25]},{"t":"cyl","ax":"z","ro":15.7,"ri":0.0,"a":[-76.66666666666667,-72.5],"c":[0,-51.083333333333336]},{"t":"cyl","ax":"z","ro":15.7,"ri":0.0,"a":[-72.5,-68.33333333333334],"c":[0,-53.91666666666667]},{"t":"cyl","ax":"z","ro":15.7,"ri":0.0,"a":[-68.33333333333334,-64.16666666666666],"c":[0,-56.75]},{"t":"cyl","ax":"z","ro":15.7,"ri":0.0,"a":[-64.16666666666666,-60.0],"c":[0,-59.58333333333333]},{"t":"cyl","ax":"z","ro":15.7,"ri":0.0,"a":[-60.0,-56.0],"c":[0,-61.15]},{"t":"cyl","ax":"z","ro":15.7,"ri":0.0,"a":[-56.0,-52.0],"c":[0,-61.45]},{"t":"cyl","ax":"z","ro":15.7,"ri":0.0,"a":[-52.0,-48.0],"c":[0,-61.75]},{"t":"cyl","ax":"z","ro":15.7,"ri":0.0,"a":[-48.0,-44.0],"c":[0,-62.05]},{"t":"cyl","ax":"z","ro":15.7,"ri":0.0,"a":[-44.0,-40.0],"c":[0,-62.35]},{"t":"cyl","ax":"z","ro":15.7,"ri":0.0,"a":[-40.0,-36.0],"c":[0,-62.65]},{"t":"cyl","ax":"z","ro":15.7,"ri":0.0,"a":[-36.0,-32.0],"c":[0,-62.95]},{"t":"cyl","ax":"z","ro":15.7,"ri":0.0,"a":[-32.0,-28.0],"c":[0,-63.25]},{"t":"cyl","ax":"z","ro":15.7,"ri":0.0,"a":[-28.0,-24.0],"c":[0,-63.55]},{"t":"cyl","ax":"z","ro":15.7,"ri":0.0,"a":[-24.0,-20.0],"c":[0,-63.85]}],"cuts":[],"vec":[0,0,0],"frame":"yoke","label":"Szyja"},{"name":"kolnierz","grp":"print","prims":[{"t":"box","b":[-45,45,-80.0,-48.0,-22,-12]}],"cuts":[],"vec":[0,0,0],"frame":"yoke","label":"Kołnierz szyi"},{"name":"ucho_p","grp":"print","prims":[{"t":"box","b":[30,42,-80.0,-36.0,-12,12]},{"t":"cyl","ax":"x","ro":12,"ri":0.0,"a":[30,42],"c":[-36.0,0]}],"cuts":[],"vec":[0,0,0],"frame":"yoke","label":"Ucho prawe (serwo)"},{"name":"ucho_l","grp":"print","prims":[{"t":"box","b":[-42,-30,-80.0,-36.0,-12,12]},{"t":"cyl","ax":"x","ro":12,"ri":0.0,"a":[-42,-30],"c":[-36.0,0]}],"cuts":[{"t":"cyl","ax":"x","ro":11,"ri":0.0,"a":[-37,-30],"c":[-36.0,0]}],"vec":[0,0,0],"frame":"yoke","label":"Ucho lewe (łożysko)"},{"name":"serwo","grp":"servo","prims":[{"t":"box","b":[42,62,-66.7,-26.0,-9.85,9.85]}],"cuts":[],"vec":[0,0,0],"frame":"yoke","label":"Serwo TILT"},{"name":"lozysko","grp":"hw","prims":[{"t":"cyl","ax":"x","ro":11,"ri":4,"a":[-37,-30],"c":[-36.0,0]}],"cuts":[],"vec":[0,0,0],"frame":"yoke","label":"Łożysko 608"}]};
+  var host = document.getElementById('view');
+  var renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+  host.appendChild(renderer.domElement);
+  var scene = new THREE.Scene();
+  var camera = new THREE.PerspectiveCamera(32, 1, 10, 6000);
+  scene.add(new THREE.HemisphereLight(0xffffff, 0x6a7a84, 0.95));
+  var d1 = new THREE.DirectionalLight(0xffffff, 0.8); d1.position.set(300, 500, 500); scene.add(d1);
+  var d2 = new THREE.DirectionalLight(0xffffff, 0.35); d2.position.set(-400, 200, -300); scene.add(d2);
+
+  var lineMat = new THREE.LineBasicMaterial({ color: 0x1e2a30 });
+  var M = {
+    part: new THREE.MeshStandardMaterial({ color: 0x6b8796, roughness: 0.55, metalness: 0.05 }),
+    body: new THREE.MeshStandardMaterial({ color: 0xd3dbdf, roughness: 0.6, metalness: 0.02 }),
+    tpu: new THREE.MeshStandardMaterial({ color: 0x1c1f22, roughness: 0.9 }),
+    pad: new THREE.MeshStandardMaterial({ color: 0xe6e9eb, roughness: 0.5 }),
+    phone: new THREE.MeshStandardMaterial({ color: 0x23272e, roughness: 0.35, metalness: 0.3 }),
+    screen: new THREE.MeshStandardMaterial({ color: 0x050607, roughness: 0.2 }),
+    eye: new THREE.MeshBasicMaterial({ color: 0x7be7ff }),
+    metal: new THREE.MeshStandardMaterial({ color: 0xb7c0c6, roughness: 0.35, metalness: 0.8 }),
+    band: new THREE.MeshStandardMaterial({ color: 0xd9a521, roughness: 0.7 }),
+    accent: new THREE.MeshStandardMaterial({ color: 0xc2410c, roughness: 0.5 }),
+    ghost: new THREE.MeshBasicMaterial({ color: 0x88aabb, transparent: true, opacity: 0.1, depthWrite: false })
+  };
+  var GRP = { print: M.part, tpu: M.tpu, hw: M.metal, servo: M.accent, pad: M.pad, body: M.body, phone: M.ghost };
+
+  // Współrzędne CAD (x w prawo, y do przodu, z w górę) -> three (x, z, y)
+  function edge(m) { m.add(new THREE.LineSegments(new THREE.EdgesGeometry(m.geometry, 25), lineMat)); }
+  function box(g, x0, x1, y0, y1, z0, z1, mat, noEdge) {
+    var m = new THREE.Mesh(new THREE.BoxGeometry(x1 - x0, z1 - z0, y1 - y0), mat);
+    m.position.set((x0 + x1) / 2, (z0 + z1) / 2, (y0 + y1) / 2);
+    g.add(m); if (!noEdge) edge(m); return m;
+  }
+  function cylX(g, r, x0, x1, cy, cz, mat, seg) {
+    var m = new THREE.Mesh(new THREE.CylinderGeometry(r, r, x1 - x0, seg || 40), mat);
+    m.rotation.z = Math.PI / 2; m.position.set((x0 + x1) / 2, cz, cy); g.add(m); return m;
+  }
+  function cylY(g, r, y0, y1, cx, cz, mat, seg) {
+    var m = new THREE.Mesh(new THREE.CylinderGeometry(r, r, y1 - y0, seg || 64), mat);
+    m.rotation.x = Math.PI / 2; m.position.set(cx, cz, (y0 + y1) / 2); g.add(m); return m;
+  }
+  function cylZ(g, r, z0, z1, cx, cy, mat, seg) {
+    var m = new THREE.Mesh(new THREE.CylinderGeometry(r, r, z1 - z0, seg || 32), mat);
+    m.position.set(cx, (z0 + z1) / 2, cy); g.add(m); return m;
+  }
+  function addPrim(g, p, mat) {
+    if (p.t === 'box') { var b = p.b; return box(g, b[0], b[1], b[2], b[3], b[4], b[5], mat); }
+    var c = p.c, a0 = p.a[0], a1 = p.a[1];
+    if (p.ax === 'y') {
+      if (p.ri > 0) {
+        var sh = new THREE.Shape(); sh.absarc(c[0], c[1], p.ro, 0, Math.PI * 2, false);
+        var hl = new THREE.Path(); hl.absarc(c[0], c[1], p.ri, 0, Math.PI * 2, true); sh.holes.push(hl);
+        var m = new THREE.Mesh(new THREE.ExtrudeGeometry(sh, { depth: a1 - a0, bevelEnabled: false, curveSegments: 64 }), mat);
+        m.position.z = a0; g.add(m); return m;
+      }
+      return cylY(g, p.ro, a0, a1, c[0], c[1], mat);
+    }
+    if (p.ax === 'x') return cylX(g, p.ro, a0, a1, c[0], c[1], mat);
+    return cylZ(g, p.ro, a0, a1, c[0], c[1], mat, 24);
+  }
+  function makePart(def, parent) {
+    var g = new THREE.Group(); g.userData.vec = def.vec;
+    def.prims.forEach(function (p) { addPrim(g, p, GRP[def.grp] || M.part); });
+    parent.add(g); return g;
+  }
+
+  var T = D.T, H = D.H, AX_Y = D.AX_Y;
+
+  // ---------- korpus: obłe „ramiona" (obrys superelipsy, profil z dużym zaokrągleniem u góry), łożysko i szyja ----------
+  var world = new THREE.Group(); scene.add(world);
+  var NS = 96, N = 4.2, RX = 110, RY = 95, HB = 52;
+  // profil [skala obrysu, wysokość]: mała fazka przy blacie, krótka ścianka, potem szerokie, obłe ramiona aż do płaskiego szczytu pod łożyskiem
+  var prof = [[0, 0], [0.93, 0]];
+  for (var k = 1; k <= 6; k++) { var q = k / 6 * Math.PI / 2; prof.push([0.93 + 0.07 * Math.sin(q), 5 - 5 * Math.cos(q)]); }
+  var S_TOP = 0.46, H_SH = 12;
+  for (k = 1; k <= 20; k++) {
+    var f = k / 20 * Math.PI / 2;
+    prof.push([S_TOP + (1 - S_TOP) * Math.cos(f), H_SH + (HB - H_SH) * Math.pow(Math.sin(f), 0.85)]);
+  }
+  prof.push([0, HB]);
+  var outl = [];
+  for (var i = 0; i < NS; i++) {
+    var an = Math.PI * 2 * i / NS, cs = Math.cos(an), sn = Math.sin(an);
+    outl.push([RX * Math.sign(cs) * Math.pow(Math.abs(cs), 2 / N), RY * Math.sign(sn) * Math.pow(Math.abs(sn), 2 / N)]);
+  }
+  var pos = [], idx = [];
+  prof.forEach(function (p) {
+    // ramiona lekko spłaszczone z przodu i z tyłu, żeby bryła była szersza w barkach niż w głąb
+    var sy = p[0] * (1 - 0.08 * Math.max(0, (p[1] - H_SH) / (HB - H_SH)));
+    outl.forEach(function (o) { pos.push(o[0] * p[0], p[1], o[1] * sy); });
+  });
+  for (var r = 0; r < prof.length - 1; r++) for (i = 0; i < NS; i++) {
+    var a = r * NS + i, b = r * NS + (i + 1) % NS, c = a + NS, d = b + NS;
+    idx.push(a, c, b, b, c, d);
+  }
+  var bg = new THREE.BufferGeometry();
+  bg.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); bg.setIndex(idx); bg.computeVertexNormals();
+  var pebble = new THREE.Mesh(bg, M.body); world.add(pebble);
+  var floor = new THREE.Mesh(new THREE.CircleGeometry(200, 72), new THREE.MeshBasicMaterial({ color: 0x88aabb, transparent: true, opacity: 0.08, depthWrite: false }));
+  floor.rotation.x = -Math.PI / 2; floor.position.y = -0.5; world.add(floor);
+  cylZ(world, 40, 52, 60, 0, 0, M.metal, 64);                       // łożysko obrotowe
+
+  var panG = new THREE.Group(); scene.add(panG);
+  cylZ(panG, 38, 60, D.DECK_TOP, 0, 0, M.part, 64);                // pokład obrotowy
+  var npts = D.NECK_PATH.map(function (p) { return new THREE.Vector3(0, p[1], p[0]); });
+  var neck = new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(npts), 80, D.NECK_R, 28, false), M.body);
+  panG.add(neck);
+
+  // ---------- widełki osi TILT (w ramce uchwytu, przesunięte na oś) ----------
+  var yokeG = new THREE.Group(); yokeG.position.set(0, D.AXIS_ZG, D.AXIS_YG - AX_Y); panG.add(yokeG);
+  D.yoke.forEach(function (d) { if (d.name !== 'szyja') makePart(d, yokeG); });
+
+  // ---------- grupa pochylana TILT i uchwyt ----------
+  var tiltG = new THREE.Group(); tiltG.position.set(0, D.AXIS_ZG, D.AXIS_YG); panG.add(tiltG);
+  var holdG = new THREE.Group(); holdG.position.z = -AX_Y; tiltG.add(holdG);
+  var parts = [], dynParts = [];
+  D.static.forEach(function (d) { parts.push(makePart(d, holdG)); });
+  var dynG = new THREE.Group(); holdG.add(dynG);
+  var bandG = new THREE.Group(); holdG.add(bandG);
+
+  // telefon i obrys etui
+  var phoneG = new THREE.Group(); phoneG.userData.vec = [0, 130, 0]; holdG.add(phoneG);
+  var caseG = new THREE.Group(); caseG.userData.vec = [0, 130, 0]; holdG.add(caseG);
+  box(phoneG, -81.7, 81.7, 1.5, 10.4, -39.05, 39.05, M.phone, true);
+  box(phoneG, -80.5, 80.5, 10.4, 10.6, -37.8, 37.8, M.screen, true);
+  [-28, 28].forEach(function (x) { box(phoneG, x - 6, x + 6, 10.6, 10.8, 3, 25, M.eye, true); });
+  box(phoneG, -9, 9, 10.6, 10.8, -14, -11, M.eye, true);
+  var cm = box(caseG, -84, 84, 0, T, -H / 2, H / 2, M.ghost, true);
+  cm.add(new THREE.LineSegments(new THREE.EdgesGeometry(cm.geometry), new THREE.LineBasicMaterial({ color: 0x88aabb })));
+
+  // ---------- siatkowa osłona tyłu głowy (góra + 2 dolne policzki) ----------
+  // Kopuła o obrysie superelipsy za telefonem, złożona z ukośnej kratki. Okno w środku przepuszcza uszy osi TILT i serwo,
+  // boczne szczeliny przepuszczają szynę i szczęki, a kanał na dole – szyję.
+  var shellG = new THREE.Group(); shellG.userData.vec = [0, -120, 0]; holdG.add(shellG);
+  (function () {
+    var SX = 82, SZ = 57, SN = 4.2, SD = 46, SR = 0.97, Y0 = -1.5;
+    function sOf(x, h) { return Math.pow(Math.pow(Math.abs(x) / SX, SN) + Math.pow(Math.abs(h) / SZ, SN), 1 / SN); }
+    function P(p) { var s = Math.min(1, sOf(p[0], p[1])); return new THREE.Vector3(p[0], p[1], Y0 - SD * Math.pow(1 - Math.pow(s, 4), 0.25)); }
+    // wycięcia: [środek x, środek h, półszerokość, półwysokość, promień naroża]
+    var R = [[0, 0, 70, 25, 10], [0, 0, 200, 14, 0], [0, -60, 24, 60, 8]];
+    function sd(rr, x, h) {
+      var dx = Math.abs(x - rr[0]) - (rr[2] - rr[4]), dy = Math.abs(h - rr[1]) - (rr[3] - rr[4]);
+      return Math.hypot(Math.max(dx, 0), Math.max(dy, 0)) + Math.min(Math.max(dx, dy), 0) - rr[4];
+    }
+    function cut(x, h, skip) { for (var i = 0; i < R.length; i++) if (i !== skip && sd(R[i], x, h) < -0.01) return true; return false; }
+    function ok(p) { return sOf(p[0], p[1]) < SR && !cut(p[0], p[1], -1); }
+    function tube(pts, r) {
+      var clean = [pts[0]];
+      for (var i = 1; i < pts.length; i++) { var q = clean[clean.length - 1]; if (Math.hypot(pts[i][0] - q[0], pts[i][1] - q[1]) > 0.4) clean.push(pts[i]); }
+      if (clean.length < 2) return;
+      var v = clean.map(P);
+      shellG.add(new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(v), Math.max(2, v.length), r, 6, false), M.part));
+    }
+    function runs(pts, test, r) {
+      var cur = [];
+      pts.forEach(function (p) { if (test(p)) cur.push(p); else { if (cur.length > 1) tube(cur, r); cur = []; } });
+      if (cur.length > 1) tube(cur, r);
+    }
+    // kratka ukośna
+    [55, -55].forEach(function (deg) {
+      var a = deg * Math.PI / 180, dx = Math.cos(a), dy = Math.sin(a), nx = -dy, ny = dx;
+      for (var o = -200; o <= 200; o += 13) {
+        var pts = [];
+        for (var t = -200; t <= 200; t += 1.5) pts.push([o * nx + t * dx, o * ny + t * dy]);
+        runs(pts, ok, 1.3);
+      }
+    });
+    // obrzeże zewnętrzne
+    var rim = [];
+    for (var i = 0; i <= 480; i++) {
+      var an = Math.PI * 2 * i / 480, cs = Math.cos(an), sn = Math.sin(an);
+      rim.push([SR * SX * Math.sign(cs) * Math.pow(Math.abs(cs), 2 / SN), SR * SZ * Math.sign(sn) * Math.pow(Math.abs(sn), 2 / SN)]);
+    }
+    runs(rim, function (p) { return !cut(p[0], p[1], -1); }, 1.9);
+    // obrzeża wycięć
+    R.forEach(function (rr, k) {
+      var pts = [], S = [[1, 1], [-1, 1], [-1, -1], [1, -1]];
+      for (var c = 0; c < 4; c++) {
+        var cx = rr[0] + S[c][0] * (rr[2] - rr[4]), ch = rr[1] + S[c][1] * (rr[3] - rr[4]);
+        for (var j = 0; j <= 8; j++) { var an = (c + j / 8) * Math.PI / 2; pts.push([cx + rr[4] * Math.cos(an), ch + rr[4] * Math.sin(an)]); }
+        var n = S[(c + 1) % 4], nx = rr[0] + n[0] * (rr[2] - rr[4]), nh = rr[1] + n[1] * (rr[3] - rr[4]);
+        var an2 = (c + 1) * Math.PI / 2, ex0 = pts[pts.length - 1], ex1 = [nx + rr[4] * Math.cos(an2), nh + rr[4] * Math.sin(an2)];
+        var L = Math.hypot(ex1[0] - ex0[0], ex1[1] - ex0[1]), m = Math.ceil(L / 1.5);
+        for (j = 1; j < m; j++) pts.push([ex0[0] + (ex1[0] - ex0[0]) * j / m, ex0[1] + (ex1[1] - ex0[1]) * j / m]);
+      }
+      var test = function (p) { return sOf(p[0], p[1]) < SR && !cut(p[0], p[1], k); };
+      var st = 0; while (st < pts.length && test(pts[st])) st++;
+      if (st === pts.length) { tube(pts.concat([pts[0]]), 1.9); return; }
+      runs(pts.slice(st).concat(pts.slice(0, st + 1)), test, 1.9);
+    });
+  })();
+
+  // ---------- gumki ----------
+  function loopMesh(xl, xr, yc, zb, r) {
+    var pts = [], i, a;
+    for (i = 0; i <= 8; i++) pts.push([xl + (xr - xl) * i / 8, yc + r]);
+    for (i = 1; i < 12; i++) { a = Math.PI / 2 - Math.PI * i / 12; pts.push([xr + r * Math.cos(a), yc + r * Math.sin(a)]); }
+    for (i = 0; i <= 8; i++) pts.push([xr - (xr - xl) * i / 8, yc - r]);
+    for (i = 1; i < 12; i++) { a = -Math.PI / 2 - Math.PI * i / 12; pts.push([xl + r * Math.cos(a), yc + r * Math.sin(a)]); }
+    var v = pts.map(function (p) { return new THREE.Vector3(p[0], zb, p[1]); });
+    return new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(v, true, 'catmullrom', 0.1), 120, 1.2, 8, true), M.band);
+  }
+  function disposeAll(g) {
+    while (g.children.length) { var c = g.children.pop(); c.traverse(function (o) { if (o.geometry) o.geometry.dispose(); }); }
+  }
+  function build(O) {
+    disposeAll(dynG); disposeAll(bandG); dynParts.length = 0;
+    D.moving[String(O)].forEach(function (d) { dynParts.push(makePart(d, dynG)); });
+    var c = O / 2 + 1.5;
+    [-25, 25].forEach(function (zb) { bandG.add(loopMesh(-(85.5 - 5), c - 5, -21.5, zb, 3.5)); });
+    applyExplode();
+  }
+
+  // ---------- rozłożenie ----------
+  var ex = 0;
+  function setVec(g, k) { var v = g.userData.vec; g.position.set(v[0] * k, v[2] * k, v[1] * k); }
+  function applyExplode() {
+    parts.concat(dynParts).forEach(function (g) { setVec(g, ex); });
+    setVec(phoneG, ex); setVec(caseG, ex); setVec(shellG, ex);
+    bandG.visible = ex < 0.02;
+  }
+
+  // ---------- motyw ----------
+  function css(n) { return getComputedStyle(document.documentElement).getPropertyValue(n).trim(); }
+  function applyTheme() {
+    M.part.color.set(css('--part') || '#6b8796');
+    M.accent.color.set(css('--accent') || '#c2410c');
+    M.body.color.set(css('--body') || '#d3dbdf');
+    lineMat.color.set(css('--edge') || '#1e2a30');
+    draw();
+  }
+
+  // ---------- kamera ----------
+  var target = new THREE.Vector3(0, 92, 0);
+  var cam = { th: 0.7, ph: 1.2, d: 950 };
+  var views = { iso: [0.7, 1.2], front: [0, Math.PI / 2], back: [Math.PI, Math.PI / 2], top: [0, 0.05], side: [Math.PI / 2, Math.PI / 2] };
+  function baseDist() { var asp = host.clientWidth / Math.max(1, host.clientHeight); return 950 * Math.max(1, 1.2 / asp); }
+  function place() {
+    var s = Math.sin(cam.ph);
+    camera.position.set(target.x + cam.d * s * Math.sin(cam.th), target.y + cam.d * Math.cos(cam.ph), target.z + cam.d * s * Math.cos(cam.th));
+    camera.lookAt(target);
+  }
+  function draw() { place(); renderer.render(scene, camera); }
+  function resize() {
+    var w = host.clientWidth, h = host.clientHeight;
+    renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix();
+    draw();
+  }
+  var ptrs = {}, lastPinch = 0;
+  host.addEventListener('pointerdown', function (e) { host.setPointerCapture(e.pointerId); ptrs[e.pointerId] = [e.clientX, e.clientY]; });
+  host.addEventListener('pointerup', function (e) { delete ptrs[e.pointerId]; lastPinch = 0; });
+  host.addEventListener('pointercancel', function (e) { delete ptrs[e.pointerId]; lastPinch = 0; });
+  host.addEventListener('pointermove', function (e) {
+    var p = ptrs[e.pointerId]; if (!p) return;
+    var ids = Object.keys(ptrs);
+    if (ids.length === 1) {
+      cam.th -= (e.clientX - p[0]) * 0.008;
+      cam.ph = Math.min(Math.PI - 0.05, Math.max(0.05, cam.ph - (e.clientY - p[1]) * 0.008));
+      p[0] = e.clientX; p[1] = e.clientY;
+    } else {
+      p[0] = e.clientX; p[1] = e.clientY;
+      var a = ptrs[ids[0]], b = ptrs[ids[1]], dist = Math.hypot(a[0] - b[0], a[1] - b[1]);
+      if (lastPinch) cam.d = Math.min(1900, Math.max(350, cam.d * lastPinch / dist));
+      lastPinch = dist;
+    }
+    setPressed(null); draw();
+  });
+  host.addEventListener('wheel', function (e) {
+    e.preventDefault();
+    cam.d = Math.min(1900, Math.max(350, cam.d * (1 + e.deltaY * 0.001)));
+    draw();
+  }, { passive: false });
+
+  var btns = document.querySelectorAll('button.v');
+  function setPressed(name) { btns.forEach(function (b) { b.setAttribute('aria-pressed', String(b.dataset.view === name)); }); }
+  btns.forEach(function (b) {
+    b.addEventListener('click', function () {
+      var v = views[b.dataset.view]; cam.th = v[0]; cam.ph = v[1]; cam.d = baseDist();
+      setPressed(b.dataset.view); draw();
+    });
+  });
+
+  // ---------- suwaki ----------
+  function bind(id, fn) {
+    var el = document.getElementById(id), out = document.getElementById(id + 'Out');
+    el.addEventListener('input', function () { fn(+el.value, out); draw(); });
+    fn(+el.value, out);
+  }
+  bind('expl', function (v, o) { ex = v / 100; o.textContent = v + '%'; applyExplode(); });
+  bind('pan', function (v, o) { panG.rotation.y = -v * Math.PI / 180; o.textContent = v + '°'; });
+  bind('tilt', function (v, o) { tiltG.rotation.x = -v * Math.PI / 180; o.textContent = v + '°'; });
+  bind('open', function (v, o) { o.textContent = v + ' mm'; build(v); });
+  document.getElementById('showPhone').addEventListener('change', function (e) { phoneG.visible = e.target.checked; draw(); });
+  document.getElementById('showCase').addEventListener('change', function (e) { caseG.visible = e.target.checked; draw(); });
+  document.getElementById('showShell').addEventListener('change', function (e) { shellG.visible = e.target.checked; draw(); });
+
+  cam.d = baseDist();
+  applyTheme(); resize();
+  if (window.ResizeObserver) new ResizeObserver(resize).observe(host);
+  window.addEventListener('resize', resize);
+  window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', applyTheme);
+  new MutationObserver(applyTheme).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+})();
+</script>
+
+</body></html>
