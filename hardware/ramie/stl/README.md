@@ -49,7 +49,7 @@ Połówki ramion leżą płaszczyzną podziału na stole, więc ażur drukuje si
   - 2 × M3 × 50, 4 × M3 × 45, 6 × M3 × 35, łączenie połówek.
   - 4 × M3 × 20 stożkowe, dno (wkręcane od spodu).
   - 4 × M3 × 10 stożkowe, rama z szyną.
-  - 2 × M3 × 12, kołnierz przechyłu.
+  - 2 × M3 × 10, kołnierz przechyłu (wkręcane w szynę).
   - 1 × M3 × 12, zaślepka.
 - Wkręty do orczyków: zwykle są w komplecie z orczykiem.
 
@@ -89,7 +89,14 @@ Przegub (bark, łokieć, nadgarstek) wygląda zawsze tak samo:
 3. Wieżę mocujesz 4 śrubami M3 z boku.
 4. Kable przechodzą przez otwór w talerzu i łukową szczelinę w korpusie, co pozwala na obrót ±90°.
 
-**Szyjka:** MG90S jest zaciśnięte w gnieździe między połówkami szyjki, bez śrub. Jego orczyk przykręcasz do kołnierza przechyłu, a kołnierz 2 × M3 × 12 przez szynę do ramy ładowarki.
+**Szyjka:** MG90S jest zaciśnięte w gnieździe między połówkami szyjki, bez śrub. Jego orczyk przykręcasz do kołnierza przechyłu, a kołnierz 2 × M3 × 10 do szyny.
+
+**Ustawienie ładowarki pod cewkę telefonu:** rama ładowarki jest przykręcona do szyny przez podłużne otwory, które pozwalają przesunąć ją o ±8 mm w bok.
+1. Włóż telefon w szczęki.
+2. Przesuwaj ramę z ładowarką, aż telefon zacznie się ładować.
+3. Dokręć 4 śruby.
+
+Cewka w telefonie zwykle nie leży na środku jego długości, a źle ustawiona ładowarka grzeje się i ładuje słabo. Pomysł pochodzi z „Cyber Base”.
 
 ## Stabilność i limity ruchu (v0.2)
 

@@ -96,17 +96,18 @@ def holder(out,h=0.3):
         res[file]=save_stl(f'{out}/{folder}/{file}.stl',occ,g,rot)
     F='07_uchwyt_telefonu_PETG_szary'
     def rama_cut(g):
+        # podłużne otwory ±8 mm wzdłuż x: ładowarkę przesuwasz w bok pod cewkę telefonu (pomysł z „Cyber Base”)
         c=np.zeros(g.X.shape,bool)
         for x in (-40,-20,20,40):
-            c|=cyl(g,'y',x,0,1.7,-16,-10)
-            c|=(np.hypot(g.X-x,g.Z)<=1.7+np.clip(g.Y+12.9,0,None))&(g.Y>=-12.9)&(g.Y<=-11.2)   # stożek pod łeb wpuszczany od przodu
-        for x in (-16,16): c|=cyl(g,'y',x,0,1.3,-15,-12.2)                    # pilotowe pod śruby kołnierza
+            for dx in np.arange(-8,8.01,0.5):
+                c|=cyl(g,'y',x+dx,0,1.7,-16,-10)
+                c|=(np.hypot(g.X-x-dx,g.Z)<=1.7+np.clip(g.Y+12.9,0,None))&(g.Y>=-12.9)&(g.Y<=-11.2)   # stożek pod łeb wpuszczany od przodu
         return c
     make('rama','rama_ladowarki',F,extra_cut=rama_cut)
     def szyna_cut(g):
         c=np.zeros(g.X.shape,bool)
         for x in (-40,-20,20,40): c|=cyl(g,'y',x,0,1.3,-19,-13)
-        for x in (-16,16): c|=cyl(g,'y',x,0,1.7,-22,-13)
+        for x in (-16,16): c|=cyl(g,'y',x,0,1.3,-22,-15.2)        # pilotowe pod śruby kołnierza przechyłu (tylko w szynie)
         c|=cyl(g,'x',-17.6,0,1.3,91,101)          # pilot pod śrubę zaślepki
         return c
     make('szyna','szyna_z_lewa_szczeka',F,extra_cut=szyna_cut)
@@ -116,7 +117,7 @@ def holder(out,h=0.3):
         return ([[-22,22,-27,-21,-14,14]], lambda g: box(g,-22,22,-27,-21,-14,14))
     def kol_cut(g):
         c=cyl(g,'y',0,0,3.6,-28,-20)
-        for x in (-16,16): c|=cyl(g,'y',x,0,1.7,-28,-20)|cyl(g,'y',x,0,3.1,-28,-25.2)
+        for x in (-16,16): c|=cyl(g,'y',x,0,1.7,-28,-20)|cyl(g,'y',x,0,3.1,-28,-25.2)   # M3 × 10 do szyny
         return c
     make(None,'kolnierz_przechylu',F,extra_add=kol_add(),extra_cut=kol_cut)
     T='10_TPU'

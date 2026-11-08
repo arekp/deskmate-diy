@@ -18,6 +18,7 @@ Robot stoi w miejscu i rusza tylko głową oraz ramieniem: obrót, bark, łokie�
 | `wizualizacja/deskmate-szyja-wariant-a.html` | Wcześniejszy wariant z krótką szyją (dla porównania) |
 | `renders/` | Rendery: wygląd, połówki ramienia, koncept rozstrzelonego łokcia |
 | [`porownanie-so101.md`](porownanie-so101.md) | Porównanie z SO-ARM101 i remiksem „Weighted Base”, analiza stabilności, poprawki v0.2 (cokół z piaskiem albo dno z obciążnikiem, limity ruchu) |
+| [`porownanie-cyber-base.md`](porownanie-cyber-base.md) | Analiza ręcznego ramienia „Cyber Base”: przesuwana ładowarka (wprowadzona), stylistyka, zapadki |
 | `generator/stabilnosc.py` | Obliczenie zapasu przed przewróceniem dla póz, z obciążnikiem i bez |
 
 ## Najważniejsze wymiary
