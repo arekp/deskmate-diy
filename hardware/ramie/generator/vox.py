@@ -10,17 +10,31 @@ class Grid:
         xs=[s.lo[i]+np.arange(n[i],dtype=np.float32)*h for i in range(3)]
         s.X,s.Y,s.Z=np.meshgrid(*xs,indexing='ij')
 
-def save_stl(path, occ, g, rot=None, sigma=0.6, step=2):
+def save_stl(path, occ, g, rot=None, sigma=0.6, step=2, offset=None):
     v=ndimage.gaussian_filter(occ.astype(np.float32), sigma)
     v=np.pad(v,1)
     verts,faces,_,_=measure.marching_cubes(v,0.5,spacing=(g.h,)*3,step_size=step)
     verts=verts-g.h+g.lo
     if rot is not None: verts=verts@np.array(rot,float).T
-    verts=verts-[ (verts[:,0].max()+verts[:,0].min())/2,(verts[:,1].max()+verts[:,1].min())/2, verts[:,2].min()]
-    tri=verts[faces]; n=np.cross(tri[:,1]-tri[:,0],tri[:,2]-tri[:,0]); ln=np.linalg.norm(n,axis=1); ln[ln==0]=1; n/=ln[:,None]
-    return write_stl(path,verts,faces)
+    if offset is None: offset=[(verts[:,0].max()+verts[:,0].min())/2,(verts[:,1].max()+verts[:,1].min())/2, verts[:,2].min()]
+    verts=verts-np.array(offset)
+    r=write_stl(path,verts,faces); r['offset']=[float(o) for o in offset]
+    w=wall_stats(occ,g.h)
+    if w: r['scianka']=w
+    return r
+
+def wall_stats(occ,h):
+    """Grubość ścianek z wokseli: 2 × odległość do brzegu na grzbiecie (szkielecie) bryły."""
+    d=ndimage.distance_transform_edt(occ,sampling=h)
+    ridge=occ&(d>0)&(d>=ndimage.maximum_filter(d,size=3)-1e-6)
+    t=2*d[ridge]
+    if t.size==0: return None
+    return dict(min_mm=round(float(t.min()),2),p05_mm=round(float(np.percentile(t,5)),2),p50_mm=round(float(np.median(t)),2))
 
 def write_stl(path,verts,faces):
+    # normalne na zewnątrz: przy ujemnej objętości ze znakiem odwróć kolejność wierzchołków
+    t0=verts[faces]
+    if np.einsum('ij,ij->i',t0[:,0],np.cross(t0[:,1],t0[:,2])).sum()<0: faces=faces[:,[0,2,1]]
     tri=verts[faces]; n=np.cross(tri[:,1]-tri[:,0],tri[:,2]-tri[:,0]); ln=np.linalg.norm(n,axis=1); ln[ln==0]=1; n/=ln[:,None]
     os.makedirs(os.path.dirname(path),exist_ok=True)
     with open(path,'wb') as f:
@@ -76,8 +90,9 @@ def lattice_mask():
         dx=np.abs(X-a);dx=np.minimum(dx,W-dx);ds.append(np.hypot(dx,Y-b))
     ds=np.sort(np.stack(ds),axis=0);f1,f2=ds[0],ds[1]
     s=np.clip((2.6*PX-(f2-f1))/2+.5,0,1)
-    ux=np.minimum.reduce([X,W-X,np.abs(X-W/2),np.abs(X-W/4),np.abs(X-3*W/4)])
-    s[(Y<.09*H)|(Y>H-.09*H)|(ux<1.6*PX)]=1
+    us=np.minimum(np.abs(X-W/4),np.abs(X-3*W/4))                  # szew połówek
+    ub=np.minimum.reduce([X,W-X,np.abs(X-W/2)])                    # boki: pas pod listwę i napis
+    s[(Y<.09*H)|(Y>H-.09*H)|(us<1.6*PX)|(ub<3.6*PX)]=1
     def blur(a,r):
         k=2*r+1;a=np.pad(a,((0,0),(r,r)),mode='wrap');c=np.cumsum(a,1);c=np.pad(c,((0,0),(1,0)));a=(c[:,k:]-c[:,:-k])/k
         a=np.pad(a,((r,r),(0,0)),mode='edge');c=np.cumsum(a,0);c=np.pad(c,((1,0),(0,0)));return (c[k:]-c[:-k])/k

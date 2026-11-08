@@ -9,3 +9,5 @@ python3 parts_arm.py "$OUT" przedramie
 python3 parts_rest.py "$OUT"
 python3 parts_body_head.py "$OUT" body plinth holder accents
 python3 testpiece.py "$OUT"
+python3 make_3mf.py "$OUT" "${2:-../3mf}"
+python3 dfam_lite.py "$OUT"

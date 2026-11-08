@@ -44,7 +44,7 @@ def turret(out,h=0.35):
         ca,sa=math.cos(math.radians(a)),math.sin(math.radians(a))
         tt=g2.X*ca+g2.Z*sa; perp=np.abs(-g2.X*sa+g2.Z*ca)
         t&=~((np.hypot(perp,g2.Y-55.3)<=1.3)&(tt>33))
-    r['talerz']=save_stl(f'{out}/03_wieza_PETG_szary/talerz_wiezy.stl',t,g2,R_UP)
+    r['talerz']=save_stl(f'{out}/03_wieza_PETG_szary/talerz_wiezy.stl',t,g2,[[1,0,0],[0,0,1],[0,-1,0]])   # górą na stole, wnęka orczyka do góry
     return r
 
 def neck(out,h=0.3):

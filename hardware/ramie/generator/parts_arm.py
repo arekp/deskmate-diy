@@ -31,20 +31,20 @@ def parent_joint_cut(g,yc,R,W):
 
 def cheeks(g,Rp,t,yEnd):
     """Widełki ogniwa-dziecka wokół krążka poprzedniego przegubu (oś w y=0).
-    Prawy policzek x 30..33 (do orczyka), lewy x -37..-30 (gniazdo łba śruby M8)."""
+    Prawy policzek x 30..33 (do orczyka), lewy x -39..-30 (gniazdo łba śruby M8 + miejsce na czop gałki)."""
     rc=0.8*Rp; tw=t*0.9
     poly=[(tw/2,yEnd),(-tw/2,yEnd),(-rc,0),(rc,0)]   # (z,y) – kolejność przeciwna do ruchu wskazówek
     shape=convex2d(g.Z,g.Y,[(p[0],p[1]) for p in poly])|((g.Z**2+g.Y**2)<=rc*rc)
     right=shape&(g.X>=30)&(g.X<=33)
-    left=shape&(g.X>=-37)&(g.X<=-30)
+    left=shape&(g.X>=-39)&(g.X<=-30)
     return right|left
 def cheek_cut(g):
     c=cyl(g,'x',0,0,4.0,29,34)                                   # dostęp do śruby orczyka
-    c|=cyl(g,'x',0,0,4.2,-38,-29)                                # śruba M8
-    # gniazdo sześciokątne łba M8 (13 mm pod klucz), głęb. 5,5 od zewnątrz
+    c|=cyl(g,'x',0,0,4.2,-40,-29)                                # śruba M8 × 12
+    # gniazdo sześciokątne łba M8 (13 mm pod klucz), głęb. 7,5 od zewnątrz: łeb 5,3 + czop gałki 2
     ang=np.arctan2(g.Z,g.Y); r=np.hypot(g.Y,g.Z)
     hexr=6.65/np.cos(((ang+np.pi/6)%(np.pi/3))-np.pi/6)
-    c|=(r<=hexr)&(g.X>=-37.5)&(g.X<=-31.5)
+    c|=(r<=hexr)&(g.X>=-39.5)&(g.X<=-31.5)
     return c
 
 def bosses(g,pts,hwfun):
@@ -59,10 +59,31 @@ def bosses(g,pts,hwfun):
         cut|=cyl(g,'x',y,z,1.3,0,hw-1.6)               # otwór pilotowy w prawej połówce
     return add,cut
 
-def link(name,L,Rp,Rd,W,w1,t0,t1,boss_pts,h=0.35):
+def side_band(g,y0,L,w0,w1,t0,t1,a,b,depth,side,half_z):
+    """Obszar przy bocznej ściance ogniwa (|z|<=half_z, y w [a,b] długości): warstwa 'depth' pod powierzchnią."""
+    m_out,hw,ht,s=loft_metric(g,y0,L,w0,w1,t0,t1)
+    m_in,_,_,_=loft_metric(g,y0,L,w0,w1,t0,t1,inset=depth)
+    yr=(g.Y>=y0+a*(L-y0))&(g.Y<=y0+b*(L-y0))
+    return (m_out<=1)&(m_in>1)&(np.abs(g.Z)<=half_z)&yr&(side*g.X>0)
+def text_mask(g,text,y_c,height,side,font='/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf'):
+    """Maska napisu na boku ogniwa: kierunek czytania +y, góra liter +z (czytelny z zewnątrz po stronie +x)."""
+    from PIL import Image,ImageDraw,ImageFont
+    px=20; f=ImageFont.truetype(font,int(height*px*1.35))
+    w=int(f.getlength(text))+20; im=Image.new('L',(w,int(height*px*2)),0); d=ImageDraw.Draw(im)
+    bb=d.textbbox((0,0),text,font=f); d.text((10-bb[0],(im.height-(bb[3]-bb[1]))/2-bb[1]),text,font=f,fill=255)
+    a=np.array(im)>127; ys,xs=np.nonzero(a); a=a[ys.min():ys.max()+1,xs.min():xs.max()+1]
+    H,Wd=a.shape; sc=height/H; length=Wd*sc
+    col=((g.Y-(y_c-length/2))/sc).astype(int)
+    row=((height/2-g.Z)/sc).astype(int) if side>0 else ((height/2-g.Z)/sc).astype(int)
+    if side<0: col=Wd-1-col                                        # po stronie -x lustrzanie, żeby czytać z zewnątrz
+    ok=(col>=0)&(col<Wd)&(row>=0)&(row<H)
+    m=np.zeros(g.X.shape,bool); m[ok]=a[row[ok],col[ok]]
+    return m,length
+
+def link(name,L,Rp,Rd,W,w1,t0,t1,boss_pts,h=0.35,deco=None):
     """Ogniwo: widełki wokół przegubu y=0 (krążek Rp), ażurowa skorupa y 30..L, krążek Rd z serwem w y=L."""
     w0=66
-    g=Grid((-38,-26,-32),(38,L+Rd+2,32),h)
+    g=Grid((-42,-26,-32),(38,L+Rd+2,32),h)
     m,hw,ht,s=loft_metric(g,30,L,w0,w1,t0,t1)
     outer=((m<=1)&(g.Y>=30)&(g.Y<=L))|puck(g,L,Rd,W)|cheeks(g,Rp,t0,36)
     # skorupa: wydrążenie przez odległość od brzegu (ścianka 2,4 mm); wyjątek: widełki pozostają pełne
@@ -78,20 +99,38 @@ def link(name,L,Rp,Rd,W,w1,t0,t1,boss_pts,h=0.35):
     shell&=~parent_joint_cut(g,L,Rd,W)
     shell&=~cheek_cut(g)
     shell&=~bc
+    # ozdoby v0.2: rowek 0,8 mm na czerwoną listwę (a,b = zakres długości) i wgłębiony napis; wkładki do druku wielokolorowego
+    inlay=np.zeros(g.X.shape,bool)
+    for kind,side,arg in (deco or []):
+        if kind=='listwa':
+            gr=side_band(g,30,L,w0,w1,t0,t1,0.38,0.80,0.8,side,1.75)
+            shell&=~gr; inlay|=side_band(g,30,L,w0,w1,t0,t1,0.38,0.80,0.8,side,1.75)
+        if kind=='napis':
+            tm,_=text_mask(g,arg,55.0,5.5,side)   # napis 5,5 mm, przed krążkiem
+            gr=side_band(g,30,L,w0,w1,t0,t1,0.0,1.0,0.6,side,3.2)&tm
+            shell&=~gr; inlay|=gr
     right=shell&(g.X>=0); left=shell&(g.X<0)
     R_right=[[0,0,-1],[0,1,0],[1,0,0]]   # x -> wysokość druku
     R_left=[[0,0,1],[0,1,0],[-1,0,0]]
-    return g,{name+'_prawa':(right,R_right),name+'_lewa':(left,R_left)}
+    out={name+'_prawa':(right,R_right),name+'_lewa':(left,R_left)}
+    if inlay.any():
+        out[name+'_prawa_wklad']=(inlay&(g.X>=0),R_right,name+'_prawa')
+        out[name+'_lewa_wklad']=(inlay&(g.X<0),R_left,name+'_lewa')
+    return g,out
 
 if __name__=='__main__':
     out=sys.argv[1]; which=sys.argv[2]
-    res={}
     if which=='ramie':
-        g,parts=link('ramie',110,28,28,54,50,32,31,[(45,0),(110-46,0),(110+22,0)])
+        g,parts=link('ramie',110,28,28,54,50,32,31,[(45,0),(110-46,0),(110+22,0)],deco=[('listwa',1,None),('listwa',-1,None)])
         folder='04_ramie_PETG_szary'
     if which=='przedramie':
-        g,parts=link('przedramie',100,28,25,54,50,31,30,[(42,0),(100-46,0)])
+        g,parts=link('przedramie',100,28,25,54,50,31,30,[(42,0),(100-46,0)],deco=[('napis',1,'DeskMate'),('listwa',-1,None)])
         folder='05_przedramie_PETG_szary'
-    for k,(occ,rot) in parts.items():
-        res[k]=save_stl(f'{out}/{folder}/{k}.stl',occ,g,rot)
-        print(k,res[k],flush=True)
+    offs={}
+    for k,v in parts.items():
+        if len(v)==2:
+            occ,rot=v; r=save_stl(f'{out}/{folder}/{k}.stl',occ,g,rot); offs[k]=r['offset']; print(k,r,flush=True)
+    for k,v in parts.items():
+        if len(v)==3 and v[0].any():
+            occ,rot,base=v
+            r=save_stl(f'{out}/_wklady_wielokolor/{k}.stl',occ,g,rot,offset=offs[base],step=1); print(k,r,flush=True)

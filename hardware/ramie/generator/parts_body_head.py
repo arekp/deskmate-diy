@@ -111,7 +111,7 @@ def holder(out,h=0.3):
         c|=cyl(g,'x',-17.6,0,1.3,91,101)          # pilot pod śrubę zaślepki
         return c
     make('szyna','szyna_z_lewa_szczeka',F,extra_cut=szyna_cut)
-    make('szczeka_p','prawa_szczeka',F)
+    make('szczeka_p','prawa_szczeka',F,rot=(np.array([[0,0,1],[0,1,0],[-1,0,0]])@np.array(CAD_YUP)).tolist())   # zewnętrzną ścianką szczęki na stole: bez podpór
     make('zaslepka','zaslepka_szyny',F,extra_cut=lambda g: cyl(g,'x',-17.6,0,1.7,99,104),rot=[[0,0,1],[0,1,0],[-1,0,0]])
     def kol_add():
         return ([[-22,22,-27,-21,-14,14]], lambda g: box(g,-22,22,-27,-21,-14,14))
@@ -127,20 +127,45 @@ def holder(out,h=0.3):
 
 def flat_ring(path,ro,ri,t,h=None):
     return ring_mesh(path,ro,ri,t)
+def knob(path,rc,side,h=0.2):
+    """Gałka z radełkiem (v0.2, wzorem „Cyber Base”) wciskana czopem w policzek widełek.
+    side=+1: prawy policzek – czop Ø7,8 w otwór Ø8 nad śrubą orczyka, od spodu wnęka Ø22 × 2 na łby wkrętów orczyka.
+    side=-1: lewy policzek – czop sześciokątny 12,9 mm w gniazdo nad łbem śruby M8."""
+    rb=0.68*rc; r0=0.5*rc; nT=24; B=3.2; T=B+2.6
+    g=Grid((-rb-1,-rb-1,-2.6),(rb+1,rb+1,T+0.4),h)
+    r=np.hypot(g.X,g.Y); an=np.arctan2(g.Y,g.X)
+    o=(r<=rb)&(g.Z>=0)&(g.Z<=B)                                            # podstawa 3,2 mm
+    teeth=r0+0.55+0.55*np.sign(np.cos(an*nT))
+    top=T-np.clip(r-(r0+0.6),0,None)                                        # fazka na górze
+    o|=(r<=teeth)&(g.Z>=B)&(g.Z<=np.minimum(T,top))
+    hexr=3.46/np.cos(((an+np.pi/6)%(np.pi/3))-np.pi/6)
+    o&=~((r<=hexr)&(g.Z>=T-1.5))                                            # ozdobne gniazdo sześciokątne 6 mm
+    if side>0:
+        o|=(r<=3.9)&(g.Z>=-2.5)&(g.Z<0)                                     # czop
+        o&=~((r>=5)&(r<=11)&(g.Z>=0)&(g.Z<=2.0))                            # wnęka na łby wkrętów orczyka (zostaje 1,2 mm)
+    else:
+        hx=6.45/np.cos(((an+np.pi/6)%(np.pi/3))-np.pi/6)
+        o|=(r<=hx)&(g.Z>=-2.0)&(g.Z<0)                                      # czop sześciokątny
+    return save_stl(path,o,g,[[1,0,0],[0,-1,0],[0,0,-1]],sigma=0.7,step=1)  # do druku górą na stole
+def strip(path,length,h=0.1):
+    """Listwa ozdobna do wklejenia w rowek 3,5 × 0,8 mm (bez AMS). Grubość 1,4: wystaje 0,6 mm."""
+    g=Grid((-length/2-1,-2.2,0),(length/2+1,2.2,1.4),h)
+    xe=np.clip(np.abs(g.X)-(length/2-1.65),0,None)
+    o=(np.hypot(xe,g.Y)<=1.65)&(g.Z>=0)&(g.Z<=1.4)
+    return save_stl(path,o,g,None,sigma=0.6,step=2)
 def accents(out):
     res={}
-    A='08_akcent_pomaranczowy_PETG'; B='09_dekle_czarne_PETG'
+    A='08_akcent_pomaranczowy_PETG'; B='09_galki_czarne_PETG'
     for i in range(1,5): res[f'pierscien_R28_{i}']=flat_ring(f'{out}/{A}/pierscien_bark_lokiec_{i}.stl',18.27,16.67,1.2)
     for i in range(1,3): res[f'pierscien_R25_{i}']=flat_ring(f'{out}/{A}/pierscien_nadgarstek_{i}.stl',16.4,14.8,1.2)
     res['pierscien_szyjki']=flat_ring(f'{out}/{A}/pierscien_szyjki.stl',24.2,22.2,1.6)
-    for i in range(1,5): res[f'dekiel_R28_{i}']=flat_ring(f'{out}/{B}/dekiel_bark_lokiec_{i}.stl',13.9,0,1.2)
-    for i in range(1,3): res[f'dekiel_R25_{i}']=flat_ring(f'{out}/{B}/dekiel_nadgarstek_{i}.stl',12.4,0,1.2)
+    for i in (1,2): res[f'listwa_ramie_{i}']=strip(f'{out}/{A}/listwa_ramie_{i}.stl',33.6)
+    res['listwa_przedramie']=strip(f'{out}/{A}/listwa_przedramie.stl',29.4)
+    for nm,rc in (('bark',22.4),('lokiec',22.4),('nadgarstek',20.0)):
+        res[f'galka_{nm}_prawa']=knob(f'{out}/{B}/galka_{nm}_prawa.stl',rc,+1)
+        res[f'galka_{nm}_lewa']=knob(f'{out}/{B}/galka_{nm}_lewa.stl',rc,-1)
     return res
 
-if __name__=='__main__':
-    out=sys.argv[1]
-    for fn in sys.argv[2:]:
-        for k,v in globals()[fn](out).items(): print(k,v,flush=True)
 
 def plinth(out,h=0.4):
     """Cokół piaskowy (wzorem podstawy SO-ARM101 z MakerWorld): pełna bryła do druku z rzadkim gyroidem,
@@ -163,3 +188,8 @@ def plinth(out,h=0.4):
     for mx,mz in [(0,62),(0,-62)]:
         occ&=~((np.hypot(g.X-mx,g.Z-mz)<=1.5+(g.Y+0.8)*1.5)&(g.Y>=-0.8))   # znaczniki do nawiercenia otworu na piasek
     return {'dno_piaskowe':save_stl(f'{out}/02b_dno_piaskowe_PETG_szary/dno_piaskowe.stl',occ,g,R_UP)}
+
+if __name__=='__main__':
+    out=sys.argv[1]
+    for fn in sys.argv[2:]:
+        for k,v in globals()[fn](out).items(): print(k,v,flush=True)

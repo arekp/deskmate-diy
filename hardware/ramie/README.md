@@ -11,8 +11,10 @@ Robot stoi w miejscu i rusza tylko głową oraz ramieniem: obrót, bark, łokie�
 
 | Ścieżka | Co to jest |
 |---|---|
+| `3mf/` | Projekty Bambu Studio dla P2S: jeden plik na stół, części rozmieszczone; ramię i przedramię z wkładkami w drugim kolorze (AMS) |
 | [`stl/`](stl/README.md) | Gotowe STL-e, **jeden katalog = jeden wydruk** na Bambu Lab P2S (256 × 256). W README: ustawienia druku, lista śrub i serw, kolejność montażu, ograniczenia |
 | `generator/` | Skrypty Pythona, które generują wszystkie STL (woksele → marching cubes). `./run_all.sh [katalog]`, wymaga numpy, scipy, scikit-image |
+| `generator/dfam_lite.py` | Kontrola przed drukiem: szczelność, nawisy, stół, 6 orientacji |
 | `generator/check.py` | Kontrola, czy serwa i łożyska mieszczą się w przegubach |
 | `wizualizacja/deskmate-ramie.html` | Interaktywny podgląd 3D: pozy, gesty, obciążenie serw, przekrój z serwami i elektroniką, rysunki przegubu |
 | `wizualizacja/deskmate-szyja-wariant-a.html` | Wcześniejszy wariant z krótką szyją (dla porównania) |
