@@ -5,6 +5,15 @@
 - **Remiks „SO-ARM101 Weighted Base”** z MakerWorld (model 3549083): nie dało się go pobrać, bo MakerWorld blokuje automatyczne pobieranie, a do plików trzeba się zalogować. Z nazwy wynika, że to cięższa podstawa SO-101, dzięki której ramię nie musi być przykręcane ściskami do blatu. Żeby porównać dokładnie jego STL, pobierz plik ręcznie i dołącz go.
 - **Oryginalne SO-101:** STL-e i URDF z repozytorium [TheRobotStudio/SO-ARM100](https://github.com/TheRobotStudio/SO-ARM100) (licencja Apache 2.0). Długości, masy i zakresy poniżej pochodzą z `Simulation/SO101/so101_new_calib.urdf`, a wymiary części zmierzyłem w STL.
 
+## Remiks „Weighted Base” (z opisu autora)
+
+Autor przerobił SO-ARM101 tak, żeby zamiast chwytaka trzymało ekran („droid”, panel sterowania domem), czyli w tym samym celu co nasz wariant B.
+- **Podstawa:** okrągła, drukowana z bardzo rzadkim gyroidem, potem wypełniona suchym piaskiem. Otwór zalewa się żywicą, a od spodu przykleja piankę.
+- **Mocowanie ramienia:** adapter ramienia wchodzi luźno w podstawę i jest dopasowany cienką taśmą filcową, więc ramię szybko się zdejmuje.
+- **Efekt:** według autora po zasypaniu piaskiem podstawa nie ma problemów ze stabilnością nawet przy szybkim ruchu.
+
+**Co przejąłem:** cokół piaskowy `stl/02b_dno_piaskowe_PETG_szary`. Z około 1 kg piasku i stopą szerszą o 8% daje największy zapas ze wszystkich wariantów (tabela niżej) i nie wymaga kupowania stali. Szybko odłączanej podstawy nie przejąłem, bo korpus i tak trzeba otwierać, żeby dostać się do elektroniki.
+
 ## SO-101 w liczbach
 
 | | SO-101 | DeskMate wariant B |
@@ -18,6 +27,19 @@
 | Przekrój ramienia | wąski i wysoki: 24,5 × 67 mm, otwarty profil | zamknięta skorupa 50–66 × 31 mm z ażurem |
 | Podparcie przegubu | serwo jako łożysko: orczyk z jednej strony, tylna piasta STS3215 z drugiej | orczyk + łożysko 608 i śruba M8 po drugiej stronie |
 | Mocowanie do blatu | 2 ściski stolarskie (podstawa 111 × 72 mm) | wolnostojący korpus 220 × 190 mm |
+
+## Zapas przed przewróceniem (z `generator/stabilnosc.py`)
+
+Wartości to odległość środka masy od krawędzi stopy w kierunku przewrócenia: statycznie / w szybkim geście (szacunek 1,6× moment).
+
+| Poza | dno v0.2 bez obciążnika | dno v0.2 + 800 g stali | dno piaskowe (ok. 1 kg piasku) |
+|---|---|---|---|
+| Ciekawość, przód | 29 / **−7** mm | 51 / 29 mm | 63 / 43 mm |
+| Klawiatura, przód | 27 / **−10** mm | 50 / 27 mm | 61 / 41 mm |
+| Maks. wysięg 230 mm, przód | 0 / **−52** mm | 34 / 1 mm | 47 / 18 mm |
+| Maks. wysięg 230 mm, bok | 14 / **−38** mm | 48 / 15 mm | 62 / 33 mm |
+
+Wartość ujemna oznacza, że robot się przewraca.
 
 ## Czego się nauczyłem i co z tym zrobiłem
 

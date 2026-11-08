@@ -16,6 +16,7 @@ Części są już obrócone do druku: płaską stroną na stole.
 | `00_test_pasowania_PETG` | 1 płytka testowa | PETG, dowolny kolor | nie |
 | `01_korpus_PETG_szary` | korpus (220 × 190 × 53 mm) | PETG szary | **tak**, drzewiaste, tylko od stołu (pod sufit korpusu) |
 | `02_korpus_dno_PETG_szary` | dno z komorą obciążnika (12 przegródek, głęb. 7 mm) | PETG szary | nie (górną ścianką na stole) |
+| `02b_dno_piaskowe_PETG_szary` | **zamiast 02 (polecane):** cokół 22 mm wypełniany piaskiem, stopa szersza o 8% | PETG szary, **wypełnienie gyroid 6–8%**, 3 ściany, 5 warstw góra i dół | nie |
 | `03_wieza_PETG_szary` | wieża: połówka lewa i prawa, talerz | PETG szary | tak, drzewiaste (wnętrze krążka barku) |
 | `04_ramie_PETG_szary` | ramię: połówka lewa i prawa (ażur) | PETG szary | tak, drzewiaste |
 | `05_przedramie_PETG_szary` | przedramię: połówka lewa i prawa (ażur) | PETG szary | tak, drzewiaste |
@@ -93,7 +94,15 @@ Przegub (bark, łokieć, nadgarstek) wygląda zawsze tak samo:
 ## Stabilność i limity ruchu (v0.2)
 
 Bez obciążnika robot przewróci się do przodu przy szybkim geście z głową wysuniętą, np. w pozach „Ciekawość” i „Klawiatura”. Szczegóły są w [../porownanie-so101.md](../porownanie-so101.md).
-- **Obciążnik:** włóż około 800 g w przegródki dna.
+- **Obciążnik, wariant A (polecany):** wydrukuj `02b_dno_piaskowe` zamiast `02`. Działa jak podstawa SO-ARM101 „Weighted Base”.
+  1. Wydrukuj cokół z rzadkim gyroidem (6–8%).
+  2. Nawierć Ø8 w jednym z dwóch znaczników na górnej ściance.
+  3. Wsyp suchy piasek do pełna, około 1 kg, i opukuj, żeby się ułożył.
+  4. Zalej otwór żywicą albo klejem na gorąco.
+  5. Na spód naklej piankę albo filc samoprzylepny.
+
+  Korpus przykręcasz od spodu 4 × M3 × 20. Szczeliny wentylacyjne są przelotowe, a slicer zrobi wokół nich ścianki, więc piasek się nie wysypie.
+- **Obciążnik, wariant B:** dno `02` z około 800 g stali w przegródkach.
 - **Limity w programie** (ESP32 albo aplikacja):
   - wysięg głowy najwyżej 200 mm przed osią obrotu,
   - powyżej 170 mm prędkość ograniczona do połowy,

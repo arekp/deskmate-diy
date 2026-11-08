@@ -140,3 +140,25 @@ if __name__=='__main__':
     out=sys.argv[1]
     for fn in sys.argv[2:]:
         for k,v in globals()[fn](out).items(): print(k,v,flush=True)
+
+def plinth(out,h=0.4):
+    """Cokół piaskowy (wzorem podstawy SO-ARM101 z MakerWorld): pełna bryła do druku z rzadkim gyroidem,
+    po wydruku nawiercasz otwór w znaczniku, wsypujesz suchy piasek i zalewasz otwór żywicą.
+    Zastępuje dno: góra = obrys spodu korpusu, dół rozszerzony o 8% (szersza stopa)."""
+    N=4.2; H=22
+    g=Grid((-112,-H-0.6,-97),(112,0.6,97),h)
+    t=np.clip(-g.Y/H,0,1)
+    sc=0.93*(1+0.08*t)
+    q=((np.abs(g.X)/110)**N+(np.abs(g.Z)/95)**N)**(1/N)
+    occ=(q<=sc)&(g.Y<=0)&(g.Y>=-H)
+    COL=[(75,55),(-75,55),(75,-55),(-75,-55)]
+    for cx,cz in COL:
+        occ&=~cyl(g,'y',cx,cz,1.7,-H-1,1)                 # przelot M3 do kolumn korpusu
+        occ&=~cyl(g,'y',cx,cz,3.3,-H-1,-6)                # pogłębienie na łeb od spodu (zostaje 6 mm materiału)
+    for fx,fz in [(90,68),(-90,68),(90,-68),(-90,-68)]:
+        occ&=~cyl(g,'y',fx,fz,5.2,-H-1,-H+2)              # gniazda nóżek Ø10
+    for i in range(-2,3):
+        occ&=~box(g,-30,30,-H-1,1,i*11-2,i*11+2)          # przelotowe szczeliny wentylacyjne (slicer zrobi wokół nich ścianki)
+    for mx,mz in [(0,62),(0,-62)]:
+        occ&=~((np.hypot(g.X-mx,g.Z-mz)<=1.5+(g.Y+0.8)*1.5)&(g.Y>=-0.8))   # znaczniki do nawiercenia otworu na piasek
+    return {'dno_piaskowe':save_stl(f'{out}/02b_dno_piaskowe_PETG_szary/dno_piaskowe.stl',occ,g,R_UP)}

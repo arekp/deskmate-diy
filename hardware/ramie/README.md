@@ -17,7 +17,7 @@ Robot stoi w miejscu i rusza tylko głową oraz ramieniem: obrót, bark, łokie�
 | `wizualizacja/deskmate-ramie.html` | Interaktywny podgląd 3D: pozy, gesty, obciążenie serw, przekrój z serwami i elektroniką, rysunki przegubu |
 | `wizualizacja/deskmate-szyja-wariant-a.html` | Wcześniejszy wariant z krótką szyją (dla porównania) |
 | `renders/` | Rendery: wygląd, połówki ramienia, koncept rozstrzelonego łokcia |
-| [`porownanie-so101.md`](porownanie-so101.md) | Porównanie z SO-ARM101, analiza stabilności i poprawki v0.2 (dno z obciążnikiem, limity ruchu) |
+| [`porownanie-so101.md`](porownanie-so101.md) | Porównanie z SO-ARM101 i remiksem „Weighted Base”, analiza stabilności, poprawki v0.2 (cokół z piaskiem albo dno z obciążnikiem, limity ruchu) |
 | `generator/stabilnosc.py` | Obliczenie zapasu przed przewróceniem dla póz, z obciążnikiem i bez |
 
 ## Najważniejsze wymiary

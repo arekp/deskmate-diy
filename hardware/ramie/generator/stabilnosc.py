@@ -14,10 +14,13 @@ def arm_moment(r,z,f):
 M0=sum(base.values())
 print(f"masa podstawy {M0:.2f} kg")
 poses={'czuwa':(122,168,95),'patrzy':(120,215,80),'ciekawosc':(175,190,96),'klawiatura':(170,135,132),'maks. wysiegu':(230,150,90)}
-for ballast in (0,0.5,0.8):
-    print(f"--- obciążnik {ballast*1000:.0f} g")
+# warianty podstawy: (opis, dodatkowa masa nisko [kg], krawędź przód [mm], krawędź bok [mm])
+VARIANTS=[('dno v0.2 bez obciążnika',0.0,88,102),('dno v0.2 + 800 g stali',0.8,88,102),
+          ('dno piaskowe (ok. 1,0 kg piasku, stopa szersza o 8%)',1.0+0.08,95,110)]
+for opis,ballast,ef,eb in VARIANTS:
+    print(f"--- {opis}")
     for k,p in poses.items():
         mom,ma,H=arm_moment(*p); Mt=M0+ma+ballast; x=mom/Mt
-        for name,edge in (('przód',88),('bok (obrót 90°)',102)):
+        for name,edge in (('przód',ef),('bok (obrót 90°)',eb)):
             dyn=1.6*mom/Mt   # szybki gest: ok. 1,6× moment statyczny (szacunek)
-            print(f"  {k:14s} {name:16s} środek masy {x:5.1f} mm od osi, krawędź {edge} mm, zapas {edge-x:5.1f} mm statycznie, {edge-dyn:5.1f} mm w szybkim geście, kąt przewrócenia ok. {math.degrees(math.atan2(edge-x,45)):.0f}°")
+            print(f"  {k:14s} {name:16s} środek masy {x:5.1f} mm od osi, krawędź {edge} mm, zapas {edge-x:5.1f} mm statycznie, {edge-dyn:5.1f} mm w szybkim geście")

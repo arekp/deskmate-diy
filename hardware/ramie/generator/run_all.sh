@@ -7,5 +7,5 @@ OUT="${1:-../stl}"
 python3 parts_arm.py "$OUT" ramie
 python3 parts_arm.py "$OUT" przedramie
 python3 parts_rest.py "$OUT"
-python3 parts_body_head.py "$OUT" body holder accents
+python3 parts_body_head.py "$OUT" body plinth holder accents
 python3 testpiece.py "$OUT"
