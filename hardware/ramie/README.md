@@ -11,6 +11,7 @@ Robot stoi w miejscu i rusza tylko głową oraz ramieniem: obrót, bark, łokie�
 
 | Ścieżka | Co to jest |
 |---|---|
+| [`montaz/`](montaz/README.md) | **Instrukcja montażu**: mapa części, 8 kroków z rysunkami, śruby do każdego kroku, znane problemy |
 | `3mf/` | Projekty Bambu Studio dla P2S: jeden plik na stół, części rozmieszczone; ramię i przedramię z wkładkami w drugim kolorze (AMS) |
 | [`stl/`](stl/README.md) | Gotowe STL-e, **jeden katalog = jeden wydruk** na Bambu Lab P2S (256 × 256). W README: ustawienia druku, lista śrub i serw, kolejność montażu, ograniczenia |
 | `generator/` | Skrypty Pythona, które generują wszystkie STL (woksele → marching cubes). `./run_all.sh [katalog]`, wymaga numpy, scipy, scikit-image |
@@ -31,7 +32,7 @@ Robot stoi w miejscu i rusza tylko głową oraz ramieniem: obrót, bark, łokie�
   - DS3218 w barku i łokciu,
   - MG996R w nadgarstku i obrocie podstawy,
   - MG90S w przechyle głowy.
-- **Przeguby:** krążek Ø56 × 54 z serwem, łożysko 608 po drugiej stronie, śruba M8 × 16 jako oś, widełki ogniwa-dziecka po obu stronach krążka.
+- **Przeguby:** krążek Ø56 × 54 z serwem, łożysko 608 po drugiej stronie, śruba M8 × 12 jako oś, widełki ogniwa-dziecka po obu stronach krążka.
 - **Zasilanie:** jeden kabel USB-C PD 65 W. Wyzwalacz 20 V, przetwornica 6 V 10 A dla serw, moduł QC3.0 dla ładowarki, 5 V dla ESP32.
 
 ## Uwaga: różnice wobec decyzji z `CLAUDE.md`
