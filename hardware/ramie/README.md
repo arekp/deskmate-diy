@@ -17,11 +17,13 @@ Robot stoi w miejscu i rusza tylko głową oraz ramieniem: obrót, bark, łokie�
 | `wizualizacja/deskmate-ramie.html` | Interaktywny podgląd 3D: pozy, gesty, obciążenie serw, przekrój z serwami i elektroniką, rysunki przegubu |
 | `wizualizacja/deskmate-szyja-wariant-a.html` | Wcześniejszy wariant z krótką szyją (dla porównania) |
 | `renders/` | Rendery: wygląd, połówki ramienia, koncept rozstrzelonego łokcia |
+| [`porownanie-so101.md`](porownanie-so101.md) | Porównanie z SO-ARM101, analiza stabilności i poprawki v0.2 (dno z obciążnikiem, limity ruchu) |
+| `generator/stabilnosc.py` | Obliczenie zapasu przed przewróceniem dla póz, z obciążnikiem i bez |
 
 ## Najważniejsze wymiary
 
 - **Ramię:** bark 110 mm → łokieć 100 mm → nadgarstek 58 mm → środek telefonu 30 mm.
-- **Oś barku:** 101 mm nad blatem (z dnem).
+- **Oś barku:** 107 mm nad blatem (z dnem z komorą obciążnika, 9 mm).
 - **Serwa:**
   - DS3218 w barku i łokciu,
   - MG996R w nadgarstku i obrocie podstawy,

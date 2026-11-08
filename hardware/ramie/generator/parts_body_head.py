@@ -4,6 +4,7 @@ from vox import *
 R_UP=[[1,0,0],[0,0,-1],[0,1,0]]          # model: y w górę -> druk: z
 CAD_YUP=[[1,0,0],[0,0,-1],[0,1,0]]       # CAD (x, y przód, z góra): y -> z druku (tył części na stole)
 FLAT=np.eye(3)
+R_DOWN=[[1,0,0],[0,0,1],[0,-1,0]]      # model: y w dół -> druk: z (górna ścianka na stole)
 
 def body_occ(g):
     N=4.2
@@ -42,21 +43,24 @@ def body(out,h=0.5):
     sh&=~box(g,-5.5,5.5,4.5,9.5,-100,-80)
     sh&=(g.Y>=0)
     res={'korpus':save_stl(f'{out}/01_korpus_PETG_szary/korpus.stl',sh,g,R_UP)}
-    # dno
-    g2=Grid((-104,-3.2,-90),(104,2.2,90),0.4)
+    # dno v0.2 z komorą obciążnika (wzorem „weighted base”): skóra 2 mm u góry, od spodu 12 przegródek głęb. 7 mm
+    g2=Grid((-104,-9.6,-90),(104,0.6,90),0.4)
     N=4.2
     q=((np.abs(g2.X)/110)**N+(np.abs(g2.Z)/95)**N)**(1/N)
-    plate=(q<=0.93)&(g2.Y<=0)&(g2.Y>=-3)
-    lip=(q<=0.93-2.6/110)&(q>=0.93-4.4/110)&(g2.Y>0)&(g2.Y<=2)
-    plate|=lip
+    inside=(q<=0.93)&(g2.Y<=0)&(g2.Y>=-9)
+    plate=inside&(g2.Y>=-2)                                               # skóra
+    plate|=inside&(q>=0.93-3/110)                                         # obrzeże 3 mm
+    for x in (-50,0,50): plate|=inside&(np.abs(g2.X-x)<=1.2)              # żebra
+    for z in (-30,30):   plate|=inside&(np.abs(g2.Z-z)<=1.2)
+    FEET=[(85,62),(-85,62),(85,-62),(-85,-62)]
+    for cx,cz in COL: plate|=inside&cyl(g2,'y',cx,cz,7,-10,1)
+    for fx,fz in FEET: plate|=inside&cyl(g2,'y',fx,fz,8,-10,1)
     for cx,cz in COL:
-        plate&=~cyl(g2,'y',cx,cz,1.7,-4,3)
-        rr=np.hypot(g2.X-cx,g2.Z-cz); plate&=~((rr<=1.7+(-g2.Y-1.3)*1.0)&(g2.Y<=-1.3))   # stożek pod łeb wpuszczany
-    for i in range(-3,4):
-        plate&=~box(g2,-40,40,-4,1,i*12-2,i*12+2)                       # szczeliny wentylacyjne
-    for fx,fz in [(85,62),(-85,62),(85,-62),(-85,-62)]:
-        plate&=~cyl(g2,'y',fx,fz,5.2,-4,-1.8)                           # gniazda nóżek gumowych Ø10
-    res['dno']=save_stl(f'{out}/02_korpus_dno_PETG_szary/dno.stl',plate,g2,R_UP)
+        plate&=~cyl(g2,'y',cx,cz,1.7,-10,1)
+        rr=np.hypot(g2.X-cx,g2.Z-cz); plate&=~((rr<=1.7+(-g2.Y-7.3))&(g2.Y<=-7.3))     # stożek pod łeb M3 od spodu
+    for fx,fz in FEET: plate&=~cyl(g2,'y',fx,fz,5.2,-10,-7.8)                       # gniazda nóżek Ø10
+    for i in range(-2,3): plate&=~box(g2,-44,-6,-3,1,i*11-2,i*11+2)|box(g2,6,44,-3,1,i*11-2,i*11+2)   # wentylacja w 2 środkowych przegródkach
+    res['dno']=save_stl(f'{out}/02_korpus_dno_PETG_szary/dno.stl',plate,g2,R_DOWN)   # skórą do stołu, przegródki do góry
     return res
 
 def prim_occ(g,p):

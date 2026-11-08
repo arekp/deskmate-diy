@@ -15,7 +15,7 @@ Części są już obrócone do druku: płaską stroną na stole.
 |---|---|---|---|
 | `00_test_pasowania_PETG` | 1 płytka testowa | PETG, dowolny kolor | nie |
 | `01_korpus_PETG_szary` | korpus (220 × 190 × 53 mm) | PETG szary | **tak**, drzewiaste, tylko od stołu (pod sufit korpusu) |
-| `02_korpus_dno_PETG_szary` | dno z kołnierzem centrującym | PETG szary | nie |
+| `02_korpus_dno_PETG_szary` | dno z komorą obciążnika (12 przegródek, głęb. 7 mm) | PETG szary | nie (górną ścianką na stole) |
 | `03_wieza_PETG_szary` | wieża: połówka lewa i prawa, talerz | PETG szary | tak, drzewiaste (wnętrze krążka barku) |
 | `04_ramie_PETG_szary` | ramię: połówka lewa i prawa (ażur) | PETG szary | tak, drzewiaste |
 | `05_przedramie_PETG_szary` | przedramię: połówka lewa i prawa (ażur) | PETG szary | tak, drzewiaste |
@@ -46,7 +46,7 @@ Połówki ramion leżą płaszczyzną podziału na stole, więc ażur drukuje si
   - 16 × M3 × 10, uszy serw (4 serwa × 4).
   - 4 × M3 × 10, talerz wieży (wkręcane promieniowo z boku).
   - 2 × M3 × 50, 4 × M3 × 45, 6 × M3 × 35, łączenie połówek.
-  - 4 × M3 × 12 stożkowe, dno.
+  - 4 × M3 × 20 stożkowe, dno (wkręcane od spodu).
   - 4 × M3 × 10 stożkowe, rama z szyną.
   - 2 × M3 × 12, kołnierz przechyłu.
   - 1 × M3 × 12, zaślepka.
@@ -54,6 +54,7 @@ Połówki ramion leżą płaszczyzną podziału na stole, więc ażur drukuje si
 
 **Pozostałe**
 - 4 × gumowa nóżka Ø10 mm.
+- **Obciążnik około 800 g**, np. samoprzylepne ciężarki do felg albo kawałki płaskownika stalowego, przyklejone w przegródkach dna. Dwie środkowe przegródki mają otwory wentylacyjne, więc zostaw je puste.
 - Klej CA (cyjanoakrylowy) do pierścieni i dekli.
 
 **Elektronika:** ładowarka USB-C PD 65 W z kablem 5 A, wyzwalacz PD (CH224K lub IP2721) ustawiony na 20 V, przetwornica 20 V → 6 V 10 A, moduł USB QC3.0, przetwornica 5 V, ESP32, PCA9685, kondensator 4700 µF / 10 V, gniazdo USB-C (montaż w otworze z tyłu korpusu), ładowarka Anker 313 (z wersji A). Płytki w korpusie mocujesz na taśmę dwustronną.
@@ -89,12 +90,21 @@ Przegub (bark, łokieć, nadgarstek) wygląda zawsze tak samo:
 
 **Szyjka:** MG90S jest zaciśnięte w gnieździe między połówkami szyjki, bez śrub. Jego orczyk przykręcasz do kołnierza przechyłu, a kołnierz 2 × M3 × 12 przez szynę do ramy ładowarki.
 
+## Stabilność i limity ruchu (v0.2)
+
+Bez obciążnika robot przewróci się do przodu przy szybkim geście z głową wysuniętą, np. w pozach „Ciekawość” i „Klawiatura”. Szczegóły są w [../porownanie-so101.md](../porownanie-so101.md).
+- **Obciążnik:** włóż około 800 g w przegródki dna.
+- **Limity w programie** (ESP32 albo aplikacja):
+  - wysięg głowy najwyżej 200 mm przed osią obrotu,
+  - powyżej 170 mm prędkość ograniczona do połowy,
+  - gesty „Radość” i „Nie” tylko przy wysięgu poniżej 150 mm.
+
 ## Zmiany względem wizualizacji
 
 - **Podział połówek:** ogniwa dzielą się na lewą i prawą połówkę zamiast na przednią i tylną. Każdy policzek widełek jest wtedy w jednym kawałku, a serwo przykręca się do jednej połówki.
 - **Łożysko w nadgarstku:** wszystkie trzy przeguby mają łożysko 608, także nadgarstek.
 - **Oś przegubu:** zamiast trzpienia z druku jest stalowa śruba M8 × 16.
-- **Bark wyżej:** oś barku jest 6 mm wyżej (98 mm nad spodem korpusu), żeby ucho serwa barku nie zahaczało o talerz wieży. Wysokość dochodzi też z dna (3 mm).
+- **Bark wyżej:** oś barku jest 6 mm wyżej (98 mm nad spodem korpusu), żeby ucho serwa barku nie zahaczało o talerz wieży. Wysokość dochodzi też z dna (9 mm z komorą obciążnika).
 - **Szersze końce ogniw:** ramię i przedramię są przy krążkach szersze, 50 mm zamiast 44–46 mm. Inaczej ścianka przy serwie miałaby poniżej 1 mm.
 - **Szerokość przegubu:** z policzkami wynosi 70 mm.
 
