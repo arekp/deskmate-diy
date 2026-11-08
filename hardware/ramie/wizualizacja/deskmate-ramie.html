@@ -168,7 +168,8 @@ td.n { font-family: var(--f-mono); font-size: 0.78rem; text-align: right; white-
           <label><input id="gaze" type="checkbox" checked> Kierunek spojrzenia</label>
           <label><input id="shell" type="checkbox" checked> Osłona siatkowa</label>
           <label><input id="kb" type="checkbox" checked> Biurko i klawiatura</label>
-          <label><input id="xr" type="checkbox"> Przekrój: serwa i elektronika</label>
+          <label><input id="xr" type="checkbox"> Przekrój: serwa, elektronika, piasek</label>
+          <label><input id="pl" type="checkbox" checked> Cokół z piaskiem (v0.2)</label>
         </div>
         <details class="adv">
           <summary>Sterowanie ręczne położeniem głowy</summary>
@@ -177,6 +178,7 @@ td.n { font-family: var(--f-mono); font-size: 0.78rem; text-align: right; white-
             <div class="slider"><label for="sR">Wysięg głowy</label><input id="sR" type="range" min="40" max="230" step="1" value="110"><output id="oR" for="sR">110 mm</output></div>
             <div class="slider"><label for="sZ">Wysokość głowy</label><input id="sZ" type="range" min="70" max="300" step="1" value="165"><output id="oZ" for="sZ">165 mm</output></div>
             <div class="slider"><label for="sF">Nachylenie twarzy</label><input id="sF" type="range" min="45" max="150" step="1" value="95"><output id="oF" for="sF">95°</output></div>
+            <div class="slider"><label for="sChg">Przesuw ładowarki</label><input id="sChg" type="range" min="-8" max="8" step="0.5" value="0"><output id="oChg" for="sChg">0 mm</output></div>
             <div class="slider"><label for="sRoll">Przechył głowy</label><input id="sRoll" type="range" min="-30" max="30" step="1" value="0"><output id="oRoll" for="sRoll">0°</output></div>
             <p class="small">Nachylenie 90° to twarz pionowo do przodu, mniej to patrzenie w górę, więcej w dół.</p>
           </div>
@@ -216,6 +218,16 @@ td.n { font-family: var(--f-mono); font-size: 0.78rem; text-align: right; white-
           <tr><td>Wysięg głowy przed osią obrotu</td><td class="n">do ok. 230 mm</td></tr>
           <tr><td>Wysokość środka głowy</td><td class="n">ok. 85–290 mm</td></tr>
         </table>
+      </div>
+
+      <div>
+        <h2>Zmiany v0.2</h2>
+        <ol class="list">
+          <li><b>Cokół z piaskiem</b> 22 mm pod korpusem, stopa szersza o 8%. Około 1 kg suchego piasku (żółty w przekroju) daje zapas przed przewróceniem 41–43 mm w szybkim geście. Bez obciążnika robot się przewraca. Pomysł z podstawy SO-ARM101 „Weighted Base”.</li>
+          <li><b>Gałki z radełkiem</b> i gniazdem sześciokątnym zamiast płaskich dekli na przegubach.</li>
+          <li><b>Czerwone listwy</b> wzdłuż boków ramienia i przedramienia oraz napis „DeskMate” na nadgarstku.</li>
+          <li><b>Przesuwana ładowarka:</b> rama z ładowarką i półką jedzie w bok o ±8 mm, pod cewkę telefonu. Suwak „Przesuw ładowarki” jest w sterowaniu ręcznym, a niebieski pierścień pokazuje cewkę ładowarki.</li>
+        </ol>
       </div>
 
       <div>
@@ -477,6 +489,30 @@ td.n { font-family: var(--f-mono); font-size: 0.78rem; text-align: right; white-
     world.add(new THREE.Mesh(bg, M.body));
   })();
   cylZ(world, 42, 52, 56, 0, 0, M.metal, 64);
+  // ---------- v0.2: cokół wypełniany piaskiem (22 mm, stopa szersza o 8%) ----------
+  var deskG = new THREE.Group(); world.add(deskG); deskG.position.y = -22;
+  var M_sand = new THREE.MeshStandardMaterial({ color: 0xd9c08c, roughness: 1 });
+  function plinthGeo(H, y0, inset) {
+    var NS = 96, N = 4.2, pos = [], idx = [], rows = [];
+    for (var j = 0; j <= 6; j++) rows.push(j / 6);
+    rows.forEach(function (t) {
+      var sc = 0.93 * (1 + 0.08 * (1 - t)) - inset, y = y0 + t * H;
+      for (var i = 0; i < NS; i++) {
+        var an = Math.PI * 2 * i / NS, cs = Math.cos(an), sn = Math.sin(an);
+        pos.push(110 * sc * Math.sign(cs) * Math.pow(Math.abs(cs), 2 / N), y, 95 * sc * Math.sign(sn) * Math.pow(Math.abs(sn), 2 / N));
+      }
+    });
+    for (var r = 0; r < rows.length - 1; r++) for (var i = 0; i < NS; i++) {
+      var a = r * NS + i, b = r * NS + (i + 1) % NS, c = a + NS, d = b + NS; idx.push(a, c, b, b, c, d);
+    }
+    [0, rows.length - 1].forEach(function (rr) {
+      var ci = pos.length / 3; pos.push(0, y0 + (rr ? H : 0), 0);
+      for (var i = 0; i < NS; i++) { var a = rr * NS + i, b = rr * NS + (i + 1) % NS; if (rr) idx.push(ci, b, a); else idx.push(ci, a, b); }
+    });
+    var g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setIndex(idx); g.computeVertexNormals(); return g;
+  }
+  var plinth = new THREE.Mesh(plinthGeo(22, -22, 0), M.body); world.add(plinth);
+  var sand = new THREE.Mesh(plinthGeo(19, -20.5, 0.02), M_sand); world.add(sand);
   // ---------- zasilanie z USB-C: gniazdo z tyłu korpusu, kabel do ładowarki USB-C PD ----------
   var M_pcb = new THREE.MeshStandardMaterial({ color: 0x1f6f4a, roughness: 0.6 });
   var M_dark = new THREE.MeshStandardMaterial({ color: 0x1b1f22, roughness: 0.5 });
@@ -484,8 +520,9 @@ td.n { font-family: var(--f-mono); font-size: 0.78rem; text-align: right; white-
   (function () {
     var pts = [[0, 7.5, -96], [0, 7, -112], [0, 4, -135], [0, 3, -170], [20, 3, -260], [40, 3, -360], [45, 8, -405]];
     var v = pts.map(function (p) { return new THREE.Vector3(p[0], p[1], p[2]); });
+    v.forEach(function (q, i) { if (i > 1) q.y -= 22; });
     world.add(new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(v), 80, 2.2, 10, false), M_dark));
-    box(world, 18, 72, -470, -405, 0, 30, M_dark);                         // ładowarka USB-C PD 65 W
+    box(deskG, 18, 72, -470, -405, 0, 30, M_dark);                         // ładowarka USB-C PD 65 W
   })();
   // elektronika w korpusie (widoczna w przekroju)
   function board(x0, x1, z0, z1, h, mat) { var m = box(world, x0, x1, z0, z1, 4, 4 + h, mat || M_pcb); xray.push(m); return m; }
@@ -500,8 +537,8 @@ td.n { font-family: var(--f-mono); font-size: 0.78rem; text-align: right; white-
   })();
 
   var floor = new THREE.Mesh(new THREE.CircleGeometry(420, 72), new THREE.MeshBasicMaterial({ color: 0x88aabb, transparent: true, opacity: 0.07, depthWrite: false }));
-  floor.rotation.x = -Math.PI / 2; floor.position.y = -0.5; world.add(floor);
-  var kbG = new THREE.Group(); world.add(kbG);
+  floor.rotation.x = -Math.PI / 2; floor.position.y = -0.5; deskG.add(floor);
+  var kbG = new THREE.Group(); deskG.add(kbG);
   box(kbG, -200, 200, 300, 430, 0, 22, M.ghost, true);
   var kbm = kbG.children[0]; kbm.add(new THREE.LineSegments(new THREE.EdgesGeometry(kbm.geometry), new THREE.LineBasicMaterial({ color: 0x88aabb })));
 
@@ -527,8 +564,27 @@ td.n { font-family: var(--f-mono); font-size: 0.78rem; text-align: right; white-
       sh.moveTo(tw / 2, yEnd); sh.lineTo(rc, 0); sh.absarc(0, 0, rc, 0, -Math.PI, true); sh.lineTo(-tw / 2, yEnd); sh.lineTo(tw / 2, yEnd);
       var ch = new THREE.Mesh(new THREE.ExtrudeGeometry(sh, { depth: 3, bevelEnabled: false, curveSegments: 40 }), M.shell);
       ch.rotation.y = Math.PI / 2; ch.position.set(xc - 1.5, 0, 0); g.add(ch);
-      var cov = new THREE.Mesh(new THREE.CylinderGeometry(rc * 0.62, rc * 0.62, 0.8, 40), M.cap); cov.rotation.z = Math.PI / 2; cov.position.set(xc + s * 1.8, 0, 0); g.add(cov);
+      // v0.2: gałka z radełkiem i gniazdem sześciokątnym (wzorem „Cyber Base”) zamiast płaskiego dekla
+      var base = new THREE.Mesh(new THREE.CylinderGeometry(rc * 0.66, rc * 0.7, 1.6, 48), M.cap); base.rotation.z = Math.PI / 2; base.position.set(xc + s * 2.3, 0, 0); g.add(base);
+      var kn = new THREE.Shape(), r0 = rc * 0.5, nT = 22;
+      for (var k = 0; k <= nT * 4; k++) { var an = k / (nT * 4) * Math.PI * 2, rr = r0 + (Math.cos(an * nT) > 0 ? 1.1 : 0); if (k) kn.lineTo(rr * Math.cos(an), rr * Math.sin(an)); else kn.moveTo(rr, 0); }
+      var hx = new THREE.Path(); for (var k2 = 0; k2 <= 6; k2++) { var a2 = k2 / 6 * Math.PI * 2; if (k2) hx.lineTo(3.6 * Math.cos(a2), 3.6 * Math.sin(a2)); else hx.moveTo(3.6, 0); }
+      kn.holes.push(hx);
+      var knob = new THREE.Mesh(new THREE.ExtrudeGeometry(kn, { depth: 3.6, bevelEnabled: true, bevelThickness: 0.5, bevelSize: 0.4, bevelSegments: 2, curveSegments: 4 }), M.cap);
+      knob.rotation.y = s * Math.PI / 2; knob.position.set(xc + s * 3.1, 0, 0); g.add(knob);
       var ring = new THREE.Mesh(new THREE.TorusGeometry(rc * 0.78, 0.8, 8, 64), M.servo); ring.rotation.y = Math.PI / 2; ring.position.set(xc + s * 1.6, 0, 0); g.add(ring);
+    });
+  }
+  // v0.2: czerwone listwy ozdobne na pełnym pasie boku ogniwa (wzorem „Cyber Base”)
+  function stripes(g, y0, y1, w0, w1) {
+    var n = 10, a = 0.38, b = 0.8;
+    [-1, 1].forEach(function (s) {
+      for (var i = 0; i < n; i++) {
+        var t0 = a + (b - a) * i / n, t1 = a + (b - a) * (i + 1) / n, tm = (t0 + t1) / 2;
+        var hw = (w1 + (w0 - w1) * Math.pow(1 - tm, 2.2)) / 2;
+        var m = new THREE.Mesh(new THREE.BoxGeometry(1.2, (t1 - t0) * (y1 - y0) + 0.3, 3.2), M.servo);
+        m.position.set(s * (hw + 0.5), y0 + tm * (y1 - y0), 0); g.add(m);
+      }
     });
   }
   // ---------- ażurowa skorupa (Voronoi z zaokrąglonymi otworami): mapa przezroczystości rysowana na canvasie ----------
@@ -634,12 +690,12 @@ td.n { font-family: var(--f-mono); font-size: 0.78rem; text-align: right; white-
 
   var shG = new THREE.Group(); shG.position.set(0, SZ, 0); yawG.add(shG);
   fork(shG, 28, 54, 32, 36);
-  loft(shG, 30, L1, 66, 50, 32, 31, true);
+  loft(shG, 30, L1, 66, 50, 32, 31, true); stripes(shG, 30, L1, 66, 50);
   puck(shG, 28, 54, L1);
   pitchServo(shG, L1, true);
   var elG = new THREE.Group(); elG.position.y = L1; shG.add(elG);
   fork(elG, 28, 54, 31, 36);
-  loft(elG, 30, L2, 66, 50, 31, 30, true);
+  loft(elG, 30, L2, 66, 50, 31, 30, true); stripes(elG, 30, L2, 66, 50);
   puck(elG, 25, 50, L2);
   pitchServo(elG, L2, false);
   var wrG = new THREE.Group(); wrG.position.y = L2; elG.add(wrG);
@@ -651,6 +707,14 @@ td.n { font-family: var(--f-mono); font-size: 0.78rem; text-align: right; white-
     var m = new THREE.Mesh(new THREE.LatheGeometry(p.map(function (q) { return new THREE.Vector2(q[0], q[1]); }), 72), M.shell);
     wrG.add(m);
     var r = new THREE.Mesh(new THREE.TorusGeometry(23.2, 1, 8, 72), M.servo); r.rotation.x = Math.PI / 2; r.position.y = 58.2; wrG.add(r);
+    // v0.2: wytłoczony napis na bokach nadgarstka
+    var cv = document.createElement('canvas'); cv.width = 256; cv.height = 64;
+    var cx = cv.getContext('2d'); cx.font = '700 40px Archivo, sans-serif'; cx.textAlign = 'center'; cx.textBaseline = 'middle'; cx.fillStyle = '#c2410c'; cx.fillText('DeskMate', 128, 34);
+    var lt = new THREE.CanvasTexture(cv), lm = new THREE.MeshBasicMaterial({ map: lt, transparent: true, depthWrite: false });
+    [-1, 1].forEach(function (s) {
+      var pl = new THREE.Mesh(new THREE.PlaneGeometry(26, 6.5), lm);
+      pl.rotation.set(0, s * Math.PI / 2, Math.PI / 2 * s); pl.position.set(s * 26.6, 36, 0); wrG.add(pl);
+    });
     var c = xmesh(new THREE.BoxGeometry(22.8, 23, 12.2), M.servo, wrG, 5.5, 31 + 11.5, 0); edge(c);
     var t = xmesh(new THREE.BoxGeometry(32.2, 2.5, 12.2), M.servo, wrG, 5.5, 50, 0); edge(t);
     xmesh(new THREE.CylinderGeometry(2.5, 2.5, 4, 20), M.metal, wrG, 0, 56, 0);
@@ -666,9 +730,14 @@ td.n { font-family: var(--f-mono); font-size: 0.78rem; text-align: right; white-
     var ring = new THREE.Shape(); ring.absarc(0, 0, 52, 0, Math.PI * 2, false);
     var hl = new THREE.Path(); hl.absarc(0, 0, 50.3, 0, Math.PI * 2, true); ring.holes.push(hl);
     var rm = new THREE.Mesh(new THREE.ExtrudeGeometry(ring, { depth: 9, bevelEnabled: false, curveSegments: 64 }), M.part);
-    rm.position.z = -11.2; g.add(rm);
-    cylY(g, 52, -14.2, -11.2, 0, 0, M.part);
-    cylY(g, 50, -11.2, 0, 0, 0, M.pad);
+    // v0.2: rama z ładowarką i półką przesuwa się w bok o ±8 mm po podłużnych otworach
+    var cg = new THREE.Group(); g.add(cg); window.__chargerG = cg;
+    rm.position.z = -11.2; cg.add(rm);
+    cylY(cg, 52, -14.2, -11.2, 0, 0, M.part);
+    cylY(cg, 50, -11.2, 0, 0, 0, M.pad);
+    var M_coil = new THREE.MeshBasicMaterial({ color: 0x3fb8d8, transparent: true, opacity: 0.55, depthWrite: false });
+    var coil = new THREE.Mesh(new THREE.TorusGeometry(21, 1.6, 8, 48), M_coil); coil.position.z = 0.6; cg.add(coil);
+    [-40, -20, 20, 40].forEach(function (x) { box(cg, x - 9.7, x + 9.7, -11.15, -11.0, -1.7, 1.7, M_dark, true); });   // podłużne otwory
     box(g, -91.5, 100, -21, -14.2, -8, 8, M.part);                          // szyna
     box(g, -91.5, -85.5, -24, 14.5, -31, 31, M.part);                       // lewa szczęka
     box(g, -85.5, -81, 12, 14.5, -14, 14, M.part);
@@ -677,10 +746,10 @@ td.n { font-family: var(--f-mono); font-size: 0.78rem; text-align: right; white-
     box(g, 65.5, 85.5, -23.4, -11.8, -10.4, 10.4, M.part);
     box(g, -85.5, -84, 0, 12, -14, 14, M.tpu); box(g, 84, 85.5, 0, 12, -14, 14, M.tpu);
     box(g, 100, 103, -22, -13.2, -9.5, 9.5, M.part);
-    [[36, 48], [-48, -36]].forEach(function (xx) {                         // nogi i półka
-      box(g, xx[0], xx[1], -14.2, -11.2, -44.35, -33, M.part);
-      box(g, xx[0], xx[1], -14.2, 12, -44.35, -41.35, M.part);
-      box(g, xx[0], xx[1], 12, 14.5, -44.35, -38.35, M.part);
+    [[36, 48], [-48, -36]].forEach(function (xx) {                         // nogi i półka (część ramy, przesuwa się z nią)
+      box(cg, xx[0], xx[1], -14.2, -11.2, -44.35, -33, M.part);
+      box(cg, xx[0], xx[1], -14.2, 12, -44.35, -41.35, M.part);
+      box(cg, xx[0], xx[1], 12, 14.5, -44.35, -38.35, M.part);
     });
     box(g, -22, 22, -24, -14.2, -12, 12, M.part);                          // kołnierz serwa przechyłu
     // gumki
@@ -942,6 +1011,8 @@ td.n { font-family: var(--f-mono); font-size: 0.78rem; text-align: right; white-
   document.getElementById('gaze').addEventListener('change', function (e) { gazeLine.visible = e.target.checked; });
   document.getElementById('shell').addEventListener('change', function (e) { shellG.visible = e.target.checked; });
   document.getElementById('kb').addEventListener('change', function (e) { kbG.visible = e.target.checked; });
+  document.getElementById('pl').addEventListener('change', function (e) { var on = e.target.checked; plinth.visible = sand.visible = on; deskG.position.y = on ? -22 : 0; });
+  document.getElementById('sChg').addEventListener('input', function (e) { var v = +e.target.value; window.__chargerG.position.x = v; document.getElementById('oChg').textContent = (v > 0 ? '+' : '') + v + ' mm'; });
   document.getElementById('xr').addEventListener('change', function (e) {
     var on = e.target.checked;
     [M.shell, M.body, M.cap, M.lattice].forEach(function (mt) { mt.transparent = on; mt.opacity = on ? 0.22 : 1; mt.depthWrite = !on; mt.needsUpdate = true; });
